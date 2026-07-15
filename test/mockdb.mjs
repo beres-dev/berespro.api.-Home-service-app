@@ -7,11 +7,27 @@ class Stmt {
   async all(){ return this.db._exec(this.sql,this.args); }
 }
 export class MockDB {
-  constructor(){ this.t={users:[],sessions:[],tasks:[],bids:[],reviews:[],partner_merchants:[],payments:[],kyc_submissions:[],disputes:[],audit_log:[],rate_limits:[],vouchers:[],voucher_redemptions:[],settings:[],devices:[],notifications:[],cancellations:[]}; }
+  constructor(){ this.t={users:[],sessions:[],tasks:[],bids:[],reviews:[],partner_merchants:[],payments:[],kyc_submissions:[],disputes:[],audit_log:[],rate_limits:[],vouchers:[],voucher_redemptions:[],settings:[],devices:[],notifications:[],cancellations:[]}; this.cols={}; }
   prepare(sql){ return new Stmt(this,sql); }
   async batch(stmts){ const out=[]; for(const s of stmts) out.push(this._exec(s.sql,s.args)); return out; }
   _table(sql){ const m=sql.match(/(?:FROM|INTO|UPDATE)\s+(\w+)/i); return m&&this.t[m[1]]?m[1]:null; }
   _exec(sql,args){
+    // ALTER TABLE t ADD COLUMN c ... — real D1/SQLite throws "duplicate column name"
+    // if run twice. We track added columns per table so /setup's re-run path is
+    // actually exercised, instead of this shim silently no-op'ing every time.
+    // The ALTER may be preceded by comment lines (and blank lines between comment
+    // blocks) within the same semicolon-delimited chunk, so strip ALL comment
+    // lines first — same approach the /setup endpoint itself uses to detect
+    // "comment-only" chunks — before testing what the statement actually is.
+    const bare = sql.replace(/^--.*$/gm, "").trim();
+    const alt = bare.match(/^ALTER\s+TABLE\s+(\w+)\s+ADD\s+COLUMN\s+(\w+)/i);
+    if (alt) {
+      const [, tbl, col] = alt;
+      this.cols[tbl] = this.cols[tbl] || new Set();
+      if (this.cols[tbl].has(col)) throw new Error(`duplicate column name: ${col}`);
+      this.cols[tbl].add(col);
+      return { results: [] };
+    }
     const table=this._table(sql); const rows=table?this.t[table]:[];
     if(/^INSERT/i.test(sql)){
       const cols=sql.match(/\(([^)]+)\)\s*VALUES/i)[1].split(',').map(s=>s.trim());
