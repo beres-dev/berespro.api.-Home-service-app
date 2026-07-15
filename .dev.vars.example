@@ -1,0 +1,5 @@
+# Copy to .dev.vars for local `wrangler dev`. Never commit .dev.vars.
+JWT_SECRET=change-me-to-a-long-random-string
+FIREBASE_PROJECT_ID=your-firebase-project-id
+PSP_SECRET=your-gateway-webhook-secret
+FCM_SERVER_KEY=your-fcm-server-key

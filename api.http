@@ -1,0 +1,53 @@
+### Berespro API — quick manual tests (VS Code REST Client / IntelliJ HTTP)
+@base = http://127.0.0.1:8787
+@token = PASTE_ACCESS_TOKEN
+
+### health
+GET {{base}}/health
+
+### exchange Firebase token for a session (app does this after Google/phone sign-in)
+POST {{base}}/auth/session
+Content-Type: application/json
+
+{ "firebaseToken": "PASTE_FIREBASE_ID_TOKEN" }
+
+### me
+GET {{base}}/me
+Authorization: Bearer {{token}}
+
+### switch to partner mode
+PATCH {{base}}/me
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "mode": "partner", "skills": ["Handyman","Assembly"] }
+
+### post a task (customer)
+POST {{base}}/tasks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "title":"Assemble IKEA PAX","category":"assembly","city":"Kuala Lumpur","addr":"Mont Kiara","lat":3.171,"lng":101.652,"budget_cents":18000,"date_label":"14 Jul 2026","time_slot":"Morning","description":"12th floor, lift access" }
+
+### partner job feed
+GET {{base}}/tasks?lat=3.15&lng=101.66&radius=20&sort=nearest
+Authorization: Bearer {{token}}
+
+### place a bid
+POST {{base}}/tasks/TASK_ID/bids
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "amount_cents": 17000, "message": "2 hours incl cleanup" }
+
+### connect payout (partner, once) — creates PSP sub-merchant
+POST {{base}}/partners/connect
+Authorization: Bearer {{token}}
+
+### accept a bid (customer) — PSP authorizes (holds) funds, returns payment_url
+POST {{base}}/bids/BID_ID/accept
+Authorization: Bearer {{token}}
+
+### payment status
+GET {{base}}/payments/PAYMENT_ID
+Authorization: Bearer {{token}}

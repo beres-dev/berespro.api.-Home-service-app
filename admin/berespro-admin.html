@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Berespro — Admin Console</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;800&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0B1526;--panel:#0F1B30;--sur:#FFFFFF;--content:#EEF3FA;
+  --line:#E4EAF4;--dline:#1D2C47;--tx:#101F3A;--mut:#5C6E8E;--dim:#8B9AB6;
+  --ctx:#F3F7FF;--cmut:#9FB0CF;
+  --blu:#2F6BFF;--grn:#0FBE7C;--amb:#F59F0A;--red:#EF4D41;--pur:#7A5CFF;
+  --disp:'Unbounded',sans-serif;--body:'Hanken Grotesk',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--body);background:var(--content);color:var(--tx);display:flex;min-height:100vh}
+button{font-family:var(--body);cursor:pointer}
+
+/* ---------- sidebar ---------- */
+.side{width:230px;background:var(--bg);color:var(--ctx);padding:22px 14px;display:flex;flex-direction:column;position:fixed;top:0;bottom:0}
+.wordmark{font-family:var(--disp);font-weight:800;font-size:19px;padding:0 10px 4px}
+.wordmark .p{color:var(--blu)}
+.wsub{font-size:10.5px;color:var(--cmut);letter-spacing:.14em;text-transform:uppercase;padding:0 10px 20px}
+.nav{display:flex;flex-direction:column;gap:2px;flex:1}
+.nav button{display:flex;align-items:center;gap:11px;background:none;border:0;color:var(--cmut);font-size:13.5px;font-weight:600;padding:10px 12px;border-radius:11px;text-align:left;width:100%}
+.nav button.on{background:rgba(47,107,255,.16);color:#fff}
+.nav button:hover:not(.on){background:rgba(255,255,255,.05);color:#DCE6F7}
+.nav svg{flex-shrink:0}
+.envbox{background:#0A1322;border:1px solid var(--dline);border-radius:13px;padding:12px;margin-top:12px}
+.envbox label{font-size:10px;font-weight:800;letter-spacing:.1em;color:var(--cmut);text-transform:uppercase;display:block;margin-bottom:5px}
+.envbox input{width:100%;background:#0E1930;border:1px solid var(--dline);border-radius:9px;color:var(--ctx);font-size:11.5px;padding:8px 9px;margin-bottom:8px;font-family:var(--body)}
+.envbox .row{display:flex;gap:7px}
+.bttn{border:0;border-radius:9px;padding:9px 12px;font-weight:700;font-size:12px;color:#fff;background:var(--blu);flex:1}
+.bttn.ghost{background:rgba(255,255,255,.08);color:var(--cmut)}
+.demoTag{display:none;margin-top:10px;text-align:center;font-size:10.5px;font-weight:800;letter-spacing:.1em;color:var(--amb);background:rgba(245,159,10,.12);border-radius:8px;padding:6px}
+body.demo .demoTag{display:block}
+
+/* ---------- main ---------- */
+.main{flex:1;margin-left:230px;padding:26px 30px 60px}
+.pageh{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px}
+.pageh h1{font-family:var(--disp);font-weight:700;font-size:20px;letter-spacing:-.01em}
+.pageh .sub{font-size:12.5px;color:var(--mut);margin-top:5px}
+.section{display:none}
+.section.on{display:block}
+
+/* ---------- cards / tables ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+.kpi{background:var(--sur);border:1px solid var(--line);border-radius:15px;padding:15px 16px;box-shadow:0 1px 2px rgba(16,31,58,.05)}
+.kpi .k{font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.kpi .v{font-size:22px;font-weight:800;margin-top:6px;font-variant-numeric:tabular-nums}
+.kpi .s{font-size:11.5px;color:var(--mut);margin-top:3px}
+.kpi.hero{background:linear-gradient(135deg,#17347A 0%,#0C1C42 75%);border:0;color:#fff}
+.kpi.hero .k{color:#9FB6DE}.kpi.hero .s{color:#9FB6DE}
+.panel{background:var(--sur);border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 2px rgba(16,31,58,.05);overflow:hidden;margin-bottom:16px}
+.ph{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ph b{font-size:14px;font-weight:800}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);text-align:left;padding:10px 18px;border-bottom:1px solid var(--line);background:#F7FAFE}
+td{padding:11px 18px;border-bottom:1px solid #F0F4FA;vertical-align:middle}
+tr:last-child td{border-bottom:0}
+.num{font-variant-numeric:tabular-nums}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:99px;background:#EFF4FB;color:var(--mut);white-space:nowrap}
+.chip .dt{width:6px;height:6px;border-radius:99px;background:currentColor}
+.chip.blu{background:#E9F0FF;color:var(--blu)} .chip.grn{background:#E4F9F0;color:#0B9163}
+.chip.amb{background:#FFF4DE;color:#B87508} .chip.red{background:#FDEAE8;color:#D03A2F}
+.chip.pur{background:#EFEAFF;color:#6247D6}
+.act{border:0;border-radius:9px;padding:7px 12px;font-weight:700;font-size:12px;color:#fff;background:var(--blu)}
+.act.grn{background:var(--grn)} .act.red{background:#FDEAE8;color:#D03A2F} .act.ghost{background:#EDF1F9;color:var(--mut)}
+.act:disabled{opacity:.45;cursor:default}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.fchip{font-size:12.5px;font-weight:700;padding:7px 14px;border-radius:99px;background:var(--sur);border:1px solid #D8E1F0;color:var(--mut)}
+.fchip.on{background:var(--blu);border-color:var(--blu);color:#fff}
+input.f,select.f{background:var(--sur);border:1.5px solid #D8E1F0;border-radius:11px;padding:10px 13px;font-family:var(--body);font-size:13.5px;color:var(--tx)}
+input.f:focus,select.f:focus{outline:none;border-color:var(--blu)}
+label.f{display:block;font-size:11.5px;font-weight:700;color:var(--mut);margin:12px 0 6px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.empty{padding:34px;text-align:center;color:var(--dim);font-size:13px}
+#map{height:520px;border-radius:16px;border:1px solid var(--line)}
+.legend{display:flex;gap:14px;margin-top:10px;font-size:12px;color:var(--mut);font-weight:600}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:99px;margin-right:5px;vertical-align:middle}
+.slider{display:flex;align-items:center;gap:14px;padding:8px 0}
+.slider label{width:170px;font-size:13px;font-weight:700}
+.slider input[type=range]{flex:1;accent-color:var(--blu)}
+.slider output{width:44px;text-align:right;font-weight:800;font-variant-numeric:tabular-nums}
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:#101F3A;color:#fff;font-size:13px;font-weight:700;padding:12px 22px;border-radius:99px;z-index:999;box-shadow:0 10px 30px rgba(0,0,0,.35);display:none}
+.docimg{font-size:12px;color:var(--blu);font-weight:700;text-decoration:none;margin-right:10px}
+.mono{font-family:ui-monospace,monospace;font-size:11px;color:var(--dim)}
+@media(max-width:900px){.side{display:none}.main{margin-left:0}}
+</style>
+</head>
+<body>
+
+<!-- ============ SIDEBAR ============ -->
+<aside class="side">
+  <div class="wordmark">beres<span class="p">pro</span></div>
+  <div class="wsub">Admin Console</div>
+  <nav class="nav" id="nav"></nav>
+  <div class="envbox">
+    <label>API Base URL</label>
+    <input id="cfg-base" placeholder="https://berespro-api.xxx.workers.dev">
+    <label>Admin Access Token</label>
+    <input id="cfg-token" type="password" placeholder="Bearer token">
+    <div class="row">
+      <button class="bttn" onclick="saveCfg()">Connect</button>
+      <button class="bttn ghost" onclick="demoMode()">Demo</button>
+    </div>
+    <div class="demoTag">DEMO DATA — NOT LIVE</div>
+  </div>
+</aside>
+
+<!-- ============ MAIN ============ -->
+<main class="main">
+  <div class="pageh">
+    <div><h1 id="pgTitle">Overview</h1><div class="sub" id="pgSub">Platform health at a glance</div></div>
+    <button class="act ghost" onclick="loadSection(CUR)">↻ Refresh</button>
+  </div>
+
+  <section class="section" id="sec-overview">
+    <div class="kpis" id="kpis"></div>
+    <div class="panel"><div class="ph"><b>Recent audit activity</b></div><div id="ov-audit"></div></div>
+  </section>
+
+  <section class="section" id="sec-users">
+    <div class="panel">
+      <div class="ph"><b>Users</b>
+        <div class="filters">
+          <input class="f" id="u-q" placeholder="Search name / phone / email" style="padding:7px 12px" oninput="renderUsers()">
+          <button class="fchip on" data-um="all" onclick="uMode(this)">All</button>
+          <button class="fchip" data-um="customer" onclick="uMode(this)">Customers</button>
+          <button class="fchip" data-um="partner" onclick="uMode(this)">Partners</button>
+        </div>
+      </div>
+      <div id="u-table"></div>
+    </div>
+  </section>
+
+  <section class="section" id="sec-kyc">
+    <div class="panel"><div class="ph"><b>KYC review queue</b></div><div id="kyc-table"></div></div>
+  </section>
+
+  <section class="section" id="sec-tasks">
+    <div class="panel">
+      <div class="ph"><b>Tasks</b>
+        <div class="filters" id="t-filters">
+          <button class="fchip on" data-ts="" onclick="tStatus(this)">All</button>
+          <button class="fchip" data-ts="open" onclick="tStatus(this)">Open</button>
+          <button class="fchip" data-ts="inprogress" onclick="tStatus(this)">In progress</button>
+          <button class="fchip" data-ts="completed" onclick="tStatus(this)">Completed</button>
+          <button class="fchip" data-ts="cancelled" onclick="tStatus(this)">Cancelled</button>
+        </div>
+      </div>
+      <div id="t-table"></div>
+    </div>
+  </section>
+
+  <section class="section" id="sec-map">
+    <div id="map"></div>
+    <div class="legend">
+      <span><i style="background:#F59F0A"></i>Open</span>
+      <span><i style="background:#2F6BFF"></i>In progress</span>
+      <span><i style="background:#0FBE7C"></i>Completed</span>
+      <span><i style="background:#8B9AB6"></i>Cancelled</span>
+    </div>
+  </section>
+
+  <section class="section" id="sec-payments">
+    <div class="panel">
+      <div class="ph"><b>Payments (PSP-held escrow)</b>
+        <div class="filters">
+          <button class="fchip on" data-ps="" onclick="pStatus(this)">All</button>
+          <button class="fchip" data-ps="held" onclick="pStatus(this)">Held</button>
+          <button class="fchip" data-ps="captured" onclick="pStatus(this)">Released</button>
+          <button class="fchip" data-ps="refunded" onclick="pStatus(this)">Refunded</button>
+          <button class="fchip" data-ps="pending" onclick="pStatus(this)">Pending</button>
+        </div>
+      </div>
+      <div id="p-table"></div>
+    </div>
+  </section>
+
+  <section class="section" id="sec-disputes">
+    <div class="panel"><div class="ph"><b>Open disputes — payment frozen until resolved</b></div><div id="d-table"></div></div>
+  </section>
+
+  <section class="section" id="sec-vouchers">
+    <div class="panel">
+      <div class="ph"><b>Create voucher</b><span class="chip amb"><span class="dt"></span>Discount comes from platform fee — partner 80% untouched</span></div>
+      <div style="padding:6px 18px 18px">
+        <div class="grid2">
+          <div><label class="f">Code</label><input class="f" id="v-code" placeholder="BERES10" style="width:100%"></div>
+          <div><label class="f">Type</label><select class="f" id="v-type" style="width:100%"><option value="percent">Percent (%)</option><option value="fixed">Fixed (RM)</option></select></div>
+          <div><label class="f">Value (% or RM)</label><input class="f" id="v-value" type="number" placeholder="10" style="width:100%"></div>
+          <div><label class="f">Min spend (RM)</label><input class="f" id="v-min" type="number" placeholder="0" style="width:100%"></div>
+          <div><label class="f">Total usage limit (blank = ∞)</label><input class="f" id="v-limit" type="number" style="width:100%"></div>
+          <div><label class="f">Per-user limit</label><input class="f" id="v-peruser" type="number" value="1" style="width:100%"></div>
+        </div>
+        <div style="height:14px"></div>
+        <button class="act" onclick="createVoucher()">Create voucher</button>
+      </div>
+    </div>
+    <div class="panel"><div class="ph"><b>All vouchers</b></div><div id="v-table"></div></div>
+  </section>
+
+  <section class="section" id="sec-algorithm">
+    <div class="panel">
+      <div class="ph"><b>Recommended-feed algorithm weights</b><span class="chip blu"><span class="dt"></span>score = wD·closeness + wR·freshness + wB·budget</span></div>
+      <div style="padding:10px 18px 18px">
+        <div class="slider"><label>Distance (closeness)</label><input type="range" id="s-dist" min="0" max="100" oninput="this.nextElementSibling.value=this.value"><output>50</output></div>
+        <div class="slider"><label>Recency (freshness)</label><input type="range" id="s-rec" min="0" max="100" oninput="this.nextElementSibling.value=this.value"><output>30</output></div>
+        <div class="slider"><label>Budget attractiveness</label><input type="range" id="s-bud" min="0" max="100" oninput="this.nextElementSibling.value=this.value"><output>20</output></div>
+        <div class="slider"><label>Platform commission (bps)</label><input type="range" id="s-comm" min="500" max="3000" step="50" oninput="this.nextElementSibling.value=this.value"><output>2000</output></div>
+        <div style="height:10px"></div>
+        <button class="act" onclick="saveSettings()">Save settings</button>
+        <span style="font-size:12px;color:var(--mut);margin-left:12px">2000 bps = 20% fee. Changes apply to new accepts only.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="sec-audit">
+    <div class="panel"><div class="ph"><b>Audit log — immutable trail</b></div><div id="a-table"></div></div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= config & API ================= */
+let CFG = { base: "", token: "" };
+try { CFG = JSON.parse(localStorage.getItem("bp.admin.cfg")) || CFG; } catch {}
+document.getElementById("cfg-base").value = CFG.base || "";
+document.getElementById("cfg-token").value = CFG.token || "";
+let DEMO = !CFG.base;
+
+function saveCfg(){
+  CFG.base = document.getElementById("cfg-base").value.trim().replace(/\/+$/,"");
+  CFG.token = document.getElementById("cfg-token").value.trim();
+  try { localStorage.setItem("bp.admin.cfg", JSON.stringify(CFG)); } catch {}
+  DEMO = !CFG.base; document.body.classList.toggle("demo", DEMO);
+  toast(DEMO ? "No base URL — demo mode" : "Connected to " + CFG.base);
+  loadSection(CUR);
+}
+function demoMode(){ DEMO = true; document.body.classList.add("demo"); toast("Demo mode — sample data"); loadSection(CUR); }
+
+async function api(path, method = "GET", body){
+  if (DEMO) return demoApi(path, method, body);
+  const r = await fetch(CFG.base + path, {
+    method,
+    headers: { "content-type": "application/json", authorization: "Bearer " + CFG.token },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { toast("Error: " + (j.error?.message || r.status)); throw new Error(j.error?.message || r.status); }
+  return j;
+}
+function toast(m){ const t = document.getElementById("toast"); t.textContent = m; t.style.display = "block";
+  clearTimeout(t._t); t._t = setTimeout(() => t.style.display = "none", 2600); }
+const RM = c => "RM " + (c/100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+const esc = s => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;");
+const when = ts => new Date(ts*1000).toLocaleString("en-MY",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
+const stChip = s => ({open:'<span class="chip amb"><span class="dt"></span>Open</span>',
+  inprogress:'<span class="chip blu"><span class="dt"></span>In progress</span>',
+  completed:'<span class="chip grn"><span class="dt"></span>Completed</span>',
+  cancelled:'<span class="chip"><span class="dt"></span>Cancelled</span>',
+  held:'<span class="chip blu"><span class="dt"></span>Held</span>',
+  captured:'<span class="chip grn"><span class="dt"></span>Released</span>',
+  refunded:'<span class="chip"><span class="dt"></span>Refunded</span>',
+  pending:'<span class="chip amb"><span class="dt"></span>Pending</span>',
+  failed:'<span class="chip red"><span class="dt"></span>Failed</span>'}[s] || esc(s));
+
+/* ================= navigation ================= */
+const SECTIONS = [
+  ["overview","Overview","Platform health at a glance","M4 12h4v7H4zM10 5h4v14h-4zM16 9h4v10h-4z"],
+  ["users","Users","Both sides — search, verify status, suspend","M12 11.2a3.3 3.3 0 1 0 0-6.6 3.3 3.3 0 0 0 0 6.6ZM5.5 19.4a6.7 6.7 0 0 1 13 0"],
+  ["kyc","KYC Queue","Approve partner identity before they can bid","M12 3.8 18.6 6.2v5.2c0 4.3-2.7 7.3-6.6 8.8-3.9-1.5-6.6-4.5-6.6-8.8V6.2L12 3.8ZM9.1 11.7l2.1 2.1 3.8-4"],
+  ["tasks","Tasks","Every task on the platform","M5.5 4.6h13v15.9h-13zM8.9 13.2l2.1 2.1 4.1-4.5"],
+  ["map","Map","Live geography of tasks","M12 21.2c4.4-4.1 6.6-7.5 6.6-10.4a6.6 6.6 0 1 0-13.2 0c0 2.9 2.2 6.3 6.6 10.4ZM12 13.1a2.4 2.4 0 1 0 0-4.8 2.4 2.4 0 0 0 0 4.8Z"],
+  ["payments","Payments","Held / release / refund controls","M3.8 6.6h16.4v12.8H3.8zM3.8 10.2h16.4"],
+  ["disputes","Disputes","Frozen payments awaiting your decision","M12 3.5 21 19H3L12 3.5ZM12 10v4M12 16.6v.4"],
+  ["vouchers","Vouchers","Marketing codes — fee-absorbed discounts","M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 1 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 1 0 0-4V8ZM12 6v12"],
+  ["algorithm","Algorithm","Feed ranking weights & commission","M4.5 7h9M17 7h2.5M4.5 12h2.5M11.5 12h8M4.5 17h10.5M19.5 17h0"],
+  ["audit","Audit Log","Immutable trail of sensitive actions","M4.8 12a7.4 7.4 0 1 1 2.1 5.2M4.8 12H8.2M4.8 12V8.6M12 8.8V12l2.6 1.7"],
+];
+let CUR = "overview";
+const navEl = document.getElementById("nav");
+navEl.innerHTML = SECTIONS.map(([id,label,,d]) =>
+  `<button data-s="${id}" onclick="go('${id}')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>${label}</button>`).join("");
+function go(id){
+  CUR = id;
+  document.querySelectorAll(".nav button").forEach(b => b.classList.toggle("on", b.dataset.s === id));
+  document.querySelectorAll(".section").forEach(s => s.classList.toggle("on", s.id === "sec-" + id));
+  const meta = SECTIONS.find(s => s[0] === id);
+  document.getElementById("pgTitle").textContent = meta[1];
+  document.getElementById("pgSub").textContent = meta[2];
+  loadSection(id);
+}
+
+/* ================= loaders ================= */
+async function loadSection(id){
+  try {
+    if (id === "overview") await loadOverview();
+    if (id === "users") await loadUsers();
+    if (id === "kyc") await loadKyc();
+    if (id === "tasks") await loadTasks();
+    if (id === "map") await loadMap();
+    if (id === "payments") await loadPayments();
+    if (id === "disputes") await loadDisputes();
+    if (id === "vouchers") await loadVouchers();
+    if (id === "algorithm") await loadAlgorithm();
+    if (id === "audit") await loadAudit();
+  } catch(e) { /* toast already shown */ }
+}
+
+async function loadOverview(){
+  const { stats } = await api("/admin/stats");
+  document.getElementById("kpis").innerHTML = `
+    <div class="kpi hero"><div class="k">GMV (released)</div><div class="v num">${RM(stats.captured.gmv_cents)}</div><div class="s">${stats.captured.count} jobs paid out</div></div>
+    <div class="kpi"><div class="k">Platform revenue</div><div class="v num" style="color:#0B9163">${RM(stats.captured.revenue_cents)}</div><div class="s">after ${RM(stats.captured.discounts_cents)} voucher spend</div></div>
+    <div class="kpi"><div class="k">Held in escrow</div><div class="v num" style="color:var(--blu)">${RM(stats.held.sum_cents)}</div><div class="s">${stats.held.count} active jobs</div></div>
+    <div class="kpi"><div class="k">Users</div><div class="v num">${stats.customers + stats.partners}</div><div class="s">${stats.customers} customers · ${stats.partners} partners</div></div>
+    <div class="kpi"><div class="k">Tasks</div><div class="v num">${stats.tasks.open + stats.tasks.inprogress}</div><div class="s">${stats.tasks.open} open · ${stats.tasks.inprogress} in progress · ${stats.tasks.completed} done</div></div>
+    <div class="kpi"><div class="k">Needs attention</div><div class="v num" style="color:${(stats.kyc_pending+stats.disputes_open)?'#D03A2F':'inherit'}">${stats.kyc_pending + stats.disputes_open}</div><div class="s">${stats.kyc_pending} KYC · ${stats.disputes_open} disputes</div></div>`;
+  const { audit } = await api("/admin/audit?limit=12");
+  document.getElementById("ov-audit").innerHTML = audit.length ? `<table><tbody>
+    ${audit.map(a => `<tr><td class="mono">${when(a.created_at)}</td><td><span class="chip pur">${esc(a.action)}</span></td><td class="mono">${esc(a.ref||"")}</td><td class="mono">${esc(a.actor_id||"")}</td></tr>`).join("")}
+  </tbody></table>` : `<div class="empty">No activity yet.</div>`;
+}
+
+let U_MODE = "all", USERS = [];
+function uMode(btn){ U_MODE = btn.dataset.um;
+  document.querySelectorAll("[data-um]").forEach(b => b.classList.toggle("on", b === btn)); renderUsers(); }
+async function loadUsers(){ const q = U_MODE === "all" ? "" : "?mode=" + U_MODE;
+  USERS = (await api("/admin/users" + q)).users; renderUsers(); }
+function renderUsers(){
+  const q = (document.getElementById("u-q").value || "").toLowerCase();
+  let rows = USERS.filter(u => U_MODE === "all" || u.mode === U_MODE);
+  if (q) rows = rows.filter(u => (u.name||"").toLowerCase().includes(q) || (u.phone||"").includes(q) || (u.email||"").toLowerCase().includes(q));
+  document.getElementById("u-table").innerHTML = rows.length ? `<table>
+    <tr><th>Name</th><th>Mode</th><th>Contact</th><th>Verified</th><th>Status</th><th></th></tr>
+    ${rows.map(u => `<tr>
+      <td><b>${esc(u.name)}</b><div class="mono">${esc(u.id)}</div></td>
+      <td>${u.mode === "partner" ? '<span class="chip blu">Partner</span>' : '<span class="chip">Customer</span>'}</td>
+      <td>${esc(u.phone||"")}<div class="mono">${esc(u.email||"")}</div></td>
+      <td>${u.id_verified ? '<span class="chip grn"><span class="dt"></span>ID Verified</span>' : '<span class="chip">—</span>'}</td>
+      <td>${u.suspended ? '<span class="chip red"><span class="dt"></span>Suspended</span>' : '<span class="chip grn"><span class="dt"></span>Active</span>'}</td>
+      <td>${u.suspended
+        ? `<button class="act grn" onclick="suspend('${u.id}',false)">Unsuspend</button>`
+        : `<button class="act red" onclick="suspend('${u.id}',true)">Suspend</button>`}</td>
+    </tr>`).join("")}</table>` : `<div class="empty">No users match.</div>`;
+}
+async function suspend(id, flag){
+  const reason = flag ? (prompt("Reason (sent to the user):") || "") : "";
+  if (flag && reason === null) return;
+  await api(`/admin/users/${id}/suspend`, "POST", { suspend: flag, reason });
+  toast(flag ? "User suspended" : "User restored"); loadUsers();
+}
+
+async function loadKyc(){
+  const { submissions } = await api("/kyc/pending");
+  document.getElementById("kyc-table").innerHTML = submissions.length ? `<table>
+    <tr><th>Applicant</th><th>IC (last 4)</th><th>Documents</th><th>Submitted</th><th></th></tr>
+    ${submissions.map(k => `<tr>
+      <td><b>${esc(k.full_name)}</b><div class="mono">${esc(k.user_id)}</div></td>
+      <td class="num">•••• ${esc(k.ic_last4)}</td>
+      <td><a class="docimg" href="${esc(k.doc_front_url)}" target="_blank">IC front</a>${k.doc_back_url?`<a class="docimg" href="${esc(k.doc_back_url)}" target="_blank">IC back</a>`:""}<a class="docimg" href="${esc(k.selfie_url)}" target="_blank">Selfie</a></td>
+      <td class="mono">${when(k.created_at)}</td>
+      <td><button class="act grn" onclick="kycReview('${k.id}','approve')">Approve</button>
+          <button class="act red" onclick="kycReview('${k.id}','reject')">Reject</button></td>
+    </tr>`).join("")}</table>` : `<div class="empty">Queue clear — no pending verifications.</div>`;
+}
+async function kycReview(id, action){
+  const reason = action === "reject" ? (prompt("Rejection reason (sent to partner):") || "documents unclear") : undefined;
+  await api(`/kyc/${id}/review`, "POST", { action, reason });
+  toast("KYC " + action + "d"); loadKyc();
+}
+
+let T_STATUS = "";
+function tStatus(btn){ T_STATUS = btn.dataset.ts;
+  document.querySelectorAll("[data-ts]").forEach(b => b.classList.toggle("on", b === btn)); loadTasks(); }
+async function loadTasks(){
+  const { tasks } = await api("/admin/tasks" + (T_STATUS ? "?status=" + T_STATUS : ""));
+  document.getElementById("t-table").innerHTML = tasks.length ? `<table>
+    <tr><th>Task</th><th>Customer</th><th>Location</th><th>Budget</th><th>Status</th><th>Posted</th></tr>
+    ${tasks.map(t => `<tr>
+      <td style="max-width:280px"><b>${esc(t.title)}</b><div class="mono">${esc(t.category)}</div></td>
+      <td>${esc(t.customer_name)}</td>
+      <td>${esc(t.addr||"")}, ${esc(t.city)}</td>
+      <td class="num"><b>${RM(t.budget_cents)}</b></td>
+      <td>${stChip(t.status)}</td>
+      <td class="mono">${when(t.created_at)}</td>
+    </tr>`).join("")}</table>` : `<div class="empty">No tasks with this status.</div>`;
+}
+
+let MAP, MARKERS = [];
+async function loadMap(){
+  const { tasks } = await api("/admin/tasks");
+  if (!MAP) {
+    MAP = L.map("map").setView([3.12, 101.68], 10);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+      { attribution: "© OpenStreetMap © CARTO", maxZoom: 19 }).addTo(MAP);
+  }
+  MARKERS.forEach(m => MAP.removeLayer(m)); MARKERS = [];
+  const color = { open:"#F59F0A", inprogress:"#2F6BFF", completed:"#0FBE7C", cancelled:"#8B9AB6" };
+  for (const t of tasks) {
+    if (t.lat == null || t.lng == null) continue;
+    const m = L.circleMarker([t.lat, t.lng], {
+      radius: 8, weight: 2, color: "#fff", fillColor: color[t.status] || "#8B9AB6", fillOpacity: .95,
+    }).addTo(MAP).bindPopup(
+      `<b>${esc(t.title)}</b><br>${esc(t.addr||"")}, ${esc(t.city)}<br>${RM(t.budget_cents)} · ${esc(t.status)}`);
+    MARKERS.push(m);
+  }
+  if (MARKERS.length) MAP.fitBounds(L.featureGroup(MARKERS).getBounds().pad(.25));
+  setTimeout(() => MAP.invalidateSize(), 60);
+}
+
+let P_STATUS = "";
+function pStatus(btn){ P_STATUS = btn.dataset.ps;
+  document.querySelectorAll("[data-ps]").forEach(b => b.classList.toggle("on", b === btn)); loadPayments(); }
+async function loadPayments(){
+  const { payments } = await api("/admin/payments" + (P_STATUS ? "?status=" + P_STATUS : ""));
+  document.getElementById("p-table").innerHTML = payments.length ? `<table>
+    <tr><th>Job</th><th>Gross</th><th>Voucher</th><th>Partner 80%</th><th>Fee</th><th>Status</th><th>Actions</th></tr>
+    ${payments.map(p => `<tr>
+      <td style="max-width:240px"><b>${esc(p.title)}</b><div class="mono">${esc(p.id)}</div></td>
+      <td class="num">${RM(p.amount_cents)}</td>
+      <td>${p.discount_cents ? `<span class="chip pur">${esc(p.voucher_code||"")} −${RM(p.discount_cents)}</span>` : "—"}</td>
+      <td class="num" style="color:#0B9163"><b>${RM(p.net_cents)}</b></td>
+      <td class="num">${RM(p.fee_cents - (p.discount_cents||0))}</td>
+      <td>${stChip(p.status)}</td>
+      <td>${p.status === "held"
+        ? `<button class="act grn" onclick="payAct('${p.id}','release')">Release</button>
+           <button class="act red" onclick="payAct('${p.id}','refund')">Refund</button>` : "—"}</td>
+    </tr>`).join("")}</table>` : `<div class="empty">No payments with this status.</div>`;
+}
+async function payAct(id, action){
+  const note = prompt(`Note for this manual ${action} (recorded in audit log):`);
+  if (note === null) return;
+  await api(`/admin/payments/${id}/${action}`, "POST", { note });
+  toast(action === "release" ? "Payment released — 80/20 split executed" : "Payment refunded to customer");
+  loadPayments();
+}
+
+async function loadDisputes(){
+  const { disputes } = await api("/disputes/open");
+  document.getElementById("d-table").innerHTML = disputes.length ? `<table>
+    <tr><th>Job</th><th>Opened by</th><th>Reason</th><th>Opened</th><th>Resolution</th></tr>
+    ${disputes.map(d => `<tr>
+      <td><b>${esc(d.title)}</b><div class="mono">${esc(d.task_id)}</div></td>
+      <td class="mono">${esc(d.opened_by)}</td>
+      <td style="max-width:300px">${esc(d.reason)}</td>
+      <td class="mono">${when(d.created_at)}</td>
+      <td><button class="act red" onclick="resolve('${d.id}','refund')">Refund customer</button>
+          <button class="act grn" onclick="resolve('${d.id}','release')">Release to partner</button></td>
+    </tr>`).join("")}</table>` : `<div class="empty">No open disputes. All payments moving normally.</div>`;
+}
+async function resolve(id, action){
+  const note = prompt("Resolution note (recorded, visible in audit):");
+  if (note === null) return;
+  await api(`/disputes/${id}/resolve`, "POST", { action, note });
+  toast("Dispute resolved: " + action); loadDisputes();
+}
+
+async function loadVouchers(){
+  const { vouchers } = await api("/admin/vouchers");
+  document.getElementById("v-table").innerHTML = vouchers.length ? `<table>
+    <tr><th>Code</th><th>Discount</th><th>Rules</th><th>Used</th><th>Spend</th><th>Status</th><th></th></tr>
+    ${vouchers.map(v => `<tr>
+      <td><b>${esc(v.code)}</b></td>
+      <td>${v.type === "percent" ? (v.value/100)+"%" : RM(v.value)}${v.max_discount_cents ? ` <span class="mono">cap ${RM(v.max_discount_cents)}</span>` : ""}</td>
+      <td class="mono">min ${RM(v.min_amount_cents)} · ${v.usage_limit ?? "∞"} total · ${v.per_user_limit}/user</td>
+      <td class="num">${v.redemptions}</td>
+      <td class="num">${RM(v.discount_total_cents)}</td>
+      <td>${v.active ? '<span class="chip grn"><span class="dt"></span>Active</span>' : '<span class="chip"><span class="dt"></span>Off</span>'}</td>
+      <td><button class="act ghost" onclick="toggleVoucher('${v.id}',${v.active?0:1})">${v.active?"Deactivate":"Activate"}</button></td>
+    </tr>`).join("")}</table>` : `<div class="empty">No vouchers yet — create your first campaign above.</div>`;
+}
+async function createVoucher(){
+  const type = document.getElementById("v-type").value;
+  const raw = parseFloat(document.getElementById("v-value").value || "0");
+  const body = {
+    code: document.getElementById("v-code").value,
+    type,
+    value: type === "percent" ? Math.round(raw * 100) : Math.round(raw * 100), // % → bps, RM → cents
+    min_amount_cents: Math.round(parseFloat(document.getElementById("v-min").value || "0") * 100),
+    usage_limit: document.getElementById("v-limit").value ? parseInt(document.getElementById("v-limit").value) : null,
+    per_user_limit: parseInt(document.getElementById("v-peruser").value || "1"),
+  };
+  await api("/admin/vouchers", "POST", body);
+  toast("Voucher created"); loadVouchers();
+}
+async function toggleVoucher(id, active){
+  await api(`/admin/vouchers/${id}`, "PATCH", { active: !!active }); loadVouchers();
+}
+
+async function loadAlgorithm(){
+  const { settings } = await api("/admin/settings");
+  const set = (id, v) => { const el = document.getElementById(id); el.value = v; el.nextElementSibling.value = v; };
+  set("s-dist", settings.algo_w_distance || 50);
+  set("s-rec", settings.algo_w_recency || 30);
+  set("s-bud", settings.algo_w_budget || 20);
+  set("s-comm", settings.commission_bps || 2000);
+}
+async function saveSettings(){
+  await api("/admin/settings", "PATCH", {
+    algo_w_distance: +document.getElementById("s-dist").value,
+    algo_w_recency: +document.getElementById("s-rec").value,
+    algo_w_budget: +document.getElementById("s-bud").value,
+    commission_bps: +document.getElementById("s-comm").value,
+  });
+  toast("Settings saved — applies to new activity");
+}
+
+async function loadAudit(){
+  const { audit } = await api("/admin/audit?limit=200");
+  document.getElementById("a-table").innerHTML = audit.length ? `<table>
+    <tr><th>When</th><th>Action</th><th>Actor</th><th>Ref</th><th>Detail</th></tr>
+    ${audit.map(a => `<tr>
+      <td class="mono">${when(a.created_at)}</td>
+      <td><span class="chip pur">${esc(a.action)}</span></td>
+      <td class="mono">${esc(a.actor_id||"")}</td>
+      <td class="mono">${esc(a.ref||"")}</td>
+      <td class="mono" style="max-width:340px;overflow:hidden;text-overflow:ellipsis">${esc(a.meta||"")}</td>
+    </tr>`).join("")}</table>` : `<div class="empty">No audit entries yet.</div>`;
+}
+
+/* ================= DEMO DATA ================= */
+function demoApi(path){
+  const now_ = Math.floor(Date.now()/1000);
+  const D = {
+    "/admin/stats": { stats: { customers: 128, partners: 46,
+      tasks: { open: 14, inprogress: 9, completed: 87 },
+      held: { count: 9, sum_cents: 312000 },
+      captured: { count: 87, gmv_cents: 2148500, revenue_cents: 386400, discounts_cents: 43300 },
+      kyc_pending: 3, disputes_open: 1 } },
+    "/admin/users": { users: [
+      { id:"usr_demo1", name:"Zaini Kamsi", phone:"+60 12-345 6789", email:"zaini@t.my", mode:"customer", id_verified:1, suspended:0, created_at:now_-86400*40 },
+      { id:"usr_demo2", name:"Hafiz Roslan", phone:"+60 13-222 1144", email:"hafiz@t.my", mode:"partner", id_verified:1, suspended:0, created_at:now_-86400*35 },
+      { id:"usr_demo3", name:"Kumar Selvam", phone:"+60 16-909 8811", email:"kumar@t.my", mode:"partner", id_verified:0, suspended:0, created_at:now_-86400*3 },
+      { id:"usr_demo4", name:"Farah Nadia", phone:"+60 17-511 0090", email:"farah@t.my", mode:"partner", id_verified:1, suspended:1, created_at:now_-86400*20 } ] },
+    "/kyc/pending": { submissions: [
+      { id:"kyc_demo1", user_id:"usr_demo3", full_name:"Kumar Selvam", ic_last4:"4412", doc_front_url:"#", doc_back_url:"#", selfie_url:"#", created_at:now_-7200 },
+      { id:"kyc_demo2", user_id:"usr_demo5", full_name:"Aiman Zubir", ic_last4:"7781", doc_front_url:"#", selfie_url:"#", created_at:now_-3600 } ] },
+    "/admin/tasks": { tasks: [
+      { id:"tsk_d1", title:"Assemble IKEA PAX wardrobe", category:"assembly", customer_name:"Zaini K.", addr:"Mont Kiara", city:"Kuala Lumpur", lat:3.171, lng:101.652, budget_cents:18000, status:"open", created_at:now_-7200 },
+      { id:"tsk_d2", title:"Deep cleaning double-storey", category:"cleaning", customer_name:"Nurul A.", addr:"Taman Desa", city:"Kuala Lumpur", lat:3.099, lng:101.685, budget_cents:42000, status:"inprogress", created_at:now_-86400 },
+      { id:"tsk_d3", title:"Aircon service x3", category:"aircon", customer_name:"Marcus T.", addr:"Wangsa Maju", city:"Kuala Lumpur", lat:3.203, lng:101.737, budget_cents:24000, status:"open", created_at:now_-1800 },
+      { id:"tsk_d4", title:"Garden tidy-up", category:"gardening", customer_name:"Jason L.", addr:"Seksyen 7", city:"Shah Alam", lat:3.066, lng:101.502, budget_cents:20000, status:"completed", created_at:now_-86400*4 },
+      { id:"tsk_d5", title:"TV mounting 65\"", category:"handyman", customer_name:"Devi R.", addr:"USJ 9", city:"Subang Jaya", lat:3.045, lng:101.582, budget_cents:15000, status:"cancelled", created_at:now_-86400*2 } ] },
+    "/admin/payments": { payments: [
+      { id:"pay_d1", title:"Deep cleaning double-storey", amount_cents:40000, discount_cents:0, voucher_code:null, net_cents:32000, fee_cents:8000, status:"held", created_at:now_-86000 },
+      { id:"pay_d2", title:"Garden tidy-up", amount_cents:19000, discount_cents:1900, voucher_code:"BERES10", net_cents:15200, fee_cents:3800, status:"captured", created_at:now_-86400*3 },
+      { id:"pay_d3", title:"TV mounting 65\"", amount_cents:15000, discount_cents:0, voucher_code:null, net_cents:12000, fee_cents:3000, status:"refunded", created_at:now_-86400*2 } ] },
+    "/disputes/open": { disputes: [
+      { id:"dsp_d1", task_id:"tsk_d2", title:"Deep cleaning double-storey", opened_by:"usr_demo1", reason:"Two rooms not cleaned to scope; photos attached in chat.", created_at:now_-4000 } ] },
+    "/admin/vouchers": { vouchers: [
+      { id:"vch_d1", code:"BERES10", type:"percent", value:1000, min_amount_cents:5000, max_discount_cents:3000, usage_limit:200, per_user_limit:1, active:1, redemptions:37, discount_total_cents:43300, created_at:now_-86400*10 },
+      { id:"vch_d2", code:"MERDEKA5", type:"fixed", value:500, min_amount_cents:10000, max_discount_cents:null, usage_limit:null, per_user_limit:2, active:0, redemptions:112, discount_total_cents:56000, created_at:now_-86400*30 } ] },
+    "/admin/settings": { settings: { algo_w_distance:"50", algo_w_recency:"30", algo_w_budget:"20", commission_bps:"2000" } },
+  };
+  if (path.startsWith("/admin/audit")) return Promise.resolve({ audit: [
+    { created_at:now_-600, action:"admin.payment.release", actor_id:"usr_admin", ref:"pay_d2", meta:'{"note":"partner provided proof"}' },
+    { created_at:now_-4000, action:"dispute.open", actor_id:"usr_demo1", ref:"dsp_d1", meta:'{"task":"tsk_d2"}' },
+    { created_at:now_-7200, action:"kyc.submit", actor_id:"usr_demo3", ref:"kyc_demo1", meta:'{"ic_last4":"4412"}' },
+    { created_at:now_-86400, action:"bid.accept", actor_id:"usr_demo1", ref:"bid_d9", meta:'{"amount":40000}' },
+    { created_at:now_-86400*3, action:"voucher.create", actor_id:"usr_admin", ref:"vch_d1", meta:'{"code":"BERES10"}' } ] });
+  for (const k in D) if (path.startsWith(k)) return Promise.resolve(D[k]);
+  return Promise.resolve({ ok: true });
+}
+
+/* boot */
+document.body.classList.toggle("demo", DEMO);
+go("overview");
+</script>
+</body>
+</html>

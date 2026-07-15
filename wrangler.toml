@@ -1,0 +1,21 @@
+name = "berespro-api"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# D1 database: no database_id here on purpose.
+# When Cloudflare deploys this Worker from GitHub, it AUTO-CREATES the D1 database
+# named "berespro-db" and binds it as DB. No wrangler, no manual ID needed.
+[[d1_databases]]
+binding = "DB"
+database_name = "berespro-db"
+
+[vars]
+CLERK_ISSUER = "https://good-penguin-19.clerk.accounts.dev"
+COMMISSION_BPS = "2000"        # 20% platform fee (2000 bps)
+REQUIRE_KYC_TO_BID = "1"       # partners must pass KYC before bidding
+
+# Secrets: set these in the Cloudflare dashboard (Workers > Settings > Variables):
+#   JWT_SECRET     (Encrypt)  random 40+ char string for signing session JWTs
+#   CLERK_ISSUER   already set above as a plain var
+#   ADMIN_IDS      (plain)    your user id(s), comma-separated, for admin dashboard
+#   PSP_SECRET / PSP_KEY / PSP_BASE   later, when you register a PSP
