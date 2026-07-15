@@ -3,6 +3,8 @@ import { json, err, id, now, haversineKm, readBody } from "../lib/util.js";
 import { requireUser } from "../lib/auth.js";
 import { rateLimit, vint, vstr, vnum, LIMITS } from "../lib/guard.js";
 import { getSettings } from "../lib/settings.js";
+import { createNotif } from "./bids.js";
+import { pushNotify } from "../lib/notify.js";
 
 // POST /tasks  (customer)
 export async function createTask(req, env) {
@@ -32,7 +34,40 @@ export async function createTask(req, env) {
   ).bind(tid, user.id, b.title, b.category, b.city, b.addr || null, b.lat, b.lng,
          b.budget_cents, b.date_label || null, b.time_slot || null, b.description || null, now()).run();
   const task = await env.DB.prepare("SELECT * FROM tasks WHERE id = ?").bind(tid).first();
+
+  // Tell nearby partners a job just appeared. Without this, partners have to keep
+  // opening the app and checking, which is the difference between a marketplace
+  // that moves and one that sits still. Best-effort: never fails the post.
+  try { await notifyNearbyPartners(env, task, user.id); } catch (_) {}
+
   return json({ task: shapeTask(task) }, 201);
+}
+
+// Notify partners whose saved position is within NOTIFY_RADIUS_KM of a new task.
+// Bounding-box prefilter in SQL (indexed), exact haversine in JS, hard cap on fan-out.
+const NOTIFY_RADIUS_KM = 15;
+const NOTIFY_MAX = 50;
+async function notifyNearbyPartners(env, task, posterId) {
+  const dLat = NOTIFY_RADIUS_KM / 111;
+  const dLng = NOTIFY_RADIUS_KM / (111 * Math.cos((task.lat * Math.PI) / 180) || 1);
+  const { results } = await env.DB.prepare(
+    "SELECT id, lat, lng FROM users WHERE mode='partner' AND suspended=0 AND id != ? " +
+    "AND lat BETWEEN ? AND ? AND lng BETWEEN ? AND ? LIMIT 300"
+  ).bind(posterId, task.lat - dLat, task.lat + dLat, task.lng - dLng, task.lng + dLng).all();
+
+  const near = results
+    .map((p) => ({ ...p, km: haversineKm(task.lat, task.lng, p.lat, p.lng) }))
+    .filter((p) => p.km <= NOTIFY_RADIUS_KM)
+    .sort((a, b) => a.km - b.km)
+    .slice(0, NOTIFY_MAX);
+
+  const rm = (task.budget_cents / 100).toFixed(2);
+  for (const p of near) {
+    await createNotif(env, p.id, "job",
+      `New job ${p.km < 1 ? "under 1" : p.km.toFixed(1)} km away`,
+      `${task.title} · RM ${rm}`);
+    await pushNotify(env, p.id, "New job near you", `${task.title} · RM ${rm}`);
+  }
 }
 
 // GET /tasks?lat=&lng=&radius=&cat=&sort=   (partner feed, open tasks only)
