@@ -2,12 +2,13 @@ name = "berespro-api"
 main = "src/index.js"
 compatibility_date = "2024-11-01"
 
-# D1 database: no database_id here on purpose.
-# When Cloudflare deploys this Worker from GitHub, it AUTO-CREATES the D1 database
-# named "berespro-db" and binds it as DB. No wrangler, no manual ID needed.
+# D1 database. The database_id below points to the D1 database you created in the
+# Cloudflare dashboard (Storage & Databases > D1 > berespro-db).
+# This id is not a secret; it is useless without access to your Cloudflare account.
 [[d1_databases]]
 binding = "DB"
 database_name = "berespro-db"
+database_id = "9595441c-9638-4b61-ad6a-0e15c0be23af"
 
 [vars]
 CLERK_ISSUER = "https://good-penguin-19.clerk.accounts.dev"
