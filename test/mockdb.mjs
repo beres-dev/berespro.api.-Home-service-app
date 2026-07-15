@@ -7,7 +7,7 @@ class Stmt {
   async all(){ return this.db._exec(this.sql,this.args); }
 }
 export class MockDB {
-  constructor(){ this.t={users:[],sessions:[],tasks:[],bids:[],reviews:[],partner_merchants:[],payments:[],kyc_submissions:[],disputes:[],audit_log:[],rate_limits:[],vouchers:[],voucher_redemptions:[],settings:[],devices:[],notifications:[]}; }
+  constructor(){ this.t={users:[],sessions:[],tasks:[],bids:[],reviews:[],partner_merchants:[],payments:[],kyc_submissions:[],disputes:[],audit_log:[],rate_limits:[],vouchers:[],voucher_redemptions:[],settings:[],devices:[],notifications:[],cancellations:[]}; }
   prepare(sql){ return new Stmt(this,sql); }
   async batch(stmts){ const out=[]; for(const s of stmts) out.push(this._exec(s.sql,s.args)); return out; }
   _table(sql){ const m=sql.match(/(?:FROM|INTO|UPDATE)\s+(\w+)/i); return m&&this.t[m[1]]?m[1]:null; }
@@ -42,6 +42,9 @@ export class MockDB {
         if(rhs==='?'){ const v=args[ai++]; setters.push([col,()=>v]); }
         else if(/^'.*'$/.test(rhs)){ const v=rhs.slice(1,-1); setters.push([col,()=>v]); }
         else if(/^-?\d+$/.test(rhs)){ const v=parseInt(rhs,10); setters.push([col,()=>v]); }
+        // NULL is a literal, not a bound arg. Treating it as one used to consume the
+        // WHERE's argument, so the UPDATE matched nothing and failed silently.
+        else if(/^NULL$/i.test(rhs)){ setters.push([col,()=>null]); }
         else { const v=args[ai++]; setters.push([col,()=>v]); }
       }
       // where: support "id=?", "user_id=?", and "task_id=? AND id!=?"
@@ -84,6 +87,17 @@ export class MockDB {
         f = f.map(r=>{ const u=this.t.users.find(x=>x.id===r[jk]); const o={...r};
           for(const [col,alias] of pairs) o[alias]=u?u[col]:null; return o; });
       }
+      // SELECT DISTINCT col[,col] — without this, repeated rows for the same value
+      // look like separate entities and callers over-count (e.g. one customer
+      // paying 3 times reads as 3 different customers).
+      const dm = sql.match(/^\s*SELECT\s+DISTINCT\s+([\w,\s.]+?)\s+FROM/i);
+      if (dm) {
+        const cols = dm[1].split(",").map(c => c.trim().replace(/^\w+\./, ""));
+        const seen = new Set();
+        f = f.filter(r => { const k = cols.map(c => r[c]).join("|");
+          if (seen.has(k)) return false; seen.add(k); return true; });
+        f = f.map(r => { const o = {}; for (const c of cols) o[c] = r[c]; return o; });
+      }
       return {results:f};
     }
     return {results:[]};
@@ -98,6 +112,13 @@ export class MockDB {
     for(const c of conds){
       if(c.includes('BETWEEN')){ const col=c.split('BETWEEN')[0].trim(); const lo=args[ai++],hi=args[ai++]; f=f.filter(r=>r[col]>=lo&&r[col]<=hi); }
       else if(/!=\s*\?/.test(c)){ const col=c.split('!=')[0].trim(); const v=args[ai++]; f=f.filter(r=>r[col]!==v); }
+      // Range comparisons must be checked BEFORE plain "=", otherwise ">= ?" matches
+      // the "= ?" branch and we end up looking for a column literally named "col >".
+      else if(/(>=|<=|>|<)\s*\?/.test(c)){
+        const m=c.match(/^\s*(\w+)\s*(>=|<=|>|<)\s*\?\s*$/);
+        if(m){ const [,col,op]=m; const v=args[ai++];
+          f=f.filter(r=> op===">=" ? r[col]>=v : op==="<=" ? r[col]<=v : op===">" ? r[col]>v : r[col]<v); }
+      }
       else if(/=\s*\?/.test(c)){ const col=c.split('=')[0].trim(); const v=args[ai++]; f=f.filter(r=>String(r[col])===String(v)); }
       // literal comparisons on ANY column, e.g. mode='partner', suspended=0, status='open'.
       // (This used to only understand status='...', so other literal conditions were
