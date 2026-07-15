@@ -1,4 +1,4 @@
-// Auto-generated from schema.sql — do not edit here; edit schema.sql and regenerate.
+// Auto-generated from schema.sql. Do not edit here; edit schema.sql and regenerate.
 export default `-- ============================================================
 -- BERESPRO API — D1 schema (prepaid wallet model)
 -- Money is stored in CENTS (integer) everywhere. Never floats.
@@ -138,6 +138,9 @@ CREATE TABLE IF NOT EXISTS payments (
   discount_cents INTEGER NOT NULL DEFAULT 0, -- voucher discount (absorbed by platform fee)
   voucher_code  TEXT,
   psp_ref       TEXT,                        -- PSP transaction id
+  card_fp       TEXT,                        -- stable card fingerprint from the PSP (same physical
+                                             -- card = same value, across tokens AND accounts).
+                                             -- Used to spot one card farming many accounts.
   status        TEXT NOT NULL DEFAULT 'pending', -- pending | held | captured | refunded | failed
   created_at    INTEGER NOT NULL,
   updated_at    INTEGER NOT NULL,
@@ -147,6 +150,7 @@ CREATE TABLE IF NOT EXISTS payments (
 CREATE INDEX IF NOT EXISTS idx_payments_task ON payments(task_id);
 CREATE INDEX IF NOT EXISTS idx_payments_pspref ON payments(psp_ref);
 CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
+CREATE INDEX IF NOT EXISTS idx_payments_cardfp ON payments(card_fp);
 
 -- ---------- KYC submissions (partner identity verification) ----------
 -- We store DOCUMENT REFERENCES and masked identifiers only — never raw IC numbers.
@@ -227,6 +231,21 @@ CREATE TABLE IF NOT EXISTS voucher_redemptions (
 );
 CREATE INDEX IF NOT EXISTS idx_vred_voucher ON voucher_redemptions(voucher_id);
 CREATE INDEX IF NOT EXISTS idx_vred_user ON voucher_redemptions(voucher_id, user_id);
+
+-- ---------- cancellations (rolling record; drives partner strikes) ----------
+CREATE TABLE IF NOT EXISTS cancellations (
+  id          TEXT PRIMARY KEY,             -- can_xxx
+  task_id     TEXT NOT NULL,
+  user_id     TEXT NOT NULL,                -- who cancelled
+  role        TEXT NOT NULL,                -- customer | partner
+  stage       TEXT NOT NULL,                -- open | accepted | inprogress
+  reason      TEXT,
+  created_at  INTEGER NOT NULL,
+  FOREIGN KEY (task_id) REFERENCES tasks(id),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS idx_cancel_user ON cancellations(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_cancel_task ON cancellations(task_id);
 
 -- ---------- settings (tunable platform parameters incl. feed algorithm) ----------
 CREATE TABLE IF NOT EXISTS settings (

@@ -34,6 +34,9 @@ const ROUTES = [
   ["POST", "/jobs/:taskId/complete", J.markComplete],
   ["POST", "/jobs/:taskId/confirm", J.confirmComplete],
   ["POST", "/jobs/:taskId/cancel", J.cancelJob],
+  ["POST", "/tasks/:id/cancel", J.cancelOpenTask],
+  ["POST", "/jobs/:taskId/partner-cancel", J.partnerCancelJob],
+  ["DELETE", "/bids/:id", J.withdrawBid],
   ["POST", "/jobs/:taskId/review", J.postReview],
 
   ["GET",  "/payments/:id", PAY.getPayment],
