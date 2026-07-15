@@ -99,7 +99,15 @@ export class MockDB {
       if(c.includes('BETWEEN')){ const col=c.split('BETWEEN')[0].trim(); const lo=args[ai++],hi=args[ai++]; f=f.filter(r=>r[col]>=lo&&r[col]<=hi); }
       else if(/!=\s*\?/.test(c)){ const col=c.split('!=')[0].trim(); const v=args[ai++]; f=f.filter(r=>r[col]!==v); }
       else if(/=\s*\?/.test(c)){ const col=c.split('=')[0].trim(); const v=args[ai++]; f=f.filter(r=>String(r[col])===String(v)); }
-      else if(/status\s*=\s*'(\w+)'/.test(c)){ const v=c.match(/status\s*=\s*'(\w+)'/)[1]; f=f.filter(r=>r.status===v); }
+      // literal comparisons on ANY column, e.g. mode='partner', suspended=0, status='open'.
+      // (This used to only understand status='...', so other literal conditions were
+      //  silently ignored and tests passed when real D1 would have filtered.)
+      else if(/^\s*(\w+)\s*=\s*'([^']*)'\s*$/.test(c)){
+        const m=c.match(/^\s*(\w+)\s*=\s*'([^']*)'\s*$/); f=f.filter(r=>String(r[m[1]])===m[2]); }
+      else if(/^\s*(\w+)\s*=\s*(-?\d+(?:\.\d+)?)\s*$/.test(c)){
+        const m=c.match(/^\s*(\w+)\s*=\s*(-?\d+(?:\.\d+)?)\s*$/); f=f.filter(r=>Number(r[m[1]])===Number(m[2])); }
+      else if(/^\s*(\w+)\s*!=\s*'([^']*)'\s*$/.test(c)){
+        const m=c.match(/^\s*(\w+)\s*!=\s*'([^']*)'\s*$/); f=f.filter(r=>String(r[m[1]])!==m[2]); }
     }
     return f;
   }
