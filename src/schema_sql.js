@@ -6,6 +6,12 @@ export default `-- ============================================================
 -- Berespro never touches customer funds.
 -- ============================================================
 
+-- ---------- migrations (safe to re-run; /setup skips "duplicate column") ----------
+-- CREATE TABLE IF NOT EXISTS does not add columns to a table that already
+-- exists, so any new column added to an existing table needs an explicit ALTER
+-- here. Each one is its own statement so a partial failure doesn't cascade.
+ALTER TABLE payments ADD COLUMN card_fp TEXT;
+
 -- ---------- users ----------
 CREATE TABLE IF NOT EXISTS users (
   id            TEXT PRIMARY KEY,           -- usr_xxx

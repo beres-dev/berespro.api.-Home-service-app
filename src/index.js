@@ -104,14 +104,26 @@ export default {
     if (path === "/setup") {
       const key = url.searchParams.get("key") || "";
       if (!env.SETUP_KEY || key !== env.SETUP_KEY) return err("forbidden — set SETUP_KEY and pass ?key=", 403);
-      try {
-        const stmts = SCHEMA_SQL.split(/;\s*\n/).map(x=>x.trim())
-          // drop empty chunks AND chunks that are comment-only (no real SQL keyword left
-          // after stripping "-- ..." lines), e.g. trailing notes at the end of schema.sql.
-          .filter(x => x && x.replace(/^--.*$/gm, "").trim().length > 0);
-        for (const st of stmts) { await env.DB.prepare(st).run(); }
-        return json({ ok: true, tables_initialised: stmts.length });
-      } catch (e) { return err("setup failed: " + (e && e.message), 500); }
+      const stmts = SCHEMA_SQL.split(/;\s*\n/).map(x=>x.trim())
+        // drop empty chunks AND chunks that are comment-only (no real SQL keyword left
+        // after stripping "-- ..." lines), e.g. trailing notes at the end of schema.sql.
+        .filter(x => x && x.replace(/^--.*$/gm, "").trim().length > 0);
+      let applied = 0, skipped = 0;
+      const errors = [];
+      for (const st of stmts) {
+        try { await env.DB.prepare(st).run(); applied++; }
+        catch (e) {
+          const msg = (e && e.message) || "";
+          // Re-running /setup after adding a column or table is expected and safe.
+          // "duplicate column" (ALTER TABLE ADD COLUMN) and "already exists" (CREATE
+          // TABLE/INDEX phrasing variants) mean the schema is already at this
+          // statement — skip it, don't fail the whole run.
+          if (/duplicate column|already exists/i.test(msg)) { skipped++; }
+          else { errors.push({ statement: st.slice(0, 80), error: msg }); }
+        }
+      }
+      if (errors.length) return err("setup had real failures: " + JSON.stringify(errors), 500);
+      return json({ ok: true, applied, skipped, total: stmts.length });
     }
 
     // ── whoami: returns your user id so you can set yourself as ADMIN_IDS.
