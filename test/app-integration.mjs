@@ -1,7 +1,7 @@
 // INTEGRATION TEST: the app's real API layer driving the real backend worker.
-import { MockDB } from '/home/claude/berespro-api/test/mockdb.mjs';
-import worker from '/home/claude/berespro-api/src/index.js';
-import { signJWT, now, id as mkid } from '/home/claude/berespro-api/src/lib/util.js';
+import { MockDB } from './mockdb.mjs';
+import worker from '../src/index.js';
+import { signJWT, now, id as mkid } from '../src/lib/util.js';
 import fs from 'fs';
 
 const env = {
@@ -21,7 +21,7 @@ global.localStorage = { getItem:k=>store[k]||null, setItem:(k,v)=>store[k]=Strin
 global.window = { open: (u)=>{ window._opened = u; } };
 
 // ---- extract app core + API layer ----
-const src = fs.readFileSync('/home/claude/berespro/berespro-app.html','utf8');
+const src = fs.readFileSync(new URL('../app/index.html', import.meta.url),'utf8');
 const core = src.split('/*__CORE_START__*/')[1].split('/*__CORE_END__*/')[0];
 const apiL = src.split('/*__API_START__*/')[1].split('/*__API_END__*/')[0];
 let lastToast = '';
