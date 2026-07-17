@@ -100,8 +100,8 @@ label.f{display:block;font-size:11.5px;font-weight:700;color:var(--mut);margin:1
   <nav class="nav" id="nav"></nav>
   <div class="envbox">
     <label>API Base URL</label>
-    <input id="cfg-base" placeholder="https://berespro-api.xxx.workers.dev">
-    <label>Admin Access Token</label>
+    <input id="cfg-base" placeholder="https://berespro.zainihafz.workers.dev">
+    <label>Admin Access Token <span style="opacity:.6;font-weight:400">(app → Settings → Admin token)</span></label>
     <input id="cfg-token" type="password" placeholder="Bearer token">
     <div class="row">
       <button class="bttn" onclick="saveCfg()">Connect</button>
@@ -228,7 +228,7 @@ label.f{display:block;font-size:11.5px;font-weight:700;color:var(--mut);margin:1
 
 <script>
 /* ================= config & API ================= */
-let CFG = { base: "", token: "" };
+let CFG = { base: "https://berespro.zainihafz.workers.dev", token: "", refresh: "" };
 try { CFG = JSON.parse(localStorage.getItem("bp.admin.cfg")) || CFG; } catch {}
 document.getElementById("cfg-base").value = CFG.base || "";
 document.getElementById("cfg-token").value = CFG.token || "";
@@ -236,7 +236,10 @@ let DEMO = !CFG.base;
 
 function saveCfg(){
   CFG.base = document.getElementById("cfg-base").value.trim().replace(/\/+$/,"");
-  CFG.token = document.getElementById("cfg-token").value.trim();
+  const raw = document.getElementById("cfg-token").value.trim();
+  // The app copies "<access>|<refresh>" so the panel can keep itself alive.
+  if (raw.includes("|")) { const [a,rt] = raw.split("|"); CFG.token = a.trim(); CFG.refresh = (rt||"").trim(); }
+  else { CFG.token = raw; CFG.refresh = ""; }
   try { localStorage.setItem("bp.admin.cfg", JSON.stringify(CFG)); } catch {}
   DEMO = !CFG.base; document.body.classList.toggle("demo", DEMO);
   toast(DEMO ? "No base URL — demo mode" : "Connected to " + CFG.base);
@@ -244,16 +247,36 @@ function saveCfg(){
 }
 function demoMode(){ DEMO = true; document.body.classList.add("demo"); toast("Demo mode — sample data"); loadSection(CUR); }
 
-async function api(path, method = "GET", body){
+async function api(path, method = "GET", body, _retry){
   if (DEMO) return demoApi(path, method, body);
   const r = await fetch(CFG.base + path, {
     method,
     headers: { "content-type": "application/json", authorization: "Bearer " + CFG.token },
     body: body ? JSON.stringify(body) : undefined,
   });
+  // Access tokens are deliberately short-lived (1h). Rather than weakening that,
+  // the panel refreshes itself the same way the app does, so you never get
+  // kicked out mid-session.
+  if (r.status === 401 && CFG.refresh && !_retry) {
+    if (await refreshSession()) return api(path, method, body, true);
+  }
   const j = await r.json().catch(() => ({}));
   if (!r.ok) { toast("Error: " + (j.error?.message || r.status)); throw new Error(j.error?.message || r.status); }
   return j;
+}
+
+async function refreshSession(){
+  try {
+    const r = await fetch(CFG.base + "/auth/refresh", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ refreshToken: CFG.refresh }),
+    });
+    if (!r.ok) { toast("Session expired. Paste a fresh token from the app."); return false; }
+    const j = await r.json();
+    CFG.token = j.accessToken; CFG.refresh = j.refreshToken;   // refresh tokens rotate
+    try { localStorage.setItem("bp.admin.cfg", JSON.stringify(CFG)); } catch {}
+    return true;
+  } catch { return false; }
 }
 function toast(m){ const t = document.getElementById("toast"); t.textContent = m; t.style.display = "block";
   clearTimeout(t._t); t._t = setTimeout(() => t.style.display = "none", 2600); }

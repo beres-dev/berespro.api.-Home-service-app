@@ -1,4 +1,13 @@
 node_modules/
 .wrangler/
 *.log
+
+# Secrets. Fail handoff guna nama-nama ni, senang tersilap drag masuk repo.
 SECRETS_TO_SET.txt
+CURRENT_SECRETS_DO_NOT_UPLOAD.txt
+*SECRET*
+*secrets*
+.dev.vars
+.env
+.env.*
+BERESPRO_FULL_HANDOFF.zip
