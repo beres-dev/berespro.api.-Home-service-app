@@ -9,6 +9,7 @@ const env = {
   COMMISSION_BPS: '2000',
   PUBLIC_URL: 'https://api.test',
   PSP_SECRET: 'psp-secret',
+  XENDIT_CALLBACK_TOKEN: 'test-callback-token',
   ADMIN_IDS: 'admin1',
   REQUIRE_KYC_TO_BID: '1',
   DEV_LOGIN: '1',
@@ -22,8 +23,22 @@ async function seedUser(uid,name,mode){
 const H=(t)=>({authorization:'Bearer '+t});
 const call=(method,path,token,body)=>worker.fetch(new Request('https://api.test'+path,{method,headers:{...(token?H(token):{}),'content-type':'application/json'},body:body?JSON.stringify(body):undefined}),env);
 const j=async r=>({status:r.status,body:await r.json()});
-async function webhook(payload){ const raw=JSON.stringify(payload); const sig=await sha256hex(raw+env.PSP_SECRET);
-  return j(await worker.fetch(new Request('https://api.test/webhooks/psp',{method:'POST',headers:{'x-signature':sig,'content-type':'application/json'},body:raw}),env)); }
+// Xendit verifies webhooks with a static token in x-callback-token (not an HMAC),
+// and wraps the payload as { event, data }. The harness mirrors that exactly so
+// these tests fail if the real contract is ever broken.
+async function webhook(payload){
+  const raw = JSON.stringify(payload);
+  return j(await worker.fetch(new Request('https://api.test/webhooks/psp', {
+    method:'POST',
+    headers:{ 'x-callback-token': env.XENDIT_CALLBACK_TOKEN, 'content-type':'application/json' },
+    body: raw,
+  }), env));
+}
+// Our payment id is sent to Xendit as reference_id, so it comes back that way.
+const held = (paymentId) => ({
+  event: 'payment.authorization',
+  data: { reference_id: paymentId, payment_id: 'py-' + paymentId, status: 'AUTHORIZED' },
+});
 
 let pass=0,fail=0;
 const ok=(n,c,x)=>{ if(c){pass++;console.log('  ✓',n);} else {fail++;console.log('  ✗',n,x?JSON.stringify(x):'');} };
@@ -83,7 +98,7 @@ const payId=r.body.payment_id;
 ok('task still open until funds held', (await j(await call('GET',`/tasks/${taskId}`,cust))).body.task.status==='open');
 
 console.log('\n— PSP webhook: funds HELD → acceptance finalized —');
-r=await webhook({ type:'payment.held', reference:'sim_'+payId });
+r=await webhook(held(payId));
 ok('webhook held ok', r.body.ok===true, r.body);
 r=await j(await call('GET',`/tasks/${taskId}`,cust));
 ok('task now inprogress', r.body.task.status==='inprogress', r.body);
@@ -110,8 +125,8 @@ const t2=r.body.task.id;
 r=await j(await call('POST',`/tasks/${t2}/bids`,part,{amount_cents:12000}));
 const b2=r.body.bid_id;
 r=await j(await call('POST',`/bids/${b2}/accept`,cust));
-const pay2='sim_'+r.body.payment_id;
-await webhook({ type:'payment.held', reference:pay2 });
+const pay2=r.body.payment_id;
+await webhook(held(pay2));
 r=await j(await call('POST',`/jobs/${t2}/cancel`,cust));
 ok('cancel in-progress → refund + cancelled', r.body.ok===true, r.body);
 r=await j(await call('GET',`/tasks/${t2}`,cust));
@@ -129,7 +144,7 @@ const t3=r.body.task.id;
 r=await j(await call('POST',`/tasks/${t3}/bids`,part,{amount_cents:30000}));
 const b3=r.body.bid_id;
 r=await j(await call('POST',`/bids/${b3}/accept`,cust));
-await webhook({ type:'payment.held', reference:'sim_'+r.body.payment_id });
+await webhook(held(r.body.payment_id));
 const payId3=r.body.payment_id;
 r=await j(await call('POST',`/jobs/${t3}/dispute`,cust,{reason:'Work incomplete, paint peeling on two walls'}));
 ok('dispute opened', r.status===201, r.body);
@@ -157,7 +172,7 @@ r=await j(await call('POST',`/tasks/${tv}/bids`,part,{amount_cents:17000}));
 r=await j(await call('POST',`/bids/${r.body.bid_id}/accept`,cust,{voucher_code:'BERES10'}));
 ok('accept w/ voucher: customer pays 15300, partner net 13600 UNCHANGED', r.body.customer_pays_cents===15300 && r.body.net_cents===13600 && r.body.discount_cents===1700, r.body);
 const payV=r.body.payment_id;
-await webhook({ type:'payment.held', reference:'sim_'+payV });
+await webhook(held(payV));
 r=await j(await call('POST','/vouchers/preview',cust,{code:'BERES10',amount_cents:17000}));
 ok('second use blocked (per_user_limit=1)', r.body.valid===false && r.body.reason==='user_limit_reached', r.body);
 
