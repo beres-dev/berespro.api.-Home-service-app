@@ -1,9 +1,10 @@
 // src/routes/payments.js — PSP escrow: webhook, capture on completion, status read.
 import { json, err, id, now, readBody, sha256hex } from "../lib/util.js";
 import { requireUser } from "../lib/auth.js";
-import { capturePayment, voidPayment } from "../lib/psp.js";
+import { capturePayment, voidPayment, verifyWebhook } from "../lib/psp.js";
 import { createNotif } from "./bids.js";
 import { pushNotify } from "../lib/notify.js";
+import { audit } from "../lib/guard.js";
 
 // GET /payments/:id  (customer or partner on that payment)
 export async function getPayment(req, env, params) {
@@ -18,55 +19,74 @@ export async function getPayment(req, env, params) {
 // POST /webhooks/psp  (called by the gateway)
 // Handles: funds held (finalize acceptance), captured, refunded, merchant activated.
 export async function pspWebhook(req, env) {
+  // Xendit signs webhooks with a static token in x-callback-token, not an HMAC.
+  // An unverified webhook can move money, so this is a hard gate.
+  if (!verifyWebhook(env, req)) return err("bad callback token", 401);
+
   const raw = await req.text();
-  const sig = req.headers.get("x-signature") || "";
-  const expected = await sha256hex(raw + env.PSP_SECRET);
-  // SECURITY: signature is REQUIRED — an unsigned webhook is rejected.
-  if (!sig || sig !== expected) return err("bad signature", 401);
-
   let ev;
-  try { ev = JSON.parse(raw); } catch { ev = Object.fromEntries(new URLSearchParams(raw)); }
+  try { ev = JSON.parse(raw); } catch { return json({ ok: true }); }
 
-  const type = ev.type || ev.event || ev.status; // provider-specific; adapt in your adapter
-  const pspRef = ev.reference || ev.id || ev.payment_id || ev.ref;
+  // Xendit shape: { event, business_id, created, data: { payment_id, payment_request_id,
+  //                 reference_id, status, channel_properties: { card_details: {...} } } }
+  const event = ev.event || "";
+  const d = ev.data || {};
 
-  // --- merchant activation ---
-  if (type === "merchant.activated" || ev.merchant_status === "active") {
-    const mref = ev.merchant_reference || ev.reference; // we passed userId as reference
-    if (mref) {
-      await env.DB.prepare("UPDATE partner_merchants SET status='active', updated_at=? WHERE user_id=?")
-        .bind(now(), mref).run();
+  // --- partner sub-account went live (xenPlatform) ---
+  if (/account/i.test(event)) {
+    const accId = d.id || d.account_id || ev.id;
+    if (accId && /LIVE|ACTIVE/i.test(d.status || ev.status || "")) {
+      await env.DB.prepare("UPDATE partner_merchants SET status='active', updated_at=? WHERE psp_merchant_id=?")
+        .bind(now(), accId).run();
     }
     return json({ ok: true });
   }
 
-  if (!pspRef) return json({ ok: true });
-  const pay = await env.DB.prepare("SELECT * FROM payments WHERE psp_ref=?").bind(pspRef).first();
+  // reference_id is the id we generated; payment_request_id is what we stored as psp_ref.
+  const ourRef = d.reference_id || null;
+  const prId = d.payment_request_id || null;
+  const pyId = d.payment_id || null;
+
+  let pay = null;
+  if (ourRef) pay = await env.DB.prepare("SELECT * FROM payments WHERE id=?").bind(ourRef).first();
+  if (!pay && prId) pay = await env.DB.prepare("SELECT * FROM payments WHERE psp_ref=?").bind(prId).first();
+  // Unknown payment: ack anyway. Xendit retries 6 times on non-2xx, and retrying
+  // something we will never recognise just generates noise.
   if (!pay) return json({ ok: true });
 
-  // --- funds now HELD -> finalize the acceptance (idempotent) ---
-  if (type === "payment.held" || type === "authorized" || ev.state === "held") {
-    if (pay.status !== "pending") return json({ ok: true });
+  // Capture needs the payment id, and the card fingerprint only appears here.
+  // Record both the first time we see them.
+  const fp = (d.channel_properties && d.channel_properties.card_details &&
+              d.channel_properties.card_details.fingerprint) || null;
+  if ((pyId && !pay.psp_payment_id) || (fp && !pay.card_fp)) {
+    await env.DB.prepare("UPDATE payments SET psp_payment_id=COALESCE(?,psp_payment_id), card_fp=COALESCE(?,card_fp), updated_at=? WHERE id=?")
+      .bind(pyId, fp, now(), pay.id).run();
+    pay = await env.DB.prepare("SELECT * FROM payments WHERE id=?").bind(pay.id).first();
+  }
+
+  const status = d.status || "";
+
+  // --- money is now HELD on the customer's card -> finalise acceptance ---
+  if (event === "payment.authorization" || status === "AUTHORIZED") {
+    if (pay.status !== "pending") return json({ ok: true });   // idempotent
     await onHeld(env, pay);
     return json({ ok: true });
   }
 
-  // --- captured (release done) ---
-  if (type === "payment.captured" || ev.state === "captured") {
+  // --- captured: money released and split ---
+  if (event === "payment.capture" || status === "SUCCEEDED") {
     if (pay.status === "captured") return json({ ok: true });
     await env.DB.prepare("UPDATE payments SET status='captured', updated_at=? WHERE id=?").bind(now(), pay.id).run();
     return json({ ok: true });
   }
 
-  // --- refunded/voided ---
-  if (type === "payment.refunded" || ev.state === "refunded" || ev.state === "voided") {
-    await env.DB.prepare("UPDATE payments SET status='refunded', updated_at=? WHERE id=?").bind(now(), pay.id).run();
+  // --- failed / cancelled / expired ---
+  if (event === "payment.failure" || status === "FAILED") {
+    await env.DB.prepare("UPDATE payments SET status='failed', updated_at=? WHERE id=?").bind(now(), pay.id).run();
     return json({ ok: true });
   }
-
-  // --- failed ---
-  if (type === "payment.failed" || ev.state === "failed") {
-    await env.DB.prepare("UPDATE payments SET status='failed', updated_at=? WHERE id=?").bind(now(), pay.id).run();
+  if (/CANCELL?ED|EXPIRED/i.test(status)) {
+    await env.DB.prepare("UPDATE payments SET status='refunded', updated_at=? WHERE id=?").bind(now(), pay.id).run();
     return json({ ok: true });
   }
 
@@ -77,8 +97,8 @@ export async function pspWebhook(req, env) {
 export async function onHeld(env, pay) {
   const task = await env.DB.prepare("SELECT * FROM tasks WHERE id=?").bind(pay.task_id).first();
   if (!task || task.status !== "open") {
-    // task changed since accept — safest is to refund the hold
-    await voidPayment(env, { pspRef: pay.psp_ref });
+    // task changed since accept — safest is to give the hold back
+    await voidPayment(env, { pspRef: pay.psp_ref, pspPaymentId: pay.psp_payment_id, captured: false });
     await env.DB.prepare("UPDATE payments SET status='refunded', updated_at=? WHERE id=?").bind(now(), pay.id).run();
     return;
   }
@@ -89,8 +109,30 @@ export async function onHeld(env, pay) {
     env.DB.prepare("UPDATE tasks SET status='inprogress', accepted_bid_id=? WHERE id=?").bind(pay.bid_id, pay.task_id),
   ]);
   await createNotif(env, pay.partner_id, "job", "Your bid was accepted",
-    `${task.title} — payment secured. Start when ready.`);
+    `${task.title} \u2014 payment secured. Start when ready.`);
   await pushNotify(env, pay.partner_id, "Bid accepted!", `You won: ${task.title}`);
+
+  // A real card is the customer's strongest identity signal: the bank already
+  // verified them. But one card can quietly fund many accounts, so we flag reuse
+  // rather than trust it blindly. Flag, never block: families share cards.
+  try { await flagCardReuse(env, pay); } catch (_) {}
+}
+
+const CARD_REUSE_MAX_ACCOUNTS = 3;
+async function flagCardReuse(env, pay) {
+  if (!pay.card_fp) return;   // PSP gave us no fingerprint; nothing to check
+  const { results } = await env.DB.prepare(
+    "SELECT DISTINCT customer_id FROM payments WHERE card_fp = ?"
+  ).bind(pay.card_fp).all();
+  // Dedupe here too: never depend on the DB honouring DISTINCT to get this right.
+  const accounts = [...new Set(results.map((r) => r.customer_id))];
+  if (accounts.length < CARD_REUSE_MAX_ACCOUNTS) return;
+
+  await audit(env, pay.customer_id, "card_reuse_flagged", pay.id, {
+    card_fp: pay.card_fp,
+    account_count: accounts.length,
+    accounts,
+  });
 }
 
 // Internal: capture the held payment for a task (called from jobs.confirm).
@@ -100,7 +142,10 @@ export async function captureForTask(env, taskId) {
   const merch = await env.DB.prepare("SELECT psp_merchant_id FROM partner_merchants WHERE user_id=?")
     .bind(pay.partner_id).first();
   const cap = await capturePayment(env, {
-    pspRef: pay.psp_ref, netCents: pay.net_cents,
+    pspRef: pay.psp_ref,
+    pspPaymentId: pay.psp_payment_id,   // Xendit captures by PAYMENT id, not request id
+    amountCents: pay.amount_cents,      // capture the full authorised amount
+    netCents: pay.net_cents,
     feeCents: pay.fee_cents - (pay.discount_cents || 0),
     partnerMerchantId: merch ? merch.psp_merchant_id : null,
   });
@@ -115,7 +160,10 @@ export async function captureForTask(env, taskId) {
 export async function refundForTask(env, taskId) {
   const pay = await env.DB.prepare("SELECT * FROM payments WHERE task_id=? AND status='held'").bind(taskId).first();
   if (!pay) return { ok: false };
-  await voidPayment(env, { pspRef: pay.psp_ref });
+  // Still held means nothing was taken yet, so this cancels the authorisation
+  // rather than refunding a settled charge.
+  await voidPayment(env, { pspRef: pay.psp_ref, pspPaymentId: pay.psp_payment_id,
+                           amountCents: pay.amount_cents, captured: false });
   await env.DB.prepare("UPDATE payments SET status='refunded', updated_at=? WHERE id=?").bind(now(), pay.id).run();
   return { ok: true };
 }
