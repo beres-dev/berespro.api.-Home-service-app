@@ -5,7 +5,7 @@ import { authorizePayment } from "../lib/psp.js";
 import { pushNotify } from "../lib/notify.js";
 import { rateLimit, vint, vstr, LIMITS, audit } from "../lib/guard.js";
 import { evaluateVoucher, recordRedemption } from "../lib/voucher.js";
-import { commissionBps } from "../lib/settings.js";
+import { commissionBps, commissionBpsFor } from "../lib/settings.js";
 
 // POST /tasks/:id/bids  (partner)
 export async function placeBid(req, env, params) {
@@ -68,7 +68,7 @@ export async function acceptBid(req, env, params) {
     return err("partner has not set up a payout account yet", 409, "partner_payout_not_connected");
   }
 
-  const bps = await commissionBps(env);
+  const bps = await commissionBpsFor(env, { partnerId: bid.partner_id, category: task.category });
   const fee = Math.round((bid.amount_cents * bps) / 10000);
   const net = bid.amount_cents - fee;
 

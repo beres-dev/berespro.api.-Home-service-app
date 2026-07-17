@@ -2,7 +2,9 @@
 import { json, err, id, now, readBody } from "../lib/util.js";
 import { requireUser } from "../lib/auth.js";
 import { vstr, vint, audit } from "../lib/guard.js";
-import { getSettings, setSetting } from "../lib/settings.js";
+import { getSettings, setSetting, invalidateSettingsCache } from "../lib/settings.js";
+import { MALAYSIA } from "../lib/geo.js";
+import { getCoverageMap, isActiveIn, setCoverage, clearCoverage, KEY_STATE, KEY_DISTRICT } from "../lib/coverage.js";
 import { captureForTask, refundForTask } from "./payments.js";
 import { createNotif } from "./bids.js";
 
@@ -179,17 +181,104 @@ export async function getAdminSettings(req, env) {
 export async function patchAdminSettings(req, env) {
   const admin = await requireAdmin(req, env); if (!admin) return deny();
   const b = await readBody(req);
-  const ALLOWED = ["algo_w_distance", "algo_w_recency", "algo_w_budget", "commission_bps"];
+  const ALLOWED = ["algo_w_distance", "algo_w_recency", "algo_w_budget", "commission_bps",
+                   "cancel_grace_min", "cancel_fee_bps"];
+  const CAPS = { commission_bps: 5000, cancel_fee_bps: 5000, cancel_grace_min: 1440 };
   const applied = {};
   for (const k of ALLOWED) {
     if (b[k] === undefined) continue;
-    const v = vint(b[k], 0, k === "commission_bps" ? 5000 : 100);
+    const v = vint(b[k], 0, CAPS[k] || 100);
     if (v === null) return err(`${k} out of range`, 400);
+    await setSetting(env, k, v);
+    applied[k] = v;
+  }
+  // Dynamic override keys: commission_partner_<userId> / commission_cat_<category>.
+  // Value null/"" clears an override. Capped like the default; whitelisted by
+  // PREFIX so an admin cannot write arbitrary settings keys through this route.
+  for (const k of Object.keys(b)) {
+    if (!k.startsWith("commission_partner_") && !k.startsWith("commission_cat_")) continue;
+    if (k.length > 80) return err("override key too long", 400);
+    if (b[k] === null || b[k] === "") {
+      await env.DB.prepare("DELETE FROM settings WHERE s_key=?").bind(k).run();
+      invalidateSettingsCache();
+      applied[k] = null;
+      continue;
+    }
+    const v = vint(b[k], 0, 5000);
+    if (v === null) return err(`${k} out of range (0-5000 bps)`, 400);
+    if (k.startsWith("commission_partner_")) {
+      const uid = k.slice("commission_partner_".length);
+      const u = await env.DB.prepare("SELECT id FROM users WHERE id=?").bind(uid).first();
+      if (!u) return err("no such partner: " + uid, 404);
+    }
     await setSetting(env, k, v);
     applied[k] = v;
   }
   await audit(env, admin.id, "settings.update", null, applied);
   return json({ ok: true, applied });
+}
+
+// ---------- coverage (which states/districts are open) ----------
+// GET /admin/coverage -> full Malaysia tree with the effective on/off state,
+// plus a live task count per district so the admin can see what closing an area
+// would affect. Exceptions only are stored; everything else is active.
+export async function getAdminCoverage(req, env) {
+  const admin = await requireAdmin(req, env); if (!admin) return deny();
+  const map = await getCoverageMap(env);
+  const { results: counts } = await env.DB.prepare(
+    "SELECT state, district, COUNT(*) n FROM tasks WHERE status IN ('open','inprogress') " +
+    "AND state IS NOT NULL GROUP BY state, district").all();
+  const byKey = {};
+  for (const c of counts) byKey[`${c.state}|${c.district}`] = c.n;
+
+  const states = MALAYSIA.map((s) => {
+    const districts = s.districts.map(([district]) => ({
+      district,
+      active: isActiveIn(map, s.state, district),
+      explicit: map[KEY_DISTRICT(s.state, district)] !== undefined,
+      live_tasks: byKey[`${s.state}|${district}`] || 0,
+    }));
+    return {
+      state: s.state,
+      active: map[KEY_STATE(s.state)] !== undefined ? map[KEY_STATE(s.state)] : true,
+      explicit: map[KEY_STATE(s.state)] !== undefined,
+      districts,
+      live_tasks: districts.reduce((n, d) => n + d.live_tasks, 0),
+    };
+  });
+  return json({ states });
+}
+
+// PATCH /admin/coverage  body: { scope, active }  scope: "state:X" | "district:X|Y"
+//   active: true | false | null (null clears the exception -> back to default)
+export async function patchAdminCoverage(req, env) {
+  const admin = await requireAdmin(req, env); if (!admin) return deny();
+  const b = await readBody(req);
+  const scope = vstr(b.scope || "", 120);
+  if (!scope) return err("scope required", 400);
+
+  // Validate the scope against the real geography: an admin must not be able to
+  // write rows for places that do not exist (they would be invisible dead data).
+  const mState = scope.match(/^state:(.+)$/);
+  const mDist = scope.match(/^district:([^|]+)\|(.+)$/);
+  if (mState) {
+    if (!MALAYSIA.some((s) => s.state === mState[1])) return err("unknown state", 404);
+  } else if (mDist) {
+    const st = MALAYSIA.find((s) => s.state === mDist[1]);
+    if (!st || !st.districts.some(([d]) => d === mDist[2])) return err("unknown district", 404);
+  } else {
+    return err("scope must be state:<State> or district:<State>|<District>", 400);
+  }
+
+  if (b.active === null) {
+    await clearCoverage(env, scope);
+    await audit(env, admin.id, "coverage.clear", scope, {});
+    return json({ ok: true, scope, active: null });
+  }
+  if (typeof b.active !== "boolean") return err("active must be true, false, or null", 400);
+  await setCoverage(env, scope, b.active);
+  await audit(env, admin.id, "coverage.update", scope, { active: b.active });
+  return json({ ok: true, scope, active: b.active });
 }
 
 // GET /admin/audit?limit=

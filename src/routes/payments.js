@@ -157,6 +157,47 @@ export async function captureForTask(env, taskId) {
 }
 
 // Internal: refund the held payment for a task (cancel/dispute).
+// Customer cancelled mid-job past the grace window: capture only the
+// cancellation fee from the hold (the partner's compensation), release the
+// rest back to the customer. Cards allow capturing less than the authorised
+// amount; the uncaptured remainder is released by the PSP.
+// The payments row is rewritten to reflect what actually moved; the original
+// gross is kept in original_amount_cents for audit.
+export async function compensatePartnerOnCancel(env, taskId, compCents) {
+  const pay = await env.DB.prepare("SELECT * FROM payments WHERE task_id=? AND status='held'").bind(taskId).first();
+  if (!pay) return { ok: false, reason: "no_held_payment" };
+  const paidCents = pay.amount_cents - (pay.discount_cents || 0);
+  if (compCents <= 0 || compCents > paidCents) return { ok: false, reason: "bad_amount" };
+
+  // Same commission split as any other capture: partner nets their share of
+  // the fee, platform keeps its commission on it.
+  const ratio = pay.amount_cents > 0 ? pay.fee_cents / pay.amount_cents : 0;
+  const compFee = Math.round(compCents * ratio);
+  const compNet = compCents - compFee;
+
+  const merch = await env.DB.prepare("SELECT psp_merchant_id FROM partner_merchants WHERE user_id=?")
+    .bind(pay.partner_id).first();
+  const cap = await capturePayment(env, {
+    pspRef: pay.psp_ref,
+    pspPaymentId: pay.psp_payment_id,
+    amountCents: compCents,             // PARTIAL capture: fee only
+    netCents: compNet,
+    feeCents: compFee,
+    partnerMerchantId: merch ? merch.psp_merchant_id : null,
+  });
+  if (!cap.ok) return { ok: false, reason: "capture_failed" };
+
+  await env.DB.prepare(
+    "UPDATE payments SET status='captured', original_amount_cents=?, " +
+    "amount_cents=?, fee_cents=?, net_cents=?, updated_at=? WHERE id=?"
+  ).bind(pay.amount_cents, compCents, compFee, compNet, now(), pay.id).run();
+
+  await createNotif(env, pay.partner_id, "pay",
+    `Cancellation fee — RM ${(compNet/100).toFixed(2)}`,
+    `Compensation for the cancelled job is on the way to your bank.`);
+  return { ok: true, net_cents: compNet, fee_cents: compFee };
+}
+
 export async function refundForTask(env, taskId) {
   const pay = await env.DB.prepare("SELECT * FROM payments WHERE task_id=? AND status='held'").bind(taskId).first();
   if (!pay) return { ok: false };

@@ -14,8 +14,12 @@ export const err = (message, status = 400, code) =>
 export function cors() {
   return {
     "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
     "referrer-policy": "no-referrer",
     "cache-control": "no-store",
+    "strict-transport-security": "max-age=31536000; includeSubDomains",
+    // API returns JSON only and never HTML, so lock scripting down entirely.
+    "content-security-policy": "default-src 'none'; frame-ancestors 'none'",
     "access-control-allow-origin": "*",
     "access-control-allow-methods": "GET,POST,PATCH,DELETE,OPTIONS",
     "access-control-allow-headers": "authorization,content-type",
@@ -96,7 +100,13 @@ export async function verifyJWT(token, secret) {
   const [p1, p2, p3] = parts;
   const key = await hmacKey(secret);
   const expected = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${p1}.${p2}`));
-  if (b64url.enc(new Uint8Array(expected)) !== p3) return null;
+  // Constant-time comparison: a fast !== leaks how many leading chars matched,
+  // which over many tries can reconstruct a valid signature.
+  const a = b64url.enc(new Uint8Array(expected));
+  if (a.length !== p3.length) return null;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ p3.charCodeAt(i);
+  if (diff !== 0) return null;
   try {
     const payload = JSON.parse(b64url.decStr(p2));
     if (payload.exp && payload.exp < now()) return null;

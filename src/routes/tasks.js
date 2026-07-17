@@ -1,5 +1,7 @@
 // src/routes/tasks.js
 import { json, err, id, now, haversineKm, readBody } from "../lib/util.js";
+import { resolveDistrict } from "../lib/geo.js";
+import { isCovered } from "../lib/coverage.js";
 import { requireUser } from "../lib/auth.js";
 import { rateLimit, vint, vstr, vnum, LIMITS } from "../lib/guard.js";
 import { getSettings } from "../lib/settings.js";
@@ -27,12 +29,24 @@ export async function createTask(req, env) {
   for (const f of ["title", "category", "city", "lat", "lng", "budget_cents"]) {
     if (b[f] === undefined || b[f] === null || b[f] === "") return err(`${f} invalid or missing`, 400);
   }
+  // COVERAGE GATE: resolve the pin to a district and refuse to open new work
+  // where we are not operating. This deliberately only blocks NEW tasks —
+  // jobs already in progress are never touched by a coverage change.
+  const area = resolveDistrict(b.lat, b.lng);
+  if (!area) {
+    return err("we don't operate at that location yet", 403, "area_not_covered");
+  }
+  if (!(await isCovered(env, area.state, area.district))) {
+    return err(`Berespro is not open in ${area.district}, ${area.state} yet`, 403, "area_not_covered");
+  }
+
   const tid = id("tsk");
   await env.DB.prepare(
-    "INSERT INTO tasks (id,customer_id,title,category,city,addr,lat,lng,budget_cents,date_label,time_slot,description,status,created_at) " +
-    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?, 'open', ?)"
+    "INSERT INTO tasks (id,customer_id,title,category,city,addr,lat,lng,budget_cents,date_label,time_slot,description,status,created_at,state,district) " +
+    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?, 'open', ?,?,?)"
   ).bind(tid, user.id, b.title, b.category, b.city, b.addr || null, b.lat, b.lng,
-         b.budget_cents, b.date_label || null, b.time_slot || null, b.description || null, now()).run();
+         b.budget_cents, b.date_label || null, b.time_slot || null, b.description || null, now(),
+         area.state, area.district).run();
   const task = await env.DB.prepare("SELECT * FROM tasks WHERE id = ?").bind(tid).first();
 
   // Tell nearby partners a job just appeared. Without this, partners have to keep
@@ -61,13 +75,20 @@ async function notifyNearbyPartners(env, task, posterId) {
     .sort((a, b) => a.km - b.km)
     .slice(0, NOTIFY_MAX);
 
+  if (!near.length) return;
   const rm = (task.budget_cents / 100).toFixed(2);
-  for (const p of near) {
-    await createNotif(env, p.id, "job",
-      `New job ${p.km < 1 ? "under 1" : p.km.toFixed(1)} km away`,
-      `${task.title} · RM ${rm}`);
-    await pushNotify(env, p.id, "New job near you", `${task.title} · RM ${rm}`);
-  }
+  // One batched write for every nearby partner instead of a sequential loop.
+  // In a dense area this turns up-to-NOTIFY_MAX round-trips into a single D1
+  // call, and the customer's POST no longer waits on the whole fanout.
+  const stmt = env.DB.prepare(
+    "INSERT INTO notifications (id,user_id,type,title,body,read,created_at) VALUES (?,?,?,?,?,0,?)");
+  const t = now();
+  await env.DB.batch(near.map((p) => stmt.bind(
+    id("ntf"), p.id, "job",
+    `New job ${p.km < 1 ? "under 1" : p.km.toFixed(1)} km away`,
+    `${task.title} \u00b7 RM ${rm}`, t)));
+  // Push is best-effort and must never delay or fail the post.
+  for (const p of near) { try { pushNotify(env, p.id, "New job near you", `${task.title} \u00b7 RM ${rm}`); } catch (_) {} }
 }
 
 // GET /tasks?lat=&lng=&radius=&cat=&sort=   (partner feed, open tasks only)
@@ -111,15 +132,30 @@ export async function feedTasks(req, env) {
     tasks.sort((a, b) => sort === "budget" ? b.budget_cents - a.budget_cents : a.distance_km - b.distance_km);
   }
 
-  // attach bid counts + customer display name
-  for (const t of tasks) {
-    const c = await env.DB.prepare("SELECT COUNT(*) n FROM bids WHERE task_id = ?").bind(t.id).first();
-    t.bid_count = c.n;
-    const mine = await env.DB.prepare("SELECT id FROM bids WHERE task_id=? AND partner_id=?")
-      .bind(t.id, user.id).first();
-    t.my_bid = !!mine;
-    const cu = await env.DB.prepare("SELECT name FROM users WHERE id=?").bind(t.customer_id).first();
-    t.customer_name = cu ? cu.name : "Customer";
+  // attach bid counts + my-bid flags + customer names in THREE queries total,
+  // not three per task. With 25 tasks the old loop was 75 sequential D1
+  // round-trips per feed refresh; this is 3 regardless of feed size.
+  if (tasks.length) {
+    const ids = tasks.map(t => t.id);
+    const ph = ids.map(() => "?").join(",");
+    const counts = (await env.DB.prepare(
+      `SELECT task_id, COUNT(*) n FROM bids WHERE task_id IN (${ph}) GROUP BY task_id`)
+      .bind(...ids).all()).results;
+    const mine = (await env.DB.prepare(
+      `SELECT task_id FROM bids WHERE partner_id=? AND task_id IN (${ph})`)
+      .bind(user.id, ...ids).all()).results;
+    const custIds = [...new Set(tasks.map(t => t.customer_id))];
+    const cph = custIds.map(() => "?").join(",");
+    const custs = (await env.DB.prepare(
+      `SELECT id, name FROM users WHERE id IN (${cph})`).bind(...custIds).all()).results;
+    const nBy = Object.fromEntries(counts.map(r => [r.task_id, r.n]));
+    const mineBy = new Set(mine.map(r => r.task_id));
+    const nameBy = Object.fromEntries(custs.map(r => [r.id, r.name]));
+    for (const t of tasks) {
+      t.bid_count = nBy[t.id] || 0;
+      t.my_bid = mineBy.has(t.id);
+      t.customer_name = nameBy[t.customer_id] || "Customer";
+    }
   }
   return json({ tasks });
 }

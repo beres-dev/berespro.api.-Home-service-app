@@ -61,6 +61,8 @@ const ROUTES = [
   ["PATCH","/admin/vouchers/:id", ADM.patchVoucher],
   ["GET",  "/admin/settings", ADM.getAdminSettings],
   ["PATCH","/admin/settings", ADM.patchAdminSettings],
+  ["GET",  "/admin/coverage", ADM.getAdminCoverage],
+  ["PATCH","/admin/coverage", ADM.patchAdminCoverage],
   ["GET",  "/admin/audit", ADM.listAudit],
 
   ["POST", "/kyc/submit", K.submitKyc],
@@ -156,6 +158,12 @@ export default {
     const m = match(req.method, path);
     if (!m) return err("not found", 404);
     try { return await m.handler(req, env, m.params); }
-    catch (e) { return err("internal error: " + (e && e.message), 500); }
+    catch (e) {
+      // Never leak internal exception text to the client (it can reveal table
+      // names, SQL, or config). Log it for `wrangler tail`; return an opaque id.
+      const ref = (crypto.randomUUID && crypto.randomUUID().slice(0, 8)) || String(Date.now());
+      console.error("unhandled", ref, req.method, path, e && (e.stack || e.message));
+      return err("internal error (ref " + ref + ")", 500);
+    }
   },
 };

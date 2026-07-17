@@ -67,6 +67,9 @@ CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 CREATE INDEX IF NOT EXISTS idx_tasks_customer ON tasks(customer_id);
 -- bounding-box prefilter for the geo feed:
 CREATE INDEX IF NOT EXISTS idx_tasks_geo ON tasks(status, lat, lng);
+-- partner geo scan: notifyNearbyPartners + any partner lookup filter on these.
+-- Without it, every new task posted does a full users table scan.
+CREATE INDEX IF NOT EXISTS idx_users_partner_geo ON users(mode, suspended, lat, lng);
 
 -- ---------- bids ----------
 CREATE TABLE IF NOT EXISTS bids (
@@ -83,6 +86,8 @@ CREATE TABLE IF NOT EXISTS bids (
 );
 CREATE INDEX IF NOT EXISTS idx_bids_task ON bids(task_id);
 CREATE INDEX IF NOT EXISTS idx_bids_partner ON bids(partner_id);
+-- feed's "did I bid on these tasks" check: partner_id + task_id together.
+CREATE INDEX IF NOT EXISTS idx_bids_partner_task ON bids(partner_id, task_id);
 
 -- ---------- reviews ----------
 CREATE TABLE IF NOT EXISTS reviews (
@@ -155,6 +160,15 @@ CREATE TABLE IF NOT EXISTS payments (
   FOREIGN KEY (task_id) REFERENCES tasks(id),
   FOREIGN KEY (bid_id) REFERENCES bids(id)
 );
+-- partial-capture support (customer cancel fee): original gross kept for audit
+ALTER TABLE payments ADD COLUMN original_amount_cents INTEGER;
+
+-- coverage: the state/district a task's pin resolved to at post time. Recorded
+-- so admin reporting does not have to re-resolve, and so a later change to the
+-- district centroids cannot rewrite history.
+ALTER TABLE tasks ADD COLUMN state TEXT;
+ALTER TABLE tasks ADD COLUMN district TEXT;
+
 CREATE INDEX IF NOT EXISTS idx_payments_task ON payments(task_id);
 CREATE INDEX IF NOT EXISTS idx_payments_pspref ON payments(psp_ref);
 CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
@@ -254,6 +268,16 @@ CREATE TABLE IF NOT EXISTS cancellations (
 );
 CREATE INDEX IF NOT EXISTS idx_cancel_user ON cancellations(user_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_cancel_task ON cancellations(task_id);
+
+-- ---------- coverage (which states/districts are open for business) ----------
+-- Stores ONLY exceptions. A district with no row here is ACTIVE. Resolution is
+-- "most specific wins": district row > state row > default active. See
+-- src/lib/coverage.js and src/lib/geo.js.
+CREATE TABLE IF NOT EXISTS coverage (
+  scope      TEXT PRIMARY KEY,   -- "state:Johor" | "district:Johor|Johor Bahru"
+  active     INTEGER NOT NULL,   -- 1 open, 0 closed
+  updated_at INTEGER NOT NULL
+);
 
 -- ---------- settings (tunable platform parameters incl. feed algorithm) ----------
 CREATE TABLE IF NOT EXISTS settings (

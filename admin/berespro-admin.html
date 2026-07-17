@@ -204,6 +204,28 @@ label.f{display:block;font-size:11.5px;font-weight:700;color:var(--mut);margin:1
     <div class="panel"><div class="ph"><b>All vouchers</b></div><div id="v-table"></div></div>
   </section>
 
+  <section class="section" id="sec-coverage">
+    <div class="panel">
+      <div class="ph">
+        <b>Coverage — states &amp; districts</b>
+        <span class="chip blu"><span class="dt"></span>Closing an area blocks NEW tasks only</span>
+      </div>
+      <div style="padding:12px 18px 18px">
+        <div style="font-size:12.5px;color:var(--mut);line-height:1.6;margin-bottom:12px">
+          Everywhere is <b>open by default</b>. Switch off a state to close all its districts, or close districts one by one.
+          A district switched <b>on</b> inside a closed state stays open (most specific wins).
+          Jobs already in progress are <b>never</b> affected — they run to completion and pay out normally.
+          The area comes from the customer's map pin.
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+          <input id="cv-search" placeholder="Filter state or district…" style="padding:8px;flex:1;min-width:180px" oninput="renderCoverage()">
+          <button class="act" onclick="loadCoverage()">Refresh</button>
+        </div>
+        <div id="cv-list"></div>
+      </div>
+    </div>
+  </section>
+
   <section class="section" id="sec-algorithm">
     <div class="panel">
       <div class="ph"><b>Recommended-feed algorithm weights</b><span class="chip blu"><span class="dt"></span>score = wD·closeness + wR·freshness + wB·budget</span></div>
@@ -213,8 +235,23 @@ label.f{display:block;font-size:11.5px;font-weight:700;color:var(--mut);margin:1
         <div class="slider"><label>Budget attractiveness</label><input type="range" id="s-bud" min="0" max="100" oninput="this.nextElementSibling.value=this.value"><output>20</output></div>
         <div class="slider"><label>Platform commission (bps)</label><input type="range" id="s-comm" min="500" max="3000" step="50" oninput="this.nextElementSibling.value=this.value"><output>2000</output></div>
         <div style="height:10px"></div>
+        <div class="slider"><label>Customer cancel fee (bps of price)</label><input type="range" id="s-cfee" min="0" max="3000" step="50" oninput="this.nextElementSibling.value=this.value"><output>1000</output></div>
+        <div class="slider"><label>Free-cancel grace window (minutes)</label><input type="range" id="s-cgrace" min="0" max="360" step="5" oninput="this.nextElementSibling.value=this.value"><output>60</output></div>
+        <div style="height:10px"></div>
         <button class="act" onclick="saveSettings()">Save settings</button>
-        <span style="font-size:12px;color:var(--mut);margin-left:12px">2000 bps = 20% fee. Changes apply to new accepts only.</span>
+        <span style="font-size:12px;color:var(--mut);margin-left:12px">2000 bps = 20% fee. Cancel fee compensates the partner when a customer cancels mid-job after the grace window. Changes apply to new activity only.</span>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <h3 style="margin:0 0 4px">Commission overrides</h3>
+        <div style="font-size:12.5px;color:var(--mut);margin-bottom:10px">Most specific wins: partner override &gt; category override &gt; default above. Value in bps (1500 = 15%). Applies to new accepts only.</div>
+        <div id="ov-list" style="margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <select id="ov-scope" style="padding:7px"><option value="cat">Category</option><option value="partner">Partner (user id)</option></select>
+          <input id="ov-key" placeholder="cleaning / usr_..." style="padding:7px;flex:1;min-width:160px">
+          <input id="ov-bps" type="number" placeholder="bps" min="0" max="5000" style="padding:7px;width:90px">
+          <button class="act" onclick="setOverride()">Set</button>
+        </div>
       </div>
     </div>
   </section>
@@ -304,6 +341,7 @@ const SECTIONS = [
   ["disputes","Disputes","Frozen payments awaiting your decision","M12 3.5 21 19H3L12 3.5ZM12 10v4M12 16.6v.4"],
   ["vouchers","Vouchers","Marketing codes — fee-absorbed discounts","M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 1 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 1 0 0-4V8ZM12 6v12"],
   ["algorithm","Algorithm","Feed ranking weights & commission","M4.5 7h9M17 7h2.5M4.5 12h2.5M11.5 12h8M4.5 17h10.5M19.5 17h0"],
+  ["coverage","Coverage","Where Berespro is open for business","M12 21.2c4.4-4.1 6.6-7.5 6.6-10.4a6.6 6.6 0 1 0-13.2 0c0 2.9 2.2 6.3 6.6 10.4ZM4 4l16 16"],
   ["audit","Audit Log","Immutable trail of sensitive actions","M4.8 12a7.4 7.4 0 1 1 2.1 5.2M4.8 12H8.2M4.8 12V8.6M12 8.8V12l2.6 1.7"],
 ];
 let CUR = "overview";
@@ -332,6 +370,7 @@ async function loadSection(id){
     if (id === "disputes") await loadDisputes();
     if (id === "vouchers") await loadVouchers();
     if (id === "algorithm") await loadAlgorithm();
+    if (id === "coverage") await loadCoverage();
     if (id === "audit") await loadAudit();
   } catch(e) { /* toast already shown */ }
 }
@@ -517,6 +556,70 @@ async function toggleVoucher(id, active){
   await api(`/admin/vouchers/${id}`, "PATCH", { active: !!active }); loadVouchers();
 }
 
+/* ================= coverage ================= */
+let COVERAGE = [];
+async function loadCoverage(){
+  const { states } = await api("/admin/coverage");
+  COVERAGE = states;
+  renderCoverage();
+}
+function renderCoverage(){
+  const q = (document.getElementById("cv-search")||{value:""}).value.trim().toLowerCase();
+  const rows = COVERAGE.map(s => {
+    const dMatch = s.districts.filter(d => !q || d.district.toLowerCase().includes(q) || s.state.toLowerCase().includes(q));
+    if (!dMatch.length && !s.state.toLowerCase().includes(q)) return "";
+    const openCount = s.districts.filter(d => d.active).length;
+    return `<div style="border:1px solid var(--line);border-radius:10px;margin-bottom:10px;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 13px;background:var(--sur2)">
+        <div style="min-width:0">
+          <b style="font-size:14px">${esc(s.state)}</b>
+          <div style="font-size:11.5px;color:var(--mut);margin-top:2px">
+            ${openCount}/${s.districts.length} districts open${s.live_tasks?` · ${s.live_tasks} live task${s.live_tasks>1?"s":""}`:""}
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          ${s.explicit ? `<button class="act sm" onclick="setCov('state:${escAttr(s.state)}', null)">Reset</button>` : ``}
+          <button class="act sm" style="${s.active?'':'background:var(--red-t);color:#D03A2F'}"
+            onclick="setCov('state:${escAttr(s.state)}', ${s.active ? 'false' : 'true'})">
+            ${s.active ? "Close state" : "Open state"}
+          </button>
+        </div>
+      </div>
+      <div style="padding:6px 13px 10px">
+        ${dMatch.map(d => `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line)">
+          <span style="font-size:13px">
+            ${esc(d.district)}
+            ${d.live_tasks?`<span class="chip blu" style="margin-left:6px">${d.live_tasks} live</span>`:""}
+            ${d.explicit?`<span class="chip" style="margin-left:6px">override</span>`:""}
+          </span>
+          <span style="display:flex;align-items:center;gap:8px">
+            <span class="chip ${d.active?'grn':'red'}"><span class="dt"></span>${d.active?"Open":"Closed"}</span>
+            <button class="act sm" onclick="setCov('district:${escAttr(s.state)}|${escAttr(d.district)}', ${d.active?'false':'true'})">
+              ${d.active?"Close":"Open"}
+            </button>
+            ${d.explicit?`<button class="act sm" onclick="setCov('district:${escAttr(s.state)}|${escAttr(d.district)}', null)">Reset</button>`:``}
+          </span>
+        </div>`).join("")}
+      </div>
+    </div>`;
+  }).join("");
+  document.getElementById("cv-list").innerHTML = rows || `<div style="color:var(--mut);font-size:13px">No match.</div>`;
+}
+function escAttr(s){ return String(s).replace(/'/g,"\\'").replace(/"/g,"&quot;"); }
+async function setCov(scope, active){
+  // Closing an area is a business decision with live consequences, so confirm it
+  // and say plainly what it does and does not do.
+  if (active === false && !confirm(
+      `Close ${scope.replace(/^state:|^district:/,"").replace("|", " / ")}?\n\n` +
+      `Customers there will NOT be able to post new tasks.\n` +
+      `Jobs already in progress continue and pay out normally.`)) return;
+  try {
+    await api("/admin/coverage","PATCH",{ scope, active });
+    toast(active===null ? "Reset to default (open)" : active ? "Opened" : "Closed");
+    loadCoverage();
+  } catch(e){ toast(e.message); }
+}
+
 async function loadAlgorithm(){
   const { settings } = await api("/admin/settings");
   const set = (id, v) => { const el = document.getElementById(id); el.value = v; el.nextElementSibling.value = v; };
@@ -524,6 +627,41 @@ async function loadAlgorithm(){
   set("s-rec", settings.algo_w_recency || 30);
   set("s-bud", settings.algo_w_budget || 20);
   set("s-comm", settings.commission_bps || 2000);
+  set("s-cfee", settings.cancel_fee_bps ?? 1000);
+  set("s-cgrace", settings.cancel_grace_min ?? 60);
+  renderOverrides(settings);
+}
+function renderOverrides(settings){
+  const rows = Object.keys(settings)
+    .filter(k => k.startsWith("commission_cat_") || k.startsWith("commission_partner_"))
+    .map(k => {
+      const isCat = k.startsWith("commission_cat_");
+      const label = isCat ? "Category: " + k.slice(15) : "Partner: " + k.slice(19);
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)">
+        <span>${esc(label)}</span>
+        <span><b class="mono">${esc(String(settings[k]))} bps</b>
+        <button class="act sm" style="margin-left:10px" onclick="clearOverride('${esc(k)}')">Remove</button></span></div>`;
+    });
+  document.getElementById("ov-list").innerHTML =
+    rows.length ? rows.join("") : `<div style="color:var(--mut);font-size:13px">No overrides — every partner pays the default rate.</div>`;
+}
+async function setOverride(){
+  const scope = document.getElementById("ov-scope").value;
+  const key = document.getElementById("ov-key").value.trim();
+  const bps = parseInt(document.getElementById("ov-bps").value, 10);
+  if (!key || !Number.isFinite(bps)) { toast("Fill in the key and a bps value"); return; }
+  const settingKey = (scope === "cat" ? "commission_cat_" : "commission_partner_") + key.toLowerCase();
+  try {
+    await api("/admin/settings", "PATCH", { [settingKey]: bps });
+    toast("Override saved — applies to new accepts");
+    document.getElementById("ov-key").value = ""; document.getElementById("ov-bps").value = "";
+    loadAlgorithm();
+  } catch(e){ toast(e.message); }
+}
+async function clearOverride(key){
+  if (!confirm("Remove this override? New accepts fall back to the category/default rate.")) return;
+  await api("/admin/settings", "PATCH", { [key]: null });
+  toast("Override removed"); loadAlgorithm();
 }
 async function saveSettings(){
   await api("/admin/settings", "PATCH", {
@@ -531,6 +669,8 @@ async function saveSettings(){
     algo_w_recency: +document.getElementById("s-rec").value,
     algo_w_budget: +document.getElementById("s-bud").value,
     commission_bps: +document.getElementById("s-comm").value,
+    cancel_fee_bps: +document.getElementById("s-cfee").value,
+    cancel_grace_min: +document.getElementById("s-cgrace").value,
   });
   toast("Settings saved — applies to new activity");
 }

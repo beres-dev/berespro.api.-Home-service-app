@@ -1,6 +1,7 @@
 // src/routes/auth.js
 import { json, err, id, now, signJWT, randomToken, sha256hex, readBody } from "../lib/util.js";
 import { verifyClerkToken, requireUser } from "../lib/auth.js";
+import { commissionBpsFor, cancelPolicy } from "../lib/settings.js";
 import { rateLimit, clientIp, LIMITS } from "../lib/guard.js";
 
 // POST /auth/session
@@ -53,7 +54,14 @@ export async function postRefresh(req, env) {
 export async function getMe(req, env) {
   const user = await requireUser(req, env);
   if (!user) return err("unauthorized", 401);
-  return json({ user: publicUser(user) });
+  // Partner-facing effective commission (their override or the default) and the
+  // customer-facing cancel policy, so the app never hard-codes either number.
+  // Category overrides still apply per task at accept time; this is the
+  // partner's baseline for display.
+  const bps = await commissionBpsFor(env, { partnerId: user.id });
+  const cancel = await cancelPolicy(env);
+  return json({ user: publicUser(user), commission_bps: bps,
+                cancel_policy: { grace_min: cancel.graceMin, fee_bps: cancel.feeBps } });
 }
 
 // PATCH /me  body: { name?, mode?, city?, lat?, lng?, skills? }

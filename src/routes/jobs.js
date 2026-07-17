@@ -2,10 +2,11 @@
 import { json, err, id, now, readBody } from "../lib/util.js";
 import { requireUser } from "../lib/auth.js";
 import { createNotif } from "./bids.js";
-import { captureForTask, refundForTask } from "./payments.js";
+import { captureForTask, refundForTask, compensatePartnerOnCancel } from "./payments.js";
 import { hasOpenDispute } from "./disputes.js";
 import { audit } from "../lib/guard.js";
 import { pushNotify } from "../lib/notify.js";
+import { cancelPolicy } from "../lib/settings.js";
 
 // POST /jobs/:taskId/complete  (partner marks work done)
 export async function markComplete(req, env, params) {
@@ -41,7 +42,15 @@ export async function confirmComplete(req, env, params) {
   return json({ ok: true, released_net_cents: cap.net_cents, platform_fee_cents: cap.fee_cents });
 }
 
-// POST /jobs/:taskId/cancel  (customer cancels an in-progress job -> refund hold)
+// POST /jobs/:taskId/cancel  (customer cancels an in-progress job)
+//
+// Fairness: the partner reserved the slot, maybe turned other work down, maybe
+// already travelled. A full free refund at any time puts all of that cost on
+// the partner. Policy (admin-tunable in settings):
+//   - within cancel_grace_min of the funds being held: free, full refund
+//   - after grace: cancel_fee_bps of the agreed price is captured and paid to
+//     the partner as compensation (platform commission applies to it like any
+//     other payment); the remainder of the hold is refunded to the customer
 export async function cancelJob(req, env, params) {
   const user = await requireUser(req, env);
   if (!user) return err("unauthorized", 401);
@@ -51,12 +60,51 @@ export async function cancelJob(req, env, params) {
   if (task.status !== "inprogress") return err("task not in progress", 409);
   if (await hasOpenDispute(env, task.id))
     return err("cannot cancel — a dispute is open; support will resolve it", 409, "dispute_open");
-  await refundForTask(env, task.id);
-  await audit(env, user.id, "payment.refund", task.id, {});
+
+  const b = await readBody(req).catch(() => ({}));
+  const pay = await env.DB.prepare(
+    "SELECT * FROM payments WHERE task_id=? AND status='held'").bind(task.id).first();
+  const { graceMin, feeBps } = await cancelPolicy(env);
+  const heldFor = pay ? now() - pay.updated_at : 0;
+  // graceMin=0 means "no free window at all", so the time check only applies
+  // when a window exists.
+  const inGrace = !pay || feeBps === 0 || (graceMin > 0 && heldFor <= graceMin * 60);
+
+  // Snapshot the gross BEFORE any write: compensatePartnerOnCancel rewrites the
+  // payments row, and a DB layer that hands back live references (MockDB does)
+  // would otherwise corrupt this arithmetic mid-flight.
+  const grossCents = pay ? pay.amount_cents : 0;
+  // What the customer actually paid: gross minus any voucher discount. The
+  // hold at the PSP is for THIS amount, so every customer-facing number and
+  // the capture cap must come from it, not from gross.
+  const paidCents = pay ? grossCents - (pay.discount_cents || 0) : 0;
+  let compensation = 0, refunded = paidCents;
+  if (inGrace) {
+    await refundForTask(env, task.id);
+    await audit(env, user.id, "payment.refund", task.id, { grace: true });
+  } else {
+    // Fee is a % of the AGREED price — the partner's loss is not smaller just
+    // because the platform funded a discount — but it can never exceed the
+    // money actually held.
+    const comp = Math.min(Math.round((grossCents * feeBps) / 10000), paidCents);
+    const r = await compensatePartnerOnCancel(env, task.id, comp);
+    if (!r.ok) return err("cancellation failed — try again or contact support", 502, "cancel_failed");
+    compensation = comp; refunded = paidCents - comp;
+    await audit(env, user.id, "payment.cancel_fee", task.id,
+      { fee_bps: feeBps, compensation_cents: comp, refunded_cents: refunded });
+  }
+
   await env.DB.prepare("UPDATE tasks SET status='cancelled' WHERE id=?").bind(task.id).run();
+  await recordCancellation(env, task.id, user.id, "customer", "inprogress", b.reason);
   const bid = await env.DB.prepare("SELECT partner_id FROM bids WHERE id=?").bind(task.accepted_bid_id).first();
-  if (bid) await createNotif(env, bid.partner_id, "job", "Job cancelled", `${task.title} — the hold was refunded to the customer`);
-  return json({ ok: true });
+  if (bid) {
+    await createNotif(env, bid.partner_id, "job", "Job cancelled",
+      compensation > 0
+        ? `${task.title} — the customer cancelled. A cancellation fee of RM ${(compensation/100).toFixed(2)} is being paid out to you as compensation.`
+        : `${task.title} — the hold was refunded to the customer`);
+  }
+  return json({ ok: true, in_grace: inGrace,
+                compensation_cents: compensation, refunded_cents: refunded });
 }
 
 // POST /jobs/:taskId/review  body: { rating, text }

@@ -278,7 +278,9 @@ textarea.f{min-height:88px;resize:vertical}
    BERESPRO core: state, helpers, icons, screen templates
    Pure functions, no DOM access, snapshot-safe.
    ============================================================ */
-const FEE = 0.20;
+const FEE = 0.20; // fallback only; live rate comes from /me (commission_bps)
+function feeRate(){ return (state.live && state.live.commission_bps != null) ? state.live.commission_bps/10000 : FEE; }
+function feePct(){ return (feeRate()*100).toFixed(feeRate()*100 % 1 ? 1 : 0); }
 
 const CITIES = {
   "Kuala Lumpur":[3.139,101.687],"Petaling Jaya":[3.107,101.606],
@@ -413,7 +415,8 @@ function header(title,sub,backTo,rightBell=true){
 function statusChip(s){
   return {open:`<span class="chip amb"><i class="dt"></i>Open for bids</span>`,
     inprogress:`<span class="chip blu"><i class="dt"></i>In progress</span>`,
-    completed:`<span class="chip grn"><i class="dt"></i>Completed</span>`}[s];
+    completed:`<span class="chip grn"><i class="dt"></i>Completed</span>`,
+    cancelled:`<span class="chip"><i class="dt"></i>Cancelled</span>`}[s] || `<span class="chip">${esc(s)}</span>`;
 }
 function nav(active){
   const items = state.mode==="customer"
@@ -670,7 +673,8 @@ ${header("Task details","",'ctasks')}
           <button class="btn dark sm" onclick="toast('Bid declined')">${IC.x(15)}</button>
         </div>
       </div>`}).join("")}
-    </div>`:""}
+    </div>
+    <div style="text-align:center;margin-top:16px"><span style="font-size:13px;font-weight:700;color:var(--red);cursor:pointer" onclick="cancelOpenTask(${t.id})">Cancel this task</span></div>`:""}
 
   ${acc?`
     <div class="sec">Your partner</div>
@@ -691,7 +695,8 @@ ${header("Task details","",'ctasks')}
           <div class="tstep"><div class="tl"><div class="tdot ${st==='done'?'done':st==='cur'?'cur':''}"></div>${i<arr.length-1?'<div class="tline"></div>':''}</div><div class="tc"><b>${b}</b><span>${s}</span></div></div>`).join("")}
         </div>
         <button class="btn grn" onclick="completeTask(${t.id})">${IC.check(18)} Confirm completion &amp; release payment</button>
-        <div style="text-align:center;margin-top:12px"><span style="font-size:13px;font-weight:700;color:var(--red);cursor:pointer" onclick="reportProblem(${t.id})">Report a problem with this job</span></div>`
+        <div style="text-align:center;margin-top:12px"><span style="font-size:13px;font-weight:700;color:var(--red);cursor:pointer" onclick="reportProblem(${t.id})">Report a problem with this job</span></div>
+        <div style="text-align:center;margin-top:10px"><span style="font-size:13px;font-weight:700;color:var(--mut);cursor:pointer" onclick="cancelJob(${t.id})">Cancel this job &amp; get refunded</span></div>`
       :t.status==="completed"&&!t.reviewed?`
         <div style="height:12px"></div><button class="btn pri" onclick="openSheet('review',${t.id})">${IC.starO(17)} Rate ${esc(PARTNERS[acc.p].name.split(" ")[0])}</button>`
       :t.status==="completed"?`
@@ -902,7 +907,7 @@ ${nav('pjobs')}`;
 /* ---------- PARTNER: JOB DETAIL + BID ---------- */
 T.pjob = (id) => {
   const j = state.tasks.find(x=>x.id===id) || state.tasks.find(x=>!x.mine&&x.status==="open");
-  const net = v => rm(v*(1-FEE),2);
+  const net = v => rm(v*(1-feeRate()),2);
   return `
 ${header("Job details","",'pjobs')}
 <div class="content">
@@ -930,13 +935,15 @@ ${header("Job details","",'pjobs')}
   <div class="card">
     <label class="f" style="margin-top:2px">Your price (RM)</label>
     <input class="f num" id="bid-amt" type="number" value="${j.budget}" oninput="bidNet(this.value)">
-    <div class="netnote" id="bid-net">You'll receive ${net(j.budget)} after the 20% platform fee</div>
+    <div class="netnote" id="bid-net">You'll receive ${net(j.budget)} after the ${feePct()}% platform fee</div>
     <label class="f">Message to customer</label>
     <textarea class="f" id="bid-msg" placeholder="Introduce yourself, your experience, and what your price includes…"></textarea>
     <div style="height:16px"></div>
     ${j.myBid && j.status==="inprogress" && j.myBid.bstatus==="accepted"
-      ? `<button class="btn grn" onclick="partnerComplete(${j.id})">${IC.check(17)} Mark work complete</button>`
-      : j.myBid?`<button class="btn dark" disabled>${IC.check(17)} Bid submitted, awaiting customer</button>`
+      ? `<button class="btn grn" onclick="partnerComplete(${j.id})">${IC.check(17)} Mark work complete</button>
+         <div style="text-align:center;margin-top:12px"><span style="font-size:13px;font-weight:700;color:var(--red);cursor:pointer" onclick="partnerCancelJob(${j.id})">Cancel this job</span></div>`
+      : j.myBid?`<button class="btn dark" disabled>${IC.check(17)} Bid submitted, awaiting customer</button>
+         <div style="text-align:center;margin-top:12px"><span style="font-size:13px;font-weight:700;color:var(--red);cursor:pointer" onclick="withdrawBid(${j.id})">Withdraw my bid</span></div>`
     :`<button class="btn pri" onclick="placeBid(${j.id})">Submit bid</button>`}
   </div>
 </div>
@@ -964,7 +971,7 @@ ${header("My Bids","Track every offer you've made")}
     <h2 style="font-size:15.5px;margin-bottom:7px">${esc(r.title)}</h2>
     <div class="rowbet">
       <span class="rowg" style="gap:5px;color:var(--mut);font-size:13px">${IC.pin(13)} ${r.addr}</span>
-      <div style="text-align:right"><div class="price num" style="font-size:15.5px">${rm(r.amount)}</div><span style="font-size:11.5px;color:var(--grn);font-weight:700">Net ${rm(r.amount*0.8)}</span></div>
+      <div style="text-align:right"><div class="price num" style="font-size:15.5px">${rm(r.amount)}</div><span style="font-size:11.5px;color:var(--grn);font-weight:700">Net ${rm(r.amount*(1-feeRate()))}</span></div>
     </div>
     ${r.status==="won"?`<div class="divider" style="margin:11px 0 10px"></div><button class="btn grn sm" style="width:100%" onclick="toast('Marked as complete, awaiting customer confirmation')">${IC.check(15)} Mark job complete</button>`:""}
   </div>`).join("")}
@@ -1391,7 +1398,16 @@ function postTask(){
       date_label:(g("pt-date")&&g("pt-date").value)||"", time_slot:g("pt-time").value,
       description:g("pt-desc").value.trim() })
     .then(m=>{ state.pin=null; go("ctask",m.id); toast("Task posted. Partners are being notified"); })
-    .catch(e=>toast(e.message));
+    .catch(e=>{
+      // Coverage: we are not open where they pinned. Say so plainly and point at
+      // the pin, since that (not the city dropdown) is what decides the area.
+      if (e.code==="area_not_covered"){
+        alert(e.message + "\n\nBerespro is opening new areas as partners join. " +
+              "If your pin is in the wrong place, tap \u201cSet pin\u201d and move it to the exact spot.");
+        return;
+      }
+      toast(e.message);
+    });
     return;
   }
   state.tasks.unshift({id:nid(),mine:true,title,cat:g("pt-cat").value,city,addr:g("pt-addr").value.trim()||city,
@@ -1457,7 +1473,7 @@ function submitReview(taskId){
 }
 function bidNet(v){
   const el=document.getElementById("bid-net");
-  if(el) el.textContent=`You'll receive ${rm((parseFloat(v)||0)*(1-FEE),2)} after the 20% platform fee`;
+  if(el) el.textContent=`You'll receive ${rm((parseFloat(v)||0)*(1-feeRate()),2)} after the ${feePct()}% platform fee`;
 }
 function placeBid(jobId){
   const j=state.tasks.find(x=>x.id===jobId);
@@ -1576,7 +1592,11 @@ function upsertTask(mapped){
 
 /* ---- session & per-screen syncs (state-in, render-out) ---- */
 async function syncSession(){
-  const { user } = await api("/me");
+  const j = await api("/me");
+  const user = j.user;
+  state.live = state.live||{};
+  if (j.commission_bps != null) state.live.commission_bps = j.commission_bps;
+  if (j.cancel_policy) state.live.cancel_policy = j.cancel_policy;
   state.liveUid = user.id;
   state.user = { name:user.name, phone:user.phone||"", email:user.email||"",
                  city:user.city||"Kuala Lumpur", memberSince:"2026" };
@@ -1719,6 +1739,24 @@ async function liveReview(localTaskId, rating, text){
   const t = state.tasks.find(x=>x.id===localTaskId);
   await api("/jobs/"+t.srv+"/review","POST",{ rating, text });
   t.reviewed = true;
+}
+async function liveCancelOpenTask(localTaskId, reason){
+  const t = state.tasks.find(x=>x.id===localTaskId);
+  return api("/tasks/"+t.srv+"/cancel","POST",{ reason });
+}
+async function liveCancelJob(localTaskId, reason){
+  const t = state.tasks.find(x=>x.id===localTaskId);
+  return api("/jobs/"+t.srv+"/cancel","POST",{ reason });
+}
+async function livePartnerCancelJob(localTaskId, reason){
+  const t = state.tasks.find(x=>x.id===localTaskId);
+  return api("/jobs/"+t.srv+"/partner-cancel","POST",{ reason });
+}
+async function liveWithdrawBid(localTaskId){
+  const t = state.tasks.find(x=>x.id===localTaskId);
+  // The bid id, not the task id: DELETE /bids/:id.
+  if (!t.myBid || !t.myBid.srv) throw new Error("Bid not found. Pull to refresh and try again");
+  return api("/bids/"+t.myBid.srv,"DELETE");
 }
 async function liveDispute(localTaskId, reason){
   const t = state.tasks.find(x=>x.id===localTaskId);
@@ -1989,6 +2027,68 @@ function partnerComplete(taskId){
     const t=state.tasks.find(x=>x.id===taskId);
     toast("Marked complete, customer asked to confirm"); render();
   }).catch(e=>toast(e.message));
+}
+/* ---- cancellation: four separate flows, deliberately worded differently ---- */
+function cancelOpenTask(taskId){
+  const t = state.tasks.find(x=>x.id===taskId);
+  const n = (t && t.bids) ? t.bids.length : 0;
+  if (!confirm(n ? `Cancel this task? ${n} partner${n>1?"s":""} bid on it and will be told it was withdrawn. No money has been taken, so there is nothing to refund.`
+                 : "Cancel this task? No money has been taken, so there is nothing to refund.")) return;
+  const reason = prompt("Reason (optional, helps us improve):") || "";
+  if (!LIVE()){ t.status="cancelled"; render(); toast("Task cancelled"); return; }
+  liveCancelOpenTask(taskId, reason).then(()=>{
+    toast("Task cancelled, bidders notified");
+    return syncMyTasks();
+  }).catch(e=>{
+    if (e.code==="not_open") toast("Too late, this task is no longer open. Refresh to see its status");
+    else toast(e.message);
+  });
+}
+function cancelJob(taskId){
+  const cp = (state.live && state.live.cancel_policy) || { grace_min:60, fee_bps:1000 };
+  const feePctTxt = (cp.fee_bps/100).toFixed(cp.fee_bps%100?1:0);
+  const msg = cp.fee_bps > 0
+    ? `Cancel this job? Your partner has already been booked.\n\nFree within ${cp.grace_min} min of payment. After that, a ${feePctTxt}% cancellation fee compensates your partner and the rest is refunded to you.`
+    : "Cancel this job? Your partner has already been booked. The payment being held will be refunded to you in full.";
+  if (!confirm(msg)) return;
+  const reason = prompt("Reason (optional, your partner will not see this):") || "";
+  if (!LIVE()){ const t=state.tasks.find(x=>x.id===taskId); t.status="cancelled"; render(); toast("Job cancelled, refund on its way"); return; }
+  liveCancelJob(taskId, reason).then(j=>{
+    toast(j && j.compensation_cents
+      ? `Job cancelled. RM ${(j.refunded_cents/100).toFixed(2)} refunded, RM ${(j.compensation_cents/100).toFixed(2)} cancellation fee`
+      : "Job cancelled. Your full refund is on its way");
+    return syncMyTasks();
+  }).catch(e=>{
+    if (e.code==="dispute_open") toast("Cannot cancel while a dispute is open. Support will resolve it");
+    else toast(e.message);
+  });
+}
+function withdrawBid(taskId){
+  if (!confirm("Withdraw your bid? The customer will be told. This does not count against you.")) return;
+  if (!LIVE()){ const t=state.tasks.find(x=>x.id===taskId); t.myBid=null; render(); toast("Bid withdrawn"); return; }
+  liveWithdrawBid(taskId).then(()=>{
+    const t = state.tasks.find(x=>x.id===taskId); if (t) t.myBid=null;
+    render(); toast("Bid withdrawn");
+  }).catch(e=>{
+    if (e.code==="bid_settled") toast("Too late, this bid was already accepted or declined");
+    else if (e.code==="not_open") toast("This task is no longer open");
+    else toast(e.message);
+  });
+}
+function partnerCancelJob(taskId){
+  // Deliberately the harshest wording of the four: this one costs the customer
+  // their booking and counts against the partner.
+  if (!confirm("Cancel a job you won? The customer is refunded in full and the task reopens for other partners.\n\nThis counts as a cancellation on your record. Repeated cancellations can suspend your account.")) return;
+  const reason = prompt("Why are you cancelling? (required)");
+  if (!reason || !reason.trim()) { toast("A reason is required to cancel a job you won"); return; }
+  if (!LIVE()){ toast("Job cancelled (demo)"); return; }
+  livePartnerCancelJob(taskId, reason.trim()).then(j=>{
+    toast(j && j.warning ? j.warning : "Job cancelled. The customer was refunded");
+    return syncFeed().then(syncBids);
+  }).catch(e=>{
+    if (e.code==="dispute_open") toast("Cannot cancel while a dispute is open. Support will resolve it");
+    else toast(e.message);
+  });
 }
 function reportProblem(taskId){
   const reason = prompt("Describe the problem (this freezes the payment until support resolves it):");

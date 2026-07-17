@@ -1,13 +1,15 @@
 {
   "name": "berespro-api",
   "version": "1.0.0",
-  "description": "Berespro API — Cloudflare Worker (escrow marketplace)",
+  "description": "Berespro API \u2014 Cloudflare Worker (escrow marketplace)",
   "private": true,
   "main": "src/index.js",
   "scripts": {
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "test": "node test/run-all.mjs"
   },
   "devDependencies": {
     "wrangler": "^3.99.0"
-  }
+  },
+  "type": "module"
 }

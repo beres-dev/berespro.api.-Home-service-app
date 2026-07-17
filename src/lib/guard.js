@@ -4,6 +4,28 @@ import { id, now } from "./util.js";
 // ---- fixed-window rate limiter (D1-backed, good enough for MVP scale) ----
 // returns true if allowed, false if over limit.
 export async function rateLimit(env, key, limit, windowSec) {
+  // Prefer KV: it is purpose-built for high-rate edge counters and keeps the
+  // limiter off the D1 write path (which is the real bottleneck under load).
+  // Falls back to D1 when RL_KV is not bound, so behaviour is unchanged until
+  // the binding is added in wrangler.toml.
+  if (env.RL_KV) return rateLimitKV(env, key, limit, windowSec);
+  return rateLimitD1(env, key, limit, windowSec);
+}
+
+async function rateLimitKV(env, key, limit, windowSec) {
+  // Fixed-window counter. Bucket the window into the key so it self-expires;
+  // KV TTL cleans up old buckets with no sweeping.
+  const bucket = Math.floor(now() / windowSec);
+  const k = `rl:${key}:${bucket}`;
+  let n = 0;
+  try { n = parseInt(await env.RL_KV.get(k), 10) || 0; } catch { return true; } // KV down: fail open, never lock users out
+  if (n >= limit) return false;
+  // TTL a little past the window so late reads still see the count.
+  try { await env.RL_KV.put(k, String(n + 1), { expirationTtl: windowSec + 60 }); } catch { /* best effort */ }
+  return true;
+}
+
+async function rateLimitD1(env, key, limit, windowSec) {
   const t = now();
   const row = await env.DB.prepare("SELECT window_start, count FROM rate_limits WHERE rl_key=?")
     .bind(key).first();

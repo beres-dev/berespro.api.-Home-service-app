@@ -1,13 +1,13 @@
 // minimal in-memory D1 shim to exercise the worker logic end-to-end
 class Stmt {
   constructor(db, sql){ this.db=db; this.sql=sql.trim(); this.args=[]; }
-  bind(...a){ this.args=a; return this; }
+  bind(...a){ const c = new Stmt(this.db, this.sql); c.args = a; return c; }
   async run(){ return this.db._exec(this.sql,this.args); }
   async first(){ const r=this.db._exec(this.sql,this.args); return r.results[0]||null; }
   async all(){ return this.db._exec(this.sql,this.args); }
 }
 export class MockDB {
-  constructor(){ this.t={users:[],sessions:[],tasks:[],bids:[],reviews:[],partner_merchants:[],payments:[],kyc_submissions:[],disputes:[],audit_log:[],rate_limits:[],vouchers:[],voucher_redemptions:[],settings:[],devices:[],notifications:[],cancellations:[]}; this.cols={}; }
+  constructor(){ this.t={users:[],sessions:[],tasks:[],bids:[],reviews:[],partner_merchants:[],payments:[],kyc_submissions:[],disputes:[],audit_log:[],rate_limits:[],vouchers:[],voucher_redemptions:[],settings:[],coverage:[],devices:[],notifications:[],cancellations:[]}; this.cols={}; }
   prepare(sql){ return new Stmt(this,sql); }
   async batch(stmts){ const out=[]; for(const s of stmts) out.push(this._exec(s.sql,s.args)); return out; }
   _table(sql){ const m=sql.match(/(?:FROM|INTO|UPDATE)\s+(\w+)/i); return m&&this.t[m[1]]?m[1]:null; }
@@ -49,7 +49,11 @@ export class MockDB {
     }
     if(/^UPDATE/i.test(sql)){
       const setPart=sql.match(/SET\s+([\s\S]+?)\s+WHERE/i)[1];
-      const assigns=setPart.split(',').map(x=>x.trim()); // e.g. status='inprogress'  or balance_cents=?
+      // split on TOP-LEVEL commas only, so COALESCE(?, col) stays intact
+      const assigns=[]; { let depth=0, buf=''; for(const ch of setPart){
+        if(ch==='(')depth++; if(ch===')')depth--;
+        if(ch===','&&depth===0){ assigns.push(buf.trim()); buf=''; } else buf+=ch; }
+        if(buf.trim()) assigns.push(buf.trim()); }
       const whereClause=sql.match(/WHERE\s+([\s\S]+)$/i)[1].trim();
       // build setters, consuming ? args in order
       let ai=0; const setters=[];
@@ -61,7 +65,17 @@ export class MockDB {
         // NULL is a literal, not a bound arg. Treating it as one used to consume the
         // WHERE's argument, so the UPDATE matched nothing and failed silently.
         else if(/^NULL$/i.test(rhs)){ setters.push([col,()=>null]); }
-        else { const v=args[ai++]; setters.push([col,()=>v]); }
+        // COALESCE(?, existing_col): use the bound arg when non-null, else keep
+        // the row's current value. Real D1 supports this; used on webhook merge.
+        else if(/^COALESCE\s*\(\s*\?\s*,\s*(\w+)\s*\)$/i.test(rhs)){
+          const kc=rhs.match(/^COALESCE\s*\(\s*\?\s*,\s*(\w+)\s*\)$/i)[1];
+          const v=args[ai++]; setters.push([col,(row)=>(v!=null?v:row[kc])]); }
+        // column self-reference: col=col+1, col=col-1 (real SQLite supports this;
+        // the old shim consumed a WHERE arg here and silently updated nothing).
+        else { const m=rhs.match(/^(\w+)\s*([+-])\s*(\d+)$/);
+          if(m){ const [,rc,op,num]=m; const n=parseInt(num,10);
+            setters.push([col,(row)=>((row[rc]||0)+(op==='+'?n:-n))]); }
+          else { const v=args[ai++]; setters.push([col,()=>v]); } }
       }
       // where: support "id=?", "user_id=?", and "task_id=? AND id!=?"
       const wConds=whereClause.split(/AND/i).map(x=>x.trim());
@@ -76,7 +90,7 @@ export class MockDB {
           if(op==='eq' && String(r[col])!==String(val)) match=false;
           if(op==='ne' && String(r[col])===String(val)) match=false;
         }
-        if(match) for(const [col,fn] of setters) r[col]=fn();
+        if(match) for(const [col,fn] of setters) r[col]=fn(r);
       }
       return {results:[]};
     }

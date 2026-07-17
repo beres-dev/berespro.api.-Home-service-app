@@ -10,6 +10,13 @@ binding = "DB"
 database_name = "berespro-db"
 database_id = "9595441c-9638-4b61-ad6a-0e15c0be23af"
 
+# Rate-limit store (high-traffic). Create a KV namespace in the dashboard
+# (Storage & Databases > KV > Create), then uncomment and paste its id.
+# Until this is bound, rate limiting falls back to D1 automatically.
+# [[kv_namespaces]]
+# binding = "RL_KV"
+# id = "PASTE_KV_NAMESPACE_ID_HERE"
+
 [vars]
 CLERK_ISSUER = "https://good-penguin-19.clerk.accounts.dev"
 COMMISSION_BPS = "2000"        # 20% platform fee (2000 bps)

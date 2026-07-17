@@ -20,9 +20,12 @@ async function clerkJwks(env) {
   if (!url) throw new Error("CLERK_ISSUER or CLERK_JWKS_URL not set");
   // cache 1h, keyed by url so a config change refetches
   if (_jwks.keys && _jwks.url === url && Date.now() - _jwks.at < 3600_000) return _jwks.keys;
+  if (!/^https:\/\//.test(url)) throw new Error("JWKS URL must be https");
   const res = await fetch(url);
+  if (!res.ok) throw new Error("JWKS fetch failed: " + res.status);
   const data = await res.json();
-  _jwks = { at: Date.now(), keys: data.keys || [], url };
+  if (!Array.isArray(data.keys) || data.keys.length === 0) throw new Error("JWKS empty");
+  _jwks = { at: Date.now(), keys: data.keys, url };
   return _jwks.keys;
 }
 
@@ -47,6 +50,11 @@ export async function verifyClerkToken(token, env) {
     payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
   } catch { return null; }
 
+  // Pin the algorithm. Clerk signs with RS256; accepting anything else opens
+  // the classic JWT algorithm-confusion bypass (alg:none, or alg:HS256 using
+  // the RSA public key as the HMAC secret). Reject any other alg outright.
+  if (!header || header.alg !== "RS256") return null;
+
   const nowSec = Math.floor(Date.now() / 1000);
   if (payload.exp && payload.exp < nowSec) return null;
   if (payload.nbf && payload.nbf > nowSec + 5) return null;
@@ -54,9 +62,13 @@ export async function verifyClerkToken(token, env) {
   if (env.CLERK_ISSUER && payload.iss !== env.CLERK_ISSUER.replace(/\/+$/, "")) return null;
   if (!payload.sub) return null;
 
-  // signature check (RS256) against Clerk JWKS
-  const keys = await clerkJwks(env);
-  const jwk = keys.find((k) => k.kid === header.kid) || keys[0];
+  // signature check (RS256) against Clerk JWKS. A JWKS fetch failure must fail
+  // closed (reject the token), never surface as a 500.
+  let keys;
+  try { keys = await clerkJwks(env); } catch { return null; }
+  // Match the key id exactly. Falling back to keys[0] lets a forged `kid`
+  // steer verification to an unintended key.
+  const jwk = header.kid ? keys.find((k) => k.kid === header.kid) : null;
   if (!jwk) return null;
   const key = await crypto.subtle.importKey(
     "jwk", jwk, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]

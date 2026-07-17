@@ -1,16 +1,17 @@
 # Berespro App (frontend)
 
-Dua versi kod yang SAMA, dua sasaran berbeza:
+SATU sumber kebenaran: `index.html`. Fail duplicate `berespro-app.html`
+telah DIBUANG (v27) sebab dua salinan yang disync tangan adalah punca
+drift senyap. Kalau nampak fail tu masih ada di GitHub, padam:
+buka fail -> ikon tong sampah -> commit.
 
-- `berespro-app.html` — versi satu-fail, guna Google Fonts CDN. Untuk buka
-  terus / kongsi cepat.
-- `index.html` + `sw.js` + `manifest.webmanifest` + `fonts/` + `icons/` —
-  build PWA untuk Netlify Drop. Font local, boleh install, jalan offline.
+Isi folder ni = build PWA untuk Netlify Drop:
+  index.html, sw.js, manifest.webmanifest, fonts/, icons/
 
-⚠️ Bila ubah logik app, ubah KEDUA-DUA fail. Tiada langkah build yang
-menjana satu dari satu lagi.
+Deploy: drag isi folder ni (kecuali README.md) ke app.netlify.com/drop.
+Selepas deploy: DevTools > Application > Service Workers > Unregister,
+kemudian hard refresh. Naikkan CACHE version dalam sw.js setiap kali
+logik app berubah.
 
-Deploy: drag isi folder ni (kecuali berespro-app.html + README.md) ke
-app.netlify.com/drop.
-
-Versi semasa: v23. Lihat CHANGELOG_v23.md di root repo.
+Ujian integrasi (test/app-integration.mjs) membaca index.html ini terus,
+jadi lapisan API app diuji terhadap Worker sebenar pada setiap push.
