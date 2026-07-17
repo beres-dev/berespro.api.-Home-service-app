@@ -99,6 +99,24 @@ export default {
     const path = url.pathname.replace(/\/+$/, "") || "/";
     if (path === "/" || path === "/health") return json({ ok: true, service: "berespro-api" });
 
+    // Diagnostic: list the routes this deployment is really serving.
+    // A deploy can succeed while one file is stale, and a 404 alone cannot tell
+    // you whether the route is missing or its handler is. Open /routes in a
+    // browser (plain GET, no console needed) to see both.
+    if (path === "/routes") {
+      return json({
+        ok: true,
+        count: ROUTES.length,
+        // handler "MISSING" = route registered, but its module did not export the
+        // function. That is the signature of a half-uploaded file.
+        routes: ROUTES.map(([m, p, h]) => ({
+          method: m,
+          path: p,
+          handler: typeof h === "function" ? "ok" : "MISSING",
+        })),
+      });
+    }
+
     // ── one-time DB setup: initialise all tables. Safe to run again (IF NOT EXISTS).
     // Visit https://<worker-url>/setup?key=<SETUP_KEY> once after first deploy.
     if (path === "/setup") {
