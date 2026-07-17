@@ -19,4 +19,11 @@ REQUIRE_KYC_TO_BID = "1"       # partners must pass KYC before bidding
 #   JWT_SECRET     (Encrypt)  random 40+ char string for signing session JWTs
 #   CLERK_ISSUER   already set above as a plain var
 #   ADMIN_IDS      (plain)    your user id(s), comma-separated, for admin dashboard
-#   PSP_SECRET / PSP_KEY / PSP_BASE   later, when you register a PSP
+#
+# Xendit (set as Secret/Encrypt in Settings > Runtime > Variables and secrets):
+#   XENDIT_SECRET_KEY      Xendit dashboard > Settings > Developers > API Keys
+#   XENDIT_CALLBACK_TOKEN  Xendit dashboard > Settings > Developers > Webhooks
+#   XENDIT_SPLIT_RULE_ID   (plain Text) xenPlatform split rule id, splitru_xxx
+#
+# With XENDIT_SECRET_KEY unset the adapter stays in simulation mode, so the app
+# still runs end to end. Set it only when you are ready to move real money.

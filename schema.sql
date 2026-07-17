@@ -10,6 +10,9 @@
 -- exists, so any new column added to an existing table needs an explicit ALTER
 -- here. Each one is its own statement so a partial failure doesn't cascade.
 ALTER TABLE payments ADD COLUMN card_fp TEXT;
+-- Capture needs Xendit's PAYMENT id (py-...), but authorize only returns the
+-- payment REQUEST id (pr-...). The webhook carries the payment id, so we store it.
+ALTER TABLE payments ADD COLUMN psp_payment_id TEXT;
 
 -- ---------- users ----------
 CREATE TABLE IF NOT EXISTS users (
