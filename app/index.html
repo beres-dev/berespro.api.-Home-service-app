@@ -15,7 +15,7 @@
    Leave empty to keep DEV/phone mode. Get it from Clerk Dashboard → API Keys. */
 window.BP_CLERK_PUBLISHABLE_KEY =
   (typeof localStorage!=="undefined" && localStorage.getItem("bp.clerk")) ||
-  "pk_test_Z29vZC1wZW5ndWluLTE5LmNsZXJrLmFjY291bnRzLmRldiQ";
+  "pk_live_Y2xlcmsuYmVyZXNwcm8ubXkk";   // PRODUCTION — clerk.berespro.my
 /* PRODUCTION: paste your deployed Worker URL here (from `wrangler deploy`),
    e.g. "https://berespro-api.YOURNAME.workers.dev". Leave empty to use Settings. */
 window.BP_API_BASE = "https://berespro.zainihafz.workers.dev";
@@ -474,7 +474,7 @@ T.welcome = () => `
     <div class="tile" style="bottom:14px;right:30px">${IC.truck(15)} Moving</div>
   </div>
   <button class="btn wht" onclick="authGoogle()">${gIcon} Continue with Google</button>
-  ${ (typeof LIVE==="function" && LIVE()) ? `<div style="height:10px"></div>
+  ${ (typeof LIVE==="function" && LIVE() && window.BP_IS_DEV_BUILD) ? `<div style="height:10px"></div>
   <button class="btn pri" onclick="go('phone')">${IC.phone(18)} Sign in with phone (DEV)</button>` : `` }
   <div style="text-align:center;margin-top:14px">
     <a href="javascript:void(0)" onclick="manualRecheck()" style="font-size:12.5px;color:var(--blu);font-weight:700">Already signed in with Google? Tap to continue</a>

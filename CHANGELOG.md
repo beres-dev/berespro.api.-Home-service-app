@@ -819,3 +819,83 @@ Dipagar SETUP_KEY, jadi tidak awam.
 Diagnosis TIDAK PERNAH melonggarkan penolakan — token tetap ditolak. Nilai
 config di-log server-side untuk `wrangler tail`, tidak dihantar ke client
 (ada ujian yang sahkan issuer yang dijangka tak bocor ke luar).
+
+
+---
+
+# v37 — app bertukar ke Clerk PRODUCTION
+
+Perubahan konfigurasi, bukan logik. 474 ujian masih lulus.
+
+## Yang berubah
+
+app/index.html baris 18: kunci Clerk dev (pk_test_, instance
+good-penguin-19) diganti dengan kunci PRODUCTION:
+
+  pk_live_Y2xlcmsuYmVyZXNwcm8ubXkk    -> clerk.berespro.my
+
+Override localStorage ("bp.clerk") masih berfungsi kalau perlu tukar
+sementara tanpa deploy semula.
+
+## JANGAN DEPLOY SEHINGGA EMPAT-EMPAT SIAP
+
+App ini akan GAGAL sign-in melainkan semua ini betul serentak:
+
+1. [SIAP] Google OAuth custom credentials dalam Clerk production
+2. [SIAP] 5 CNAME di Spaceship -> Clerk DNS "Verified"
+3. [MENUNGGU] SSL certificate Clerk untuk clerk.berespro.my +
+   accounts.berespro.my (auto, biasanya beberapa minit)
+4. [BELUM] JWT template bernama "berespro" dalam instance PRODUCTION
+5. [BELUM] CLERK_ISSUER di Cloudflare = https://clerk.berespro.my
+
+Nombor 4 adalah blocker senyap: app panggil
+sess.getToken({ template: "berespro" }) TANPA fallback. Kalau template
+tiada, getToken pulang null dan pengguna nampak "Signed in, but no token"
+walaupun semua yang lain betul.
+
+Template mesti sertakan claim yang backend baca:
+  email         -> {{user.primary_email_address}}
+  name          -> {{user.full_name}}
+  phone_number  -> {{user.primary_phone_number}}
+(`sub` disertakan Clerk secara automatik.)
+
+## Selepas tukar, sahkan dengan
+
+  /health/config?key=<SETUP_KEY>
+  -> auth.clerk_instance patut jadi "production"
+
+Kalau sign-in gagal, /auth/session kini bagi kod yang tepat:
+  issuer_mismatch  = app dan CLERK_ISSUER tak sepadan
+  issuer_not_set   = CLERK_ISSUER tak diset langsung
+  bad_token        = token betul-betul tak sah
+
+## PERINGATAN
+
+Tukar ke production akan PADAM semua pengguna ujian — data Clerk tidak
+berpindah antara instance. Hari ini tiada kos (semua akaun ujian).
+
+
+---
+
+# v38 — sembunyikan UI dev daripada pengguna production
+
+Satu pembetulan kecil, dijumpai selepas Zaini deploy v37 dan nampak
+butang "Sign in with phone (DEV)" pada skrin welcome sebenar.
+
+## Bukan lubang keselamatan — hal profesionalisme
+
+Backend sudah selamat: /auth/dev-login pulang 404 sebab DEV_LOGIN tak
+diset di Cloudflare (disahkan lagi sekali). Tapi app tetap PAPARKAN
+butang tu kepada pengguna sebenar sebab ia digerbang atas LIVE() sahaja
+(iaitu, "ada API base dikonfigur"), bukan atas sama ada build ni
+production.
+
+## Fix
+
+window.BP_IS_DEV_BUILD sekarang derive terus daripada kunci Clerk yang
+aktif: false bila kunci pk_live_, true bila pk_test_. Satu punca
+kebenaran — tak boleh drift daripada kunci yang app SEBENARNYA guna.
+Butang "Sign in with phone (DEV)" (dan skrin DEV MODE di belakangnya,
+yang tiada laluan masuk lain) kini hanya nampak pada build dev.
+
+Bina production (pk_live_) sekarang tunjuk HANYA "Continue with Google".
