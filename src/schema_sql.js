@@ -7,6 +7,41 @@ export default `-- ============================================================
 -- Berespro never touches customer funds.
 -- ============================================================
 
+-- Saved addresses (Grab-style Home / Office / custom labels). One row per
+-- saved place; the label is what the user calls it. Capped in code, not here.
+CREATE TABLE IF NOT EXISTS addresses (
+  id          TEXT PRIMARY KEY,            -- adr_xxx
+  user_id     TEXT NOT NULL,
+  label       TEXT NOT NULL,               -- "Home", "Office", or custom
+  addr        TEXT NOT NULL,               -- full address text as typed
+  lat         REAL NOT NULL,
+  lng         REAL NOT NULL,
+  created_at  INTEGER NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS idx_addr_user ON addresses(user_id);
+
+-- Tips: a customer thanking a partner after the work is done.
+-- 100% goes to the partner — the platform takes NOTHING from a tip. It is not
+-- a payments row because payments carry a bid_id and a fee split; a tip has
+-- neither, and blurring them would make the fee arithmetic lie.
+-- No escrow either: escrow protects the customer BEFORE work is done. A tip is
+-- after, so it charges straight through.
+CREATE TABLE IF NOT EXISTS tips (
+  id           TEXT PRIMARY KEY,             -- tip_xxx
+  task_id      TEXT NOT NULL,
+  customer_id  TEXT NOT NULL,
+  partner_id   TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL,
+  status       TEXT NOT NULL DEFAULT 'pending',  -- pending | captured | failed
+  psp_ref      TEXT,
+  created_at   INTEGER NOT NULL,
+  FOREIGN KEY (task_id) REFERENCES tasks(id),
+  FOREIGN KEY (partner_id) REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS idx_tips_partner ON tips(partner_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tips_task ON tips(task_id);
+
 -- ---------- migrations (safe to re-run; /setup skips "duplicate column") ----------
 -- CREATE TABLE IF NOT EXISTS does not add columns to a table that already
 -- exists, so any new column added to an existing table needs an explicit ALTER
@@ -173,6 +208,27 @@ ALTER TABLE payments ADD COLUMN original_amount_cents INTEGER;
 --                   flag: a deactivated user must still be able to sign in to
 --                   turn their account back on; a suspended one must not)
 --   deleted_at      irreversible; identity anonymised, money trail retained
+-- delivery tasks (Moving/Delivery): multi-stop route + auto distance.
+--   stops     JSON array [{addr,lat,lng}] — drop-off points AFTER the pickup
+--   route_km  server-computed haversine along pickup -> stop1 -> ... (display + pricing)
+--   photos    JSON array of R2 keys (taskimg/<uid>/...), max 4, shown to partners
+-- Delivery vehicle: "motor" or "car". Motorbikes are cheaper and faster in
+-- traffic but carry little; cars cost more and carry more. Each has its own
+-- base + per-km price (admin-tunable), so the customer picks the trade-off.
+ALTER TABLE tasks ADD COLUMN vehicle TEXT;
+
+ALTER TABLE tasks ADD COLUMN stops TEXT;
+ALTER TABLE tasks ADD COLUMN route_km REAL;
+ALTER TABLE tasks ADD COLUMN photos TEXT;
+
+-- partner delivery licence + profile photo (both R2 keys, both optional)
+--   licence_key  kyc/<uid>/...-licence — an identity document, admin-only access.
+--                REQUIRED (by code) before the delivery/moving skill can be set.
+--   avatar_key   avatar/<uid> — one key per user, overwritten on change, visible
+--                to any signed-in user.
+ALTER TABLE users ADD COLUMN licence_key TEXT;
+ALTER TABLE users ADD COLUMN avatar_key TEXT;
+
 ALTER TABLE users ADD COLUMN deactivated_at INTEGER;
 ALTER TABLE users ADD COLUMN deleted_at INTEGER;
 

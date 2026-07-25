@@ -1,8 +1,8 @@
 // src/routes/auth.js
 import { json, err, id, now, signJWT, randomToken, sha256hex, readBody } from "../lib/util.js";
 import { verifyClerkToken, requireUser } from "../lib/auth.js";
-import { commissionBpsFor, cancelPolicy } from "../lib/settings.js";
-import { rateLimit, clientIp, LIMITS } from "../lib/guard.js";
+import { commissionBpsFor, cancelPolicy, getSettings } from "../lib/settings.js";
+import { rateLimit, clientIp, LIMITS, vstr } from "../lib/guard.js";
 
 // POST /auth/session
 // body: { clerkToken }  (Clerk session JWT from the app: Google or phone OTP sign-in)
@@ -75,7 +75,25 @@ export async function getMe(req, env) {
   // partner's baseline for display.
   const bps = await commissionBpsFor(env, { partnerId: user.id });
   const cancel = await cancelPolicy(env);
-  return json({ user: publicUser(user), commission_bps: bps,
+  // Per-km delivery pricing (Lalamove-style SUGGESTION, not a forced price —
+  // this stays a bidding marketplace). Admin-tunable via the settings table;
+  // the client uses these to pre-fill the budget, the server recomputes the
+  // route distance itself on create.
+  const s = await getSettings(env).catch(() => ({}));
+  // Per vehicle: a motorbike is cheaper and beats traffic but carries little;
+  // a car costs more and carries more. The customer picks the trade-off, so the
+  // price has to differ or the choice is meaningless.
+  const delivery_pricing = {
+    motor: {
+      base_cents: parseInt(s.delivery_motor_base_cents || "400", 10),      // RM4
+      per_km_cents: parseInt(s.delivery_motor_per_km_cents || "100", 10),  // RM1.00/km
+    },
+    car: {
+      base_cents: parseInt(s.delivery_car_base_cents || "500", 10),        // RM5 (Zaini's number)
+      per_km_cents: parseInt(s.delivery_car_per_km_cents || "150", 10),    // RM1.50/km
+    },
+  };
+  return json({ user: publicUser(user, env), delivery_pricing, commission_bps: bps,
                 cancel_policy: { grace_min: cancel.graceMin, fee_bps: cancel.feeBps } });
 }
 
@@ -99,12 +117,29 @@ export async function patchMe(req, env) {
     if (taken) return err("phone already in use", 409, "phone_taken");
     fields.push("phone = ?"); vals.push(norm);
   }
-  if (b.skills !== undefined) { fields.push("skills = ?"); vals.push(JSON.stringify(b.skills)); }
-  if (!fields.length) return json({ user: publicUser(user) });
+  if (b.skills !== undefined) {
+    // Skills were previously JSON.stringify'd unvalidated — any shape, any size.
+    if (!Array.isArray(b.skills) || b.skills.length > 12)
+      return err("skills must be a list (max 12)", 400);
+    const skills = [];
+    for (const s of b.skills) {
+      const v = vstr(s, 24);
+      if (!v) return err("invalid skill name", 400);
+      skills.push(v.toLowerCase());
+    }
+    // Delivery/moving means driving other people's goods: licence first. The
+    // check is HERE, server-side — the app also guides the flow, but the app
+    // is not the gate.
+    const needsLicence = skills.some(s => s === "delivery" || s === "moving");
+    if (needsLicence && !user.licence_key)
+      return err("upload your driving licence before taking the delivery skill", 403, "licence_required");
+    fields.push("skills = ?"); vals.push(JSON.stringify(skills));
+  }
+  if (!fields.length) return json({ user: publicUser(user, env) });
   vals.push(user.id);
   await env.DB.prepare(`UPDATE users SET ${fields.join(", ")} WHERE id = ?`).bind(...vals).run();
   const updated = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(user.id).first();
-  return json({ user: publicUser(updated) });
+  return json({ user: publicUser(updated, env) });
 }
 
 // POST /auth/dev-login  body: { phone, name, mode }
@@ -136,16 +171,22 @@ async function issueTokens(env, user) {
   await env.DB.prepare(
     "INSERT INTO sessions (id,user_id,refresh_hash,expires_at,created_at) VALUES (?,?,?,?,?)"
   ).bind(id("ses"), user.id, hash, now() + 30 * 24 * 3600, now()).run();
-  return json({ accessToken, refreshToken, user: publicUser(user) });
+  return json({ accessToken, refreshToken, user: publicUser(user, env) });
 }
 
-export function publicUser(u) {
+export function publicUser(u, env) {
   return {
     id: u.id, name: u.name, phone: u.phone, email: u.email,
     mode: u.mode, city: u.city, lat: u.lat, lng: u.lng,
     avatar_hue: u.avatar_hue, id_verified: !!u.id_verified,
     skills: JSON.parse(u.skills || "[]"),
     needs_phone: !u.phone,   // Google sign-in gives email+name, not phone → app collects it
+    has_avatar: !!u.avatar_key,
+    has_licence: !!u.licence_key,
+    // Admin-only UI (the control-panel token) is hidden from everyone else. The
+    // app cannot work this out on its own, and this flag grants NOTHING — every
+    // admin route re-checks ADMIN_IDS server-side regardless of what it says.
+    is_admin: !!(env && env.ADMIN_IDS && env.ADMIN_IDS.split(",").map(s => s.trim()).includes(u.id)),
   };
 }
 

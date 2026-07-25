@@ -937,3 +937,320 @@ Encrypted diurus berasingan daripada [vars], selamat dari dashboard.
 Lepas ni, apa-apa perubahan config production kena masuk wrangler.toml
 DAN dashboard sekali, bukan dashboard sahaja. Kalau tidak, ia hilang pada
 upload seterusnya tanpa amaran.
+
+
+---
+
+# v40 — empat pembetulan dari ujian sebenar Zaini di telefon
+
+## 1. KRITIKAL: toast MEMUSNAHKAN borang yang sedang diisi
+
+    function toast(m){ state.toast=m; render(); ... }
+
+render() ganti innerHTML #app sepenuhnya. Setiap input borang yang belum
+dihantar HILANG nilainya. usePin() panggil toast 3 kali, jadi tekan
+"Set pin" masa post task = borang kosong semula.
+
+Ini jejas SETIAP borang dalam app, bukan post-task sahaja.
+
+Fix: toast kini hidup dalam #toast-host, satu nod DI LUAR #app. toast()
+tulis terus ke situ, tidak pernah panggil render(). CSS ditukar dari
+position:absolute ke fixed sebab ia tidak lagi berlabuh pada .app.
+
+## 2. Baris DEV dan Admin nampak oleh pengguna biasa
+
+- "Developer" (API base URL) kini hanya pada build dev (BP_IS_DEV_BUILD).
+- "Admin token" dulu dipapar kepada SESIAPA yang log masuk (state.liveUid).
+  Kini hanya admin sebenar: backend pulangkan is_admin dalam publicUser,
+  dikira dari ADMIN_IDS. Flag ini TIDAK memberi kuasa apa-apa — setiap
+  route admin tetap semak ADMIN_IDS di server, tak kira apa app kata.
+
+## 3. Toggle "Appearance" adalah hiasan semata
+
+Tiada onclick, kekal "on", dan kandungan tetap cerah walaupun tertulis
+"Dark". Kini dark mode SEBENAR: palet penuh di html[data-theme="dark"].
+Sebab semua komponen baca token CSS, tiada satu pun perlu tahu tema wujud.
+Bayang clay ditala semula untuk permukaan gelap (highlight putih nampak
+macam calar di atas gelap). Disahkan dengan render Playwright sebenar,
+bukan diandaikan. Tema disimpan dan dipakai SEBELUM paint pertama supaya
+tiada kelipan.
+
+## 4. GPS tak dapat lokasi
+
+BUKAN bug kod. Geolocation ialah API secure-context: pada http:// browser
+BLOK terus, tiada prompt, tiada ralat yang pengguna boleh betulkan.
+app.berespro.my sedang berjalan atas HTTP (tiada sijil SSL Netlify lagi).
+
+Kod kini namakan punca sebenar dan bezakan: perlu https / kebenaran
+ditolak / tiada isyarat / timeout. Mesej lama menyalahkan "browser
+permission", yang menghantar Zaini mencari tetapan yang bukan puncanya.
+
+TINDAKAN ZAINI: hidupkan HTTPS untuk app.berespro.my di Netlify
+(Domain management > HTTPS > Verify/Provision certificate). GPS akan
+berfungsi sebaik sijil dikeluarkan.
+
+## BELUM: gambar profil
+
+Perlu storan R2 yang sama macam KYC, dan bucket berespro-kyc masih belum
+dicipta. Akan dibina selepas bucket wujud.
+
+
+---
+
+# v41 — alamat tersimpan (gaya Grab), modal peta, dan sistem state
+
+Suite baru test/addresses.mjs: 21 ujian. Jumlah 495 lulus, 0 gagal.
+3 route baru (jumlah 69). PERLU /setup semula: jadual `addresses`.
+
+## 1. Alamat tersimpan: Home / Office / label sendiri
+
+Backend sebenar (bukan localStorage sahaja) supaya alamat ikut akaun:
+  GET    /me/addresses
+  POST   /me/addresses        { label, addr, lat, lng }
+  DELETE /me/addresses/:id
+
+Keputusan reka bentuk:
+- LABEL SAMA MENGGANTI. Simpan "Home" baru menggantikan "Home" lama
+  (case-insensitive) — itulah maksud "set as Home" bagi manusia, bukan
+  kumpul lima Home. Ada ujian khusus.
+- Had 10 alamat. Tiada siapa ada 11 rumah; had menghalang client jahat
+  memenuhi jadual. Mengganti label sedia ada MASIH dibenarkan pada had.
+- Pin wajib. Alamat tanpa koordinat tak boleh pandu coverage gate atau
+  jarak partner — ia penipuan yang menunggu masa untuk pecah.
+- Ownership: orang lain dapat 404 (bukan 403 — tiada existence oracle).
+
+Dalam app: chip [Home] [Office] [...] atas borang post task — tap terus
+isi alamat + pin TANPA render (pelajaran toast: render padam borang).
+Pengurus penuh dalam Settings > Saved addresses (padam dengan confirm).
+
+## 2. Modal peta skrin penuh (macam Grab)
+
+#modal-host DI LUAR #app — pelajaran sama macam toast: render() tak boleh
+musnahkan peta yang tengah diseret. Leaflet + pin seret + tap-to-move,
+GPS jump-to-me (dengan mesej jujur https yang sama), reverse geocoding
+Nominatim yang PRE-FILL alamat tapi tak pernah menimpa apa yang pengguna
+dah taip (_mm.edited flag), chip label Home/Office/Other + checkbox
+"Save this address". Kalau Leaflet gagal dimuat (offline), fallback:
+taip alamat sendiri.
+
+## 3. Sistem state
+
+- BUSY OVERLAY (#busy-host, imperatif): "Signing you in…" semasa
+  pertukaran token Clerk (hide dalam finally yang sama dengan single-
+  flight flag — tiada laluan boleh tinggalkan spinner tersangkut),
+  "Posting your task…", "Sending your bid…".
+- SUCCESS SCREEN selepas post: bulatan hijau animasi + nama task +
+  "View my task" / "Back to home". Laluan LIVE dan local dua-dua guna.
+
+## Nota pengesahan
+
+Logik disahkan oleh 495 ujian. Render Playwright berjalan tanpa ralat
+halaman dan screenshot tercipta, tetapi paparan imej dalam sesi gagal
+kali ini — pengesahan visual akhir adalah pada telefon sebenar. Kalau
+modal peta nampak pelik, hantar screenshot.
+
+
+---
+
+# v42 — delivery multi-stop + harga per-km + foto task + Help centre
+
+Dari ujian tester sebenar (WhatsApp Zaini). Suite baru test/delivery.mjs:
+17 ujian. Jumlah 512 lulus, 0 gagal. 2 route baru (jumlah 71).
+PERLU /setup semula: kolum tasks.stops, tasks.route_km, tasks.photos.
+
+## 1. Stops penghantaran (point B, multi-drop macam Lalamove)
+
+Aduan tester: "xda ruangan untuk deliver item tu". Kini untuk kategori
+Moving/Delivery: sampai 5 stop selepas pickup, setiap satu dipilih melalui
+modal peta yang sama (alamat + pin wajib). route_km dikira di SERVER
+(haversine pickup -> stop1 -> ...) — client tak boleh dikte jarak; ada
+ujian yang cuba hantar route_km palsu dan disahkan diabaikan. Had 400km.
+
+Paparan: skrin butiran task (customer DAN partner sebelum bid) tunjuk
+laluan A -> 1 -> 2 dengan chip jarak, melalui satu blok kongsi
+taskExtras() — partner nampak laluan penuh sebelum menawar.
+
+## 2. Harga auto per-km (macam Lalamove, tapi jujur pada model bidding)
+
+CADANGAN, bukan harga paksa — ini marketplace bidding. Formula:
+base + per_km × jarak. Default RM5 + RM1.50/km, admin-tunable melalui
+settings table (delivery_base_cents, delivery_per_km_cents), dihantar ke
+app dalam respons /me. Baris "Route ≈ X km · suggested RM Y [Use
+suggested]" mengisi budget dengan satu tap. Matematik disahkan dua kali:
+ujian server (17) dan assert DOM (14).
+
+## 3. Foto task (sampai 4) — tile "Photos" tak lagi hiasan
+
+Aduan tester: "xboleh attach photo" — tile + tu memang tiada onclick.
+Kini sebenar: pilih -> DOWNSCALE atas telefon (canvas ≤1600px JPEG) ->
+upload. Downscale buat dua kerja: upload ~5MB jadi ~300KB, dan re-encode
+BUANG EXIF termasuk koordinat GPS tempat gambar diambil — foto task
+dipapar kepada orang asing, ia tak patut bocorkan lokasi melebihi alamat
+yang dipilih.
+
+Storan: bucket R2 SAMA dengan KYC (satu bucket sahaja untuk dicipta),
+prefix berbeza = peraturan akses berbeza: kyc/ admin sahaja, taskimg/
+mana-mana pengguna log masuk (partner mesti nampak foto kerja). Server
+pilih kunci, magic bytes disahkan, kunci orang lain ditolak (ujian
+forgery kyc/ + kunci orang lain ada). <img> tak boleh hantar header auth,
+jadi thumbnail dimuat melalui fetch + blob URL (hydrateTimgs, dengan
+cache).
+
+Submit disekat sementara foto masih upload ("Photos are still
+uploading") — elak task tercipta tanpa foto yang dijanjikan.
+
+## 4. Help centre — dulu toast('Help centre opened'), sekarang skrin
+
+6 FAQ (bids, bila bayar, dispute, cancel, kenapa KYC, cara delivery)
+dengan accordion. Butang WhatsApp deep-link muncul HANYA bila
+BP_SUPPORT_WA diisi nombor sebenar — tiada butang palsu yang tunjuk ke
+tempat kosong. ZAINI: isi window.BP_SUPPORT_WA = "60XXXXXXXXX" dalam
+app/index.html bila dah ada nombor support.
+
+## Nota bug diri sendiri
+
+Hook skrin saya tulis screen==="post" tapi nama skrin sebenar "cpost" —
+ditangkap oleh assert DOM (bukan oleh mata), dibaiki. Pengesahan visual
+piksel gagal dalam sesi (paparan imej), jadi pengesahan ialah 14 assert
+DOM + 512 ujian. Rupa akhir: telefon Zaini.
+
+## PENTING: foto perlukan bucket R2
+
+Upload foto pulang 503 sampai bucket "berespro-kyc" dicipta di Cloudflare
+dan [[r2_buckets]] dalam wrangler.toml di-uncomment. Ini blocker SAMA
+dengan KYC dan gambar profil — SATU langkah cipta bucket membuka
+ketiga-tiga fitur.
+
+
+---
+
+# v43 — sisi partner: skills sebenar, gate lesen delivery, KYC kamera,
+#       gambar profil, harga per-km dalam control panel
+
+Suite baru test/partner-media.mjs: 18 ujian. Jumlah 530 lulus, 0 gagal.
+4 route baru (jumlah 75). PERLU /setup semula: users.licence_key +
+users.avatar_key.
+
+## 1. "+ Add skill" — dulu chip mati, sekarang sheet penuh
+
+8 skill sebagai toggle. Skills kini DIVALIDASI di server (dulu:
+JSON.stringify apa sahaja tanpa semakan — array sahaja, max 12, setiap
+satu ≤24 aksara, lowercase).
+
+## 2. Skill Delivery/Moving perlukan lesen memandu
+
+Partner akan memandu barang customer. Gate di SERVER (patchMe):
+licence_required 403 tanpa lesen — app cuma memudahkan laluan (prompt
+kamera terus, capture="environment"). Lesen disimpan bawah kyc/ (akses
+admin sahaja — ia dokumen identiti), route admin baru
+GET /admin/licence/:userId untuk semak. Ujian: tolak tanpa lesen, lulus
+selepas, skill bukan-memandu bebas.
+
+## 3. KYC guna KAMERA, bukan album; ic_last4 DIBUANG
+
+capture="environment" (IC depan/belakang) + capture="user" (selfie).
+JUJUR: capture ialah arahan kepada browser mudah alih — Android/iOS
+membukanya terus ke kamera, tapi ia bukan bukti kriptografi; desktop
+fallback ke file picker. Field 4 digit IC dibuang dari borang DAN backend
+(nombor IC ada ATAS gambar dokumen yang admin semak — menaip 4 digit
+menambah geseran tanpa menambah verifikasi). ic_last4 masih diterima
+jika dihantar (app lama), dan masih ditolak jika cacat.
+
+## 4. Gambar profil
+
+Tap avatar di profil (customer & partner) -> kamera depan -> downscale
+(EXIF dibuang) -> POST /me/avatar. SATU kunci R2 per pengguna
+(avatar/<uid>) ditulis-ganti — tiada sampah terkumpul. Boleh dilihat
+mana-mana pengguna log masuk (avatar muncul pada bid). has_avatar /
+has_licence didedahkan dalam publicUser.
+
+## 5. Harga per-km dalam control panel
+
+Base RM5 dikekalkan (Zaini setuju). Panel admin tab Algorithm kini ada
+"Delivery pricing": Base fare (RM) + Per km (RM) — UI dalam RM, wire
+dalam sen. Whitelist admin settings ditambah delivery_base_cents (cap
+RM100) + delivery_per_km_cents (cap RM20/km). Berkuat kuasa serta-merta
+pada sesi baru (dihantar melalui /me).
+
+## Nota
+
+Pengesahan: 18 ujian server + 10 assert DOM (2 kegagalan awal ialah
+andaian ujian saya yang salah, bukan kod — borang KYC render pada status
+not_submitted, dan app sentiasa LIVE jadi prompt lesen ialah laluan
+betul). Foto/lesen/avatar semuanya 503 sehingga bucket R2 dicipta —
+blocker sama, satu langkah membuka semua.
+
+
+---
+
+# v44 — motor/kereta, tip, tema langit negeri, dark mode dibuang
+
+Suite baru test/tips.mjs: 17 ujian. Jumlah 551 lulus, 0 gagal.
+2 route baru (jumlah 77). PERLU /setup: tasks.vehicle + jadual tips.
+
+## 1. Delivery: Motor atau Kereta, harga berbeza
+
+Motor RM4 + RM1.00/km. Kereta RM5 + RM1.50/km (base RM5 Zaini setuju).
+Keempat-empat nilai boleh diubah dalam control panel. Kad pemilih tunjuk
+harga SETIAP mod terus di muka — pilihan tanpa harga bukan pilihan.
+Cadangan harga dikira semula bila mod ditukar. Server sahkan vehicle
+(motor|car sahaja) dan HANYA simpan pada task delivery/moving — task
+cleaning takkan bawa medan kenderaan yang mengelirukan.
+
+## 2. Tip kepada partner selepas kerja siap
+
+100% MASUK PARTNER. Platform tak ambil sesen pun dari tip. Ini sebabnya
+tips ialah jadual SENDIRI, bukan baris payments: payments ada bid_id dan
+pecahan yuran; tip tiada kedua-duanya, dan mencampurkannya akan buat
+aritmetik yuran menipu.
+
+Tiada escrow: escrow melindungi customer SEBELUM kerja. Tip selepas, jadi
+ia dicaj terus. Sekali sahaja per task (unique index, bukan sekadar
+semakan fungsi), customer task itu sahaja, hanya selepas completed, dan
+dibekukan kalau ada dispute.
+
+Sheet muncul sejurus selepas customer lepaskan bayaran (masa perkhidmatan
+baik masih segar), dengan "No thanks" satu tap dan TIADA amaun
+dipratetap — tip yang terasa dipaksa lebih teruk dari tiada tip.
+Pendapatan partner tunjuk tip BERASINGAN dari upah kerja.
+
+## 3. Tema langit ikut negeri
+
+SVG inline, bukan imej: skala ke mana-mana skrin, tiada berat fail, tiada
+pipeline aset. Landmark dilukis sebagai silhouette geometri sebenar:
+  KL/PJ/Subang/Kajang  Petronas (dua menara tirus + skybridge) + KL Tower
+  Putrajaya            Masjid Putra berkubah + jambatan Seri Wawasan
+  Penang               Jambatan Pulau Pinang (cable-stayed)
+  Johor Bahru          Masjid Sultan Abu Bakar (empat menara)
+  Melaka               Christ Church + Menara Taming Sari
+  Shah Alam            Masjid Biru (kubah besar, empat menara)
+  selain itu           bukit + pekan generik
+
+JUJUR: hanya tempat yang ada silhouette betul-betul boleh dikenali
+dilukis. Bentuk yang tiada siapa boleh cam lebih teruk dari langit
+generik yang jujur, jadi selebihnya guna fallback.
+
+Langit bertukar ikut jam (subuh/pagi/tengah hari/senja/malam) dan sapaan
+pun ikut jam — dulu "Good evening" tertulis kekal walaupun pukul 9 pagi.
+
+## 4. Dark mode dibuang sepenuhnya
+
+Token, toggle, applyTheme, toggleTheme, state.theme — semua dikeluarkan
+(bukan disembunyikan). Tinggal <meta theme-color> sahaja.
+
+## IKON 3D: saya TIDAK boleh hasilkan
+
+Ikon dalam mockup Zaini ialah ilustrasi 3D raster (render/AI-generated).
+Saya hanya boleh tulis SVG. Menulis SVG "3D" dengan tangan untuk 8
+kategori akan hasilkan sesuatu yang lebih teruk dari ikon garis sekarang
+— itu tepat slop yang Zaini larang. Ikon kategori KEKAL seperti sedia
+ada. Untuk dapat rupa mockup: eksport 8 PNG dari sumber yang hasilkan
+mockup itu, letak dalam app/icons/cat/, dan saya tukar tile untuk
+memaparkannya (kerja 10 minit).
+
+## Pengesahan
+
+17 ujian tip + 20 assert DOM (skyline berbeza antara negeri, teks di atas
+seni, dark mode betul-betul tiada, harga bertukar ikut kenderaan, tip
+tiada pratetap). Paparan piksel gagal lagi dalam sesi — rupa akhir pada
+telefon Zaini.

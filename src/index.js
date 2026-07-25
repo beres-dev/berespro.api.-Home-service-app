@@ -10,6 +10,10 @@ import * as P from "./routes/partners.js";
 import * as N from "./routes/notifications.js";
 import * as K from "./routes/kyc.js";
 import * as ACC from "./routes/account.js";
+import * as ADDR from "./routes/addresses.js";
+import * as TIMG from "./routes/taskimg.js";
+import * as MED from "./routes/media.js";
+import * as TIP from "./routes/tips.js";
 import * as D from "./routes/disputes.js";
 import * as ADM from "./routes/admin.js";
 import * as MSG from "./routes/messages.js";
@@ -72,6 +76,17 @@ const ROUTES = [
   ["PATCH","/admin/coverage", ADM.patchAdminCoverage],
   ["GET",  "/admin/audit", ADM.listAudit],
 
+  ["GET",  "/jobs/:taskId/tip", TIP.getTip],
+  ["POST", "/jobs/:taskId/tip", TIP.createTip],
+  ["POST", "/me/licence", MED.uploadLicence],
+  ["POST", "/me/avatar", MED.uploadAvatar],
+  ["GET",  "/avatar/:userId", MED.serveAvatar],
+  ["GET",  "/admin/licence/:userId", MED.adminGetLicence],
+  ["POST", "/tasks/photo-upload", TIMG.uploadTaskPhoto],
+  ["GET",  "/timg/:uid/:file", TIMG.serveTaskPhoto],
+  ["GET",  "/me/addresses", ADDR.listAddresses],
+  ["POST", "/me/addresses", ADDR.createAddress],
+  ["DELETE","/me/addresses/:id", ADDR.deleteAddress],
   ["GET",  "/account/closure-check", ACC.closureCheck],
   ["POST", "/account/deactivate", ACC.deactivateAccount],
   ["POST", "/account/reactivate", ACC.reactivateAccount],

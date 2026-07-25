@@ -78,7 +78,6 @@ window.BP_CLERK_APPEARANCE = {
   --red:#EF4D41; --red-t:#FDEAE8;
   --r:22px; --rs:16px;
   --disp:'Unbounded',sans-serif;
-  --body:'Hanken Grotesk',sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
@@ -101,6 +100,12 @@ h2{font-size:17px;font-weight:800;letter-spacing:-.01em}
 
 /* ---------- header ---------- */
 .hd{padding:16px 18px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+/* The skyline is absolutely placed so it sits UNDER the header row and the top
+   of the content sheet, which curves over it — the same overlap as the mockup. */
+.skyline{position:absolute;top:0;left:0;width:100%;height:200px;z-index:0;pointer-events:none}
+.hd-sky{position:relative;z-index:1;padding-bottom:64px}
+.hd-sky .htitle{text-shadow:0 1px 12px rgba(4,12,28,.55)}
+.hd-sky .hsub{text-shadow:0 1px 10px rgba(4,12,28,.5)}
 .hd .hleft{display:flex;align-items:center;gap:10px;min-width:0}
 .hback{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center;color:var(--ctx);cursor:pointer;flex-shrink:0}
 .htitle{font-size:17.5px;font-weight:800;color:var(--ctx)}
@@ -254,7 +259,42 @@ textarea.f{min-height:88px;resize:vertical}
 .escrow svg{flex-shrink:0;color:var(--grn);margin-top:1px}
 
 /* ---------- toast ---------- */
-.toast{position:absolute;bottom:100px;left:50%;transform:translateX(-50%);background:#101F3A;border:0;color:#fff;font-size:13.5px;font-weight:700;padding:12px 20px;border-radius:99px;z-index:60;white-space:nowrap;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+/* ---- vehicle picker ---- */
+.vcard{flex:1;background:var(--sur);border-radius:18px;padding:13px 12px;box-shadow:var(--clay-sm);cursor:pointer;transition:box-shadow .14s,transform .12s;text-align:center}
+.vcard b{display:block;font-size:14px;margin-top:6px}
+.vcard span{display:block;font-size:12.5px;font-weight:800;color:var(--blu);margin-top:2px}
+.vcard .vsub{font-size:11px;color:var(--dim);margin-top:4px;line-height:1.35}
+.vcard .vico{color:var(--mut);display:flex;justify-content:center}
+.vcard.on{box-shadow:var(--clay-in);background:var(--blu-t)}
+.vcard.on .vico{color:var(--blu)}
+.vcard:active{transform:scale(.98)}
+
+/* ---- full-screen map modal (Grab-style location picker) ---- */
+.mmodal{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:70;background:var(--content);display:flex;flex-direction:column}
+.mmtop{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--bg);color:#fff;flex-shrink:0}
+.mmtop b{font-size:16.5px}
+.mmback{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+#mm-map{flex:1;min-height:180px}
+.mmsheet{flex-shrink:0;background:var(--sur);border-radius:22px 22px 0 0;padding:16px 18px 18px;box-shadow:0 -8px 30px rgba(16,31,58,.16)}
+.mmlbl{display:flex;gap:8px;margin:10px 0 4px;flex-wrap:wrap}
+.mmlbl .chip{cursor:pointer}
+.mmlbl .chip.on{background:linear-gradient(145deg,#1f6bff,#0041BC);color:#fff;box-shadow:var(--clay-blu)}
+.addr-chips{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px;margin-top:8px}
+.addr-chips .chip{cursor:pointer;flex-shrink:0}
+.addr-chips .chip.on{background:linear-gradient(145deg,#1f6bff,#0041BC);color:#fff;box-shadow:var(--clay-blu)}
+
+/* ---- busy overlay (sign-in, posting, bidding) ---- */
+.busy{position:fixed;inset:0;z-index:80;background:rgba(7,16,32,.66);backdrop-filter:blur(3px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#fff;font-weight:700;font-size:14.5px}
+.spinner{width:38px;height:38px;border:3.5px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:bp-spin .8s linear infinite}
+@keyframes bp-spin{to{transform:rotate(360deg)}}
+
+/* ---- success screen ---- */
+.okball{width:92px;height:92px;border-radius:50%;background:linear-gradient(145deg,#12c98c,#0EB57D);display:flex;align-items:center;justify-content:center;color:#fff;margin:0 auto 18px;box-shadow:0 14px 34px rgba(14,181,125,.45);animation:bp-pop .5s cubic-bezier(.2,1.6,.4,1)}
+@keyframes bp-pop{0%{transform:scale(.3);opacity:0}100%{transform:scale(1);opacity:1}}
+
+/* fixed, not absolute: the toast now lives outside .app so it no longer
+   anchors to it — see the #toast-host note in the body. */
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#101F3A;border:0;color:#fff;font-size:13.5px;font-weight:700;padding:12px 20px;border-radius:99px;z-index:60;white-space:nowrap;box-shadow:0 10px 30px rgba(0,0,0,.5)}
 
 /* ---------- misc ---------- */
 .divider{height:1px;background:var(--line);margin:16px 0}
@@ -281,6 +321,14 @@ textarea.f{min-height:88px;resize:vertical}
 </head>
 <body>
 <div class="app" id="app"></div>
+<!-- Toast lives OUTSIDE #app on purpose. render() replaces #app wholesale, so a
+     toast that rendered inside it wiped every half-typed form field on screen —
+     tapping "Set pin" while posting a task emptied the whole form. -->
+<div id="toast-host"></div>
+<!-- Imperative overlays. Both live OUTSIDE #app so render() cannot destroy a
+     Leaflet map mid-drag or a busy spinner mid-request. -->
+<div id="modal-host"></div>
+<div id="busy-host"></div>
 
 <script>
 /*__CORE_START__*/
@@ -299,6 +347,135 @@ const CITIES = {
   "Johor Bahru":[1.492,103.741],"Penang":[5.414,100.329],
   "Melaka":[2.196,102.240],"Seremban":[2.726,101.938]
 };
+
+/* ---------- STATE SKYLINE THEMES ----------
+   Each place gets its own horizon. Only landmarks with a genuinely distinctive
+   SILHOUETTE are drawn — a shape nobody can place is worse than an honest
+   generic skyline, so anywhere without one falls back to `generic`. */
+const SKY_BY_CITY = {
+  "Kuala Lumpur":"klcc", "Petaling Jaya":"klcc", "Subang Jaya":"klcc",
+  "Shah Alam":"shahalam", "Kajang":"klcc", "Putrajaya":"putrajaya",
+  "Johor Bahru":"johor", "Penang":"penang", "Melaka":"melaka",
+  "Seremban":"generic",
+};
+const SKYLINES = {
+  // Petronas Towers: twin tapered shafts, stepped setbacks, spires, skybridge
+  // at the 41st/42nd — plus KL Tower's shaft-and-bulb to the right.
+  klcc: `
+    <g opacity=".30">
+      <path d="M18 128 L30 96 L42 128 Z M44 128 L58 88 L72 128 Z"/>
+      <rect x="86" y="104" width="16" height="24"/><rect x="300" y="110" width="14" height="18"/>
+    </g>
+    <g opacity=".55">
+      <rect x="196" y="70" width="7" height="58"/>
+      <circle cx="199.5" cy="66" r="7"/>
+      <rect x="197.5" y="44" width="4" height="20"/>
+      <rect x="330" y="98" width="20" height="30"/><rect x="356" y="88" width="16" height="40"/>
+      <rect x="112" y="96" width="18" height="32"/>
+    </g>
+    <g opacity=".92">
+      <rect x="132" y="60" width="20" height="68"/><rect x="135" y="48" width="14" height="14"/>
+      <rect x="138" y="34" width="8" height="15"/><rect x="141" y="20" width="2.4" height="15"/>
+      <rect x="166" y="60" width="20" height="68"/><rect x="169" y="48" width="14" height="14"/>
+      <rect x="172" y="34" width="8" height="15"/><rect x="175" y="20" width="2.4" height="15"/>
+      <rect x="152" y="70" width="14" height="3.4"/><rect x="152" y="76" width="14" height="3.4"/>
+      <rect x="158" y="73" width="2" height="4"/>
+    </g>`,
+  // Putrajaya: the domed Putra Mosque and the arched Seri Wawasan bridge.
+  putrajaya: `
+    <g opacity=".30"><path d="M0 128 L40 104 L80 128 Z"/><rect x="300" y="112" width="18" height="16"/></g>
+    <g opacity=".92">
+      <path d="M150 128 V88 a26 26 0 0 1 52 0 v40 Z"/>
+      <path d="M176 62 a20 20 0 0 1 20 26 h-40 a20 20 0 0 1 20 -26 Z"/>
+      <rect x="175" y="50" width="2.4" height="13"/>
+      <rect x="128" y="96" width="7" height="32"/><rect x="217" y="96" width="7" height="32"/>
+      <rect x="129.6" y="86" width="4" height="11"/><rect x="218.6" y="86" width="4" height="11"/>
+    </g>
+    <g opacity=".55"><path d="M250 128 V108 L300 74 L300 128 Z" fill="none" stroke="currentColor" stroke-width="2.4"/>
+      <path d="M262 108 L300 82 M276 108 L300 92 M290 108 L300 100"/></g>`,
+  // Penang: the cable-stayed bridge, with George Town low-rise behind.
+  penang: `
+    <g opacity=".30"><path d="M0 128 L46 100 L92 128 Z"/></g>
+    <g opacity=".55">
+      <rect x="20" y="112" width="14" height="16"/><rect x="38" y="106" width="12" height="22"/>
+      <rect x="54" y="114" width="16" height="14"/>
+    </g>
+    <g opacity=".92">
+      <path d="M96 128 V112 M196 128 V112" stroke="currentColor" stroke-width="3"/>
+      <rect x="140" y="52" width="6" height="60"/><rect x="246" y="52" width="6" height="60"/>
+      <path d="M96 112 H360" stroke="currentColor" stroke-width="4" fill="none"/>
+      <path d="M143 56 L104 110 M143 56 L184 110 M143 62 L120 110 M143 62 L168 110" stroke="currentColor" stroke-width="1.6" fill="none"/>
+      <path d="M249 56 L210 110 M249 56 L290 110 M249 62 L226 110 M249 62 L274 110" stroke="currentColor" stroke-width="1.6" fill="none"/>
+    </g>`,
+  // Johor Bahru: Sultan Abu Bakar mosque — four corner minarets, wide body.
+  johor: `
+    <g opacity=".30"><rect x="20" y="108" width="16" height="20"/><rect x="330" y="104" width="18" height="24"/></g>
+    <g opacity=".92">
+      <rect x="140" y="86" width="80" height="42"/>
+      <path d="M140 86 h80 l-8 -12 h-64 Z"/>
+      <rect x="124" y="70" width="9" height="58"/><rect x="227" y="70" width="9" height="58"/>
+      <rect x="152" y="74" width="7" height="14"/><rect x="201" y="74" width="7" height="14"/>
+      <path d="M124 70 l4.5 -12 l4.5 12 Z M227 70 l4.5 -12 l4.5 12 Z"/>
+      <rect x="176" y="60" width="8" height="26"/><circle cx="180" cy="56" r="6"/>
+    </g>`,
+  // Melaka: the Christ Church gable and the Menara Taming Sari tower.
+  melaka: `
+    <g opacity=".30"><path d="M0 128 L36 108 L72 128 Z"/></g>
+    <g opacity=".92">
+      <rect x="128" y="92" width="66" height="36"/>
+      <path d="M124 92 L161 68 L198 92 Z"/>
+      <rect x="156" y="52" width="4" height="16"/><rect x="150" y="58" width="16" height="3"/>
+      <rect x="256" y="64" width="8" height="64"/>
+      <rect x="246" y="60" width="28" height="8" rx="4"/>
+      <rect x="258.8" y="46" width="2.4" height="15"/>
+    </g>
+    <g opacity=".55"><rect x="210" y="106" width="18" height="22"/><rect x="300" y="112" width="20" height="16"/></g>`,
+  // Shah Alam: the Blue Mosque — one very large dome, four tall minarets.
+  shahalam: `
+    <g opacity=".30"><path d="M300 128 L340 106 L380 128 Z"/></g>
+    <g opacity=".92">
+      <path d="M146 128 V92 a34 30 0 0 1 68 0 v36 Z"/>
+      <rect x="118" y="56" width="8" height="72"/><rect x="234" y="56" width="8" height="72"/>
+      <path d="M118 56 l4 -14 l4 14 Z M234 56 l4 -14 l4 14 Z"/>
+      <rect x="176" y="52" width="8" height="14"/><circle cx="180" cy="48" r="5"/>
+    </g>
+    <g opacity=".55"><rect x="60" y="104" width="16" height="24"/><rect x="82" y="112" width="14" height="16"/></g>`,
+  // Anywhere we cannot draw honestly: hills and an unremarkable town.
+  generic: `
+    <g opacity=".30"><path d="M0 128 L54 92 L108 128 Z M78 128 L128 98 L178 128 Z"/></g>
+    <g opacity=".55"><rect x="196" y="102" width="20" height="26"/><rect x="222" y="94" width="16" height="34"/>
+      <rect x="244" y="108" width="22" height="20"/></g>
+    <g opacity=".92"><rect x="278" y="86" width="18" height="42"/><rect x="302" y="96" width="22" height="32"/>
+      <rect x="330" y="104" width="16" height="24"/><rect x="282" y="74" width="3" height="13"/></g>`,
+};
+/* Sky palette follows the clock, so the art matches the greeting above it. */
+function skyPalette(){
+  const h = new Date().getHours();
+  if (h < 6)  return ["#0B1526","#16305C","#25436F"];   // before dawn
+  if (h < 11) return ["#1B3A6B","#3E6FA8","#8FB6D9"];   // morning
+  if (h < 16) return ["#1E4C86","#3F7CBE","#A9CBE8"];   // midday
+  if (h < 19) return ["#2A2E63","#8B5A8C","#E9A177"];   // dusk
+  return ["#0B1526","#1B2C50","#33507E"];               // night
+}
+function skylineFor(city){
+  const key = SKY_BY_CITY[city] || "generic";
+  const [a, b, c] = skyPalette();
+  return `
+  <svg class="skyline" viewBox="0 0 390 128" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+    <defs>
+      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="${a}"/><stop offset="0.62" stop-color="${b}"/><stop offset="1" stop-color="${c}"/>
+      </linearGradient>
+    </defs>
+    <rect width="390" height="128" fill="url(#sky)"/>
+    <circle cx="322" cy="40" r="17" fill="#fff" opacity=".16"/>
+    <g fill="#fff" opacity=".10">
+      <ellipse cx="70" cy="34" rx="26" ry="8"/><ellipse cx="92" cy="30" rx="18" ry="7"/>
+      <ellipse cx="268" cy="22" rx="20" ry="6"/>
+    </g>
+    <g fill="#0B1526" color="#0B1526">${SKYLINES[key] || SKYLINES.generic}</g>
+  </svg>`;
+}
 
 const CATS = [
   {id:"cleaning",n:"Cleaning",i:"broom"},
@@ -342,6 +519,7 @@ const state = {
   partnerHistory:[],
   myReviews:[],
   notifs:[],
+  addresses:[],
   threads:[],
   chat:{ msgs:[], taskId:null, partnerId:null, title:"", withName:"", lastAt:0 },
   live:{}
@@ -401,6 +579,7 @@ const IC = {
   leaf:d=>I('<path d="M12 21v-7.6"/><path d="M12 13.4c0-3.6 2.7-6.2 6.7-6.2 0 3.8-2.8 6.2-6.7 6.2Z"/><path d="M12 15.4c0-2.9-2.2-5-5.4-5 0 3.1 2.3 5 5.4 5Z"/>',d),
   roller:d=>I('<rect x="4.4" y="4.4" width="13.2" height="4.8" rx="1.7"/><path d="M17.6 6.8h2.2v4.5H12v2.5"/><rect x="10.7" y="13.8" width="2.6" height="6.2" rx="1.15"/>',d),
   hex:d=>I('<path d="M12 3.6 19.3 7.8v8.4L12 20.4 4.7 16.2V7.8L12 3.6Z"/><circle cx="12" cy="12" r="2.9"/>',d),
+  motor:d=>I('<circle cx="5.5" cy="16.4" r="3.1"/><circle cx="18.5" cy="16.4" r="3.1"/><path d="M8.6 16.4h4.1l3.1-5.2h-4.4"/><path d="M12.7 11.2 10.9 8h-2"/><path d="M15.4 8h3.3l1.1 2.9"/><path d="M18.5 13.3 17 10"/>',d),
   car:d=>I('<path d="M4.6 12.4 6 8.6A2.2 2.2 0 0 1 8.1 7.1h7.8A2.2 2.2 0 0 1 18 8.6l1.4 3.8"/><path d="M4.6 12.4h14.8a1.3 1.3 0 0 1 1.3 1.3v3.2h-2.2M4.6 12.4a1.3 1.3 0 0 0-1.3 1.3v3.2h2.2"/><circle cx="7.6" cy="17.1" r="1.7"/><circle cx="16.4" cy="17.1" r="1.7"/><path d="M9.3 16.9h5.4"/>',d),
   shieldbug:d=>I('<circle cx="12" cy="13.2" r="4.6"/><path d="M9.9 9.1 8.7 6.9M14.1 9.1l1.2-2.2"/><path d="M7.4 12.1l-2.3-.5M16.6 12.1l2.3-.5M7.8 15.4 6 16.8M16.2 15.4 18 16.8"/><path d="M12 8.6v9.2"/>',d),
   book:d=>I('<path d="m12 5 9 3.7-9 3.7-9-3.7L12 5Z"/><path d="M6.9 10.8v3.5c0 1.4 2.3 2.6 5.1 2.6s5.1-1.2 5.1-2.6v-3.5"/><path d="M21 9v4.2"/>',d),
@@ -544,10 +723,11 @@ T.chome = () => {
   const active = state.tasks.filter(t=>t.mine && t.status!=="completed");
   const newBids = state.tasks.filter(t=>t.mine&&t.status==="open").reduce((s,t)=>s+t.bids.length,0);
   return `
-<div class="hd">
+${skylineFor(state.user.city)}
+<div class="hd hd-sky">
   <div class="hleft">
     <div>
-      <div class="hsub">Good evening</div>
+      <div class="hsub">${greeting()}</div>
       <div class="htitle">${esc(state.user.name.split(" ")[0])}</div>
     </div>
   </div>
@@ -617,38 +797,151 @@ ${header("Post a Task","Describe it once, pros come to you",'chome')}
   <label class="f">Task title</label>
   <input class="f" id="pt-title" placeholder="e.g. Install two ceiling fans">
   <label class="f">Category</label>
-  <select class="f" id="pt-cat">${CATS.map(c=>`<option value="${c.id}">${c.n}</option>`).join("")}</select>
+  <select class="f" id="pt-cat" onchange="onCatChange()">${CATS.map(c=>`<option value="${c.id}">${c.n}</option>`).join("")}</select>
   <label class="f">Location</label>
   <select class="f" id="pt-city">${Object.keys(CITIES).map(c=>`<option ${c===state.user.city?'selected':''}>${c}</option>`).join("")}</select>
-  <input class="f" id="pt-addr" placeholder="Area or building name" style="margin-top:9px">
+  <input class="f" id="pt-addr" placeholder="Full address — unit, street, area" style="margin-top:9px">
+  ${(state.addresses&&state.addresses.length)?`
+  <div class="addr-chips" id="addr-chips">
+    ${state.addresses.map(a=>`<span class="chip" onclick="pickSavedAddr('${a.id}')">${IC.pin(12)} ${esc(a.label)}</span>`).join("")}
+  </div>`:``}
   <div class="card" style="margin:10px 0 0;padding:12px">
     <div class="rowbet">
       <div>
         <b style="font-size:13.5px">Exact location</b>
         <div class="sub" style="font-size:12px;margin-top:2px" id="pin-status">${state.pin?`Pin set (${state.pin[0].toFixed(4)}, ${state.pin[1].toFixed(4)})`:"Not set. Pros see distance from here."}</div>
       </div>
-      <button class="btn ${state.pin?"ghost":"pri"} sm" onclick="usePin()">${IC.pin(15)} ${state.pin?"Change":"Set pin"}</button>
+      <button class="btn ${state.pin?"ghost":"pri"} sm" onclick="openTaskMap()">${IC.pin(15)} ${state.pin?"Change":"Set on map"}</button>
     </div>
-    <div id="pt-map" style="height:0;margin-top:0;border-radius:12px;overflow:hidden;transition:height .25s"></div>
   </div>
   <div style="display:flex;gap:10px">
     <div style="flex:1"><label class="f">Date needed</label><input class="f" id="pt-date" type="date" value="2026-07-15"></div>
     <div style="flex:1"><label class="f">Time</label><select class="f" id="pt-time"><option>Flexible</option><option>Morning</option><option>Afternoon</option><option>Evening</option></select></div>
   </div>
+  <div id="pt-stops-wrap" style="display:none">
+    <label class="f">Vehicle</label>
+    <div class="rowg" style="gap:9px">
+      <div class="vcard" id="v-motor" onclick="pickVehicle('motor')">
+        <div class="vico">${IC.motor(26)}</div>
+        <b>Motorbike</b><span id="v-motor-p"></span>
+        <div class="vsub">Documents, food, small parcels</div>
+      </div>
+      <div class="vcard" id="v-car" onclick="pickVehicle('car')">
+        <div class="vico">${IC.car(26)}</div>
+        <b>Car</b><span id="v-car-p"></span>
+        <div class="vsub">Boxes, groceries, bulky items</div>
+      </div>
+    </div>
+    <label class="f" style="margin-top:14px">Delivery stops</label>
+    <div class="sub" style="font-size:12px;margin:-2px 0 8px">Where should it go after pickup? Add up to 5 stops.</div>
+    <div id="pt-stops"></div>
+    <button class="btn dark sm" style="width:auto;padding:10px 16px" onclick="addStop()">${IC.plus(15)} Add stop</button>
+    <div id="pt-route" class="sub" style="font-size:12.5px;margin-top:9px;font-weight:700"></div>
+  </div>
   <label class="f">Your budget (RM)</label>
   <input class="f num" id="pt-budget" type="number" placeholder="150">
-  <div class="sub" style="font-size:12.5px;margin-top:7px">Partners can bid at, below, or slightly above your budget.</div>
+  <div class="sub" style="font-size:12.5px;margin-top:7px" id="pt-budget-hint">Partners can bid at, below, or slightly above your budget.</div>
   <label class="f">Details</label>
   <textarea class="f" id="pt-desc" placeholder="Describe the scope, access, tools or materials provided…"></textarea>
-  <label class="f">Photos (optional)</label>
-  <div style="display:flex;gap:10px">
-    <div style="width:74px;height:74px;border:1.5px dashed var(--line2);border-radius:13px;display:flex;align-items:center;justify-content:center;color:var(--dim)">${IC.plus(22)}</div>
+  <label class="f">Photos (optional, up to 4)</label>
+  <input type="file" id="pt-file" accept="image/*" multiple style="display:none" onchange="onPhotoPick(this)">
+  <div style="display:flex;gap:10px;flex-wrap:wrap" id="pt-photos">
+    <div onclick="document.getElementById('pt-file').click()" style="width:74px;height:74px;border:1.5px dashed var(--line2);border-radius:13px;display:flex;align-items:center;justify-content:center;color:var(--dim);cursor:pointer">${IC.plus(22)}</div>
   </div>
   <div style="height:24px"></div>
   <button class="btn pri" onclick="postTask()">Post task &amp; receive bids</button>
 </div>`;
 
 /* ---------- CUSTOMER: TASK DETAIL ---------- */
+/* Support contact. Set BP_SUPPORT_WA to the business WhatsApp number
+   (digits only, e.g. "60123456789") — the button below deep-links to it.
+   Until it is set, the button is hidden rather than pointing anywhere fake. */
+window.BP_SUPPORT_WA = window.BP_SUPPORT_WA || "";
+/* Route + photos block shared by the customer and partner detail screens.
+   Photos: <img> cannot send an Authorization header, so tiles start empty and
+   hydrateTimgs() fetches each with the bearer token and swaps in a blob URL. */
+function taskExtras(t){
+  let h = "";
+  if (t.stops && t.stops.length){
+    h += `<div class="card" style="padding:13px 15px">
+      <div class="rowbet" style="margin-bottom:9px"><b style="font-size:13.5px">Delivery route</b>
+      ${t.routeKm!=null?`<span class="chip">${t.routeKm} km</span>`:""}</div>
+      <div class="rowg" style="gap:9px;align-items:flex-start">
+        <span style="width:22px;height:22px;border-radius:50%;background:var(--grn);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">A</span>
+        <span style="font-size:13px;padding-top:2px">${esc(t.addr)}</span>
+      </div>
+      ${t.stops.map((s,i)=>`
+      <div class="rowg" style="gap:9px;align-items:flex-start;margin-top:8px">
+        <span style="width:22px;height:22px;border-radius:50%;background:var(--blu);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</span>
+        <span style="font-size:13px;padding-top:2px">${esc(s.addr)}</span>
+      </div>`).join("")}
+    </div>`;
+  }
+  if (t.photos && t.photos.length){
+    h += `<div class="card" style="padding:13px 15px">
+      <b style="font-size:13.5px;display:block;margin-bottom:9px">Photos</b>
+      <div style="display:flex;gap:9px;flex-wrap:wrap">
+        ${t.photos.map(k=>`<div class="timg" data-k="${esc(k)}" style="width:86px;height:86px;border-radius:12px;background:var(--sur2);box-shadow:var(--clay-in)"></div>`).join("")}
+      </div>
+    </div>`;
+  }
+  return h;
+}
+const _timgCache = {};
+async function hydrateTimgs(){
+  if (!LIVE() || !TOK.a) return;
+  for (const el of document.querySelectorAll(".timg[data-k]")){
+    const k = el.getAttribute("data-k");
+    el.removeAttribute("data-k");
+    try {
+      if (!_timgCache[k]){
+        const r = await fetch(CFG.base + "/" + k.replace("taskimg/","timg/"), { headers:{ authorization:"Bearer "+TOK.a } });
+        if (!r.ok) continue;
+        _timgCache[k] = URL.createObjectURL(await r.blob());
+      }
+      el.innerHTML = `<img src="${_timgCache[k]}" style="width:100%;height:100%;object-fit:cover;border-radius:12px">`;
+    } catch(e){}
+  }
+}
+T.help = () => `
+${header("Help centre","FAQs and support","settings")}
+<div class="content">
+  ${[
+    ["How do bids work?","Post a task with your budget. Nearby partners send offers — at, below, or above it. Compare their price, rating and message, then accept ONE. Nothing is charged by posting."],
+    ["When do I pay?","Only after you accept a bid. The money is held safely and the partner is paid when you confirm the job is done — they never get it before you say so."],
+    ["What if the job goes wrong?","Open a dispute from the task page. The money stays frozen while our team reviews it — nobody gets paid until it's resolved."],
+    ["Can I cancel?","Yes. Cancelling within the first hour after accepting is free. After that a small fee applies, because the partner has already set aside the time."],
+    ["Why does Berespro ask partners for ID?","Partners enter homes. Identity verification (IC + selfie) is required before anyone can bid — it protects you and keeps bad actors out."],
+    ["How do delivery tasks work?","For Moving and Delivery, set the pickup point, then add up to 5 drop-off stops. We compute the route distance and suggest a fair price — partners still bid."],
+  ].map(([q,a],i)=>`
+  <div class="card tap" onclick="const b=document.getElementById('faq${i}');b.style.display=b.style.display==='none'?'block':'none'">
+    <div class="rowbet"><b style="font-size:14.5px">${q}</b>${IC.chevR(15)}</div>
+    <div id="faq${i}" style="display:none" class="sub" style2=""><div style="margin-top:9px;font-size:13.5px;line-height:1.6;color:var(--mut)">${a}</div></div>
+  </div>`).join("")}
+  <div class="sec">Still stuck?</div>
+  ${window.BP_SUPPORT_WA ? `
+  <button class="btn pri" onclick="window.open('https://wa.me/${window.BP_SUPPORT_WA}','_blank')">Chat with us on WhatsApp</button>` : `
+  <div class="card"><div class="sub" style="font-size:13px;line-height:1.6">Message us from the account you signed up with and include the task title — it helps us find it fast. A contact button is coming here soon.</div></div>`}
+</div>`;
+
+T.posted = (tid) => {
+  const t = state.tasks.find(x=>String(x.id)===String(tid));
+  return `
+<div class="content noNav" style="display:flex;flex-direction:column;justify-content:center;min-height:100%;text-align:center">
+  <div class="okball">${IC.check ? IC.check(40) : "✓"}</div>
+  <h1 style="font-size:22px">Task posted!</h1>
+  <div class="sub" style="margin:10px 0 6px;line-height:1.6">
+    ${t?`<b style="color:var(--tx)">${esc(t.title)}</b><br>`:""}
+    Partners nearby are being notified. Bids usually arrive within minutes —
+    we'll ping you the moment the first one lands.
+  </div>
+  <div style="height:22px"></div>
+  <button class="btn pri" onclick="go('ctask','${tid}')">View my task</button>
+  <div style="height:10px"></div>
+  <button class="btn dark" onclick="go('chome')">Back to home</button>
+</div>`;
+};
+
 T.ctask = (id) => {
   const t = state.tasks.find(x=>x.id===id) || state.tasks.find(x=>x.mine);
   const acc = t.accepted!=null ? t.bids[t.accepted] : null;
@@ -666,6 +959,7 @@ ${header("Task details","",'ctasks')}
   <div class="card" style="margin-top:16px">
     <div class="rowbet"><span class="sub" style="font-size:13.5px">Your budget</span><div class="price num">${rm(t.budget)}</div></div>
   </div>
+  ${taskExtras(t)}
 
   ${t.status==="open"?`
     <div class="sec">Bids (${t.bids.length})</div>
@@ -753,7 +1047,11 @@ T.cprofile = () => `
 ${header("Profile","")}
 <div class="content">
   <div class="card" style="text-align:center;padding:24px 16px">
-    ${avat(state.user.name,"a72")}
+    <div style="position:relative;display:inline-block" onclick="document.getElementById('av-file').click()">
+      <div id="my-avatar" style="border-radius:50%;overflow:hidden">${avat(state.user.name,"a72")}</div>
+      <span style="position:absolute;bottom:-2px;right:-2px;width:26px;height:26px;border-radius:50%;background:var(--blu);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--clay-sm)">${IC.camera?IC.camera(13):IC.plus(13)}</span>
+    </div>
+    <input type="file" id="av-file" accept="image/*" capture="user" style="display:none" onchange="onAvatarPick(this)">
     <h2 style="margin-top:12px;font-size:18px">${esc(state.user.name)}</h2>
     <div class="sub" style="font-size:13.5px;margin-top:3px">${state.user.phone} · Member since ${state.user.memberSince}</div>
     <div class="rowg" style="justify-content:center;gap:8px;margin-top:12px">
@@ -767,7 +1065,7 @@ ${header("Profile","")}
     <div class="srow" onclick="go('threads')"><div class="si">${IC.msg(18)}</div><div style="flex:1"><b>Messages</b><span>Chat with your partners</span></div>${unreadTotal()?`<span class="badge" style="position:static;border:0">${unreadTotal()}</span>`:IC.chevR(17)}</div>
     <div class="srow" onclick="go('chistory')"><div class="si">${IC.history(18)}</div><div style="flex:1"><b>Task history</b><span>6 completed tasks</span></div>${IC.chevR(17)}</div>
     <div class="srow" onclick="go('settings')"><div class="si">${IC.gear(18)}</div><div style="flex:1"><b>Settings &amp; preferences</b><span>Notifications, location, language</span></div>${IC.chevR(17)}</div>
-    <div class="srow" style="border-bottom:0" onclick="toast('Help centre opened')"><div class="si">${IC.help(18)}</div><div style="flex:1"><b>Help centre</b><span>FAQs and support</span></div>${IC.chevR(17)}</div>
+    <div class="srow" style="border-bottom:0" onclick="go('help')"><div class="si">${IC.help(18)}</div><div style="flex:1"><b>Help centre</b><span>FAQs and support</span></div>${IC.chevR(17)}</div>
   </div>
   <div class="sec">Mode</div>
   <div class="card tap" onclick="switchMode()" style="border-color:var(--blu);background:var(--blu-t)">
@@ -861,12 +1159,21 @@ ${header("Settings","Preferences & account",state.mode==='customer'?'cprofile':'
   <div class="sec">App</div>
   <div class="card" style="padding:2px 16px">
     <div class="srow"><div class="si">${IC.lang(18)}</div><div style="flex:1"><b>Language</b><span>English</span></div>${IC.chevR(17)}</div>
-    <div class="srow"><div class="si">${IC.moon(18)}</div><div style="flex:1"><b>Appearance</b><span>Dark</span></div><div class="tgl on"></div></div>
     <div class="srow"><div class="si">${IC.shield(18)}</div><div style="flex:1"><b>Privacy &amp; security</b><span>2FA, sessions, data</span></div>${IC.chevR(17)}</div>
     <div class="srow" onclick="resetDemo()"><div class="si">${IC.history(18)}</div><div style="flex:1"><b>Reset app data</b><span>Clear local data and restart</span></div>${IC.chevR(17)}</div>
-    <div class="srow" onclick="setApiBase()"><div class="si">${IC.gear(18)}</div><div style="flex:1"><b>Developer</b><span>${"${"}state.liveUid?"Live: connected":"API base URL, connect to backend"${"}"}</span></div>${IC.chevR(17)}</div>
+    ${window.BP_IS_DEV_BUILD?`<div class="srow" onclick="setApiBase()"><div class="si">${IC.gear(18)}</div><div style="flex:1"><b>Developer</b><span>${state.liveUid?"Live: connected":"API base URL, connect to backend"}</span></div>${IC.chevR(17)}</div>`:``}
     ${state.liveUid?`<div class="srow" onclick="copyMyId()"><div class="si">${IC.user(18)}</div><div style="flex:1"><b>My user ID</b><span>${state.liveUid}</span></div><span style="font-size:12px;font-weight:800;color:var(--blu)">COPY</span></div>`:``}
-    ${state.liveUid?`<div class="srow" style="border-bottom:0" onclick="copyAdminToken()"><div class="si">${IC.shield(18)}</div><div style="flex:1"><b>Admin token</b><span>For the control panel. Paste once, it renews itself.</span></div><span style="font-size:12px;font-weight:800;color:var(--blu)">COPY</span></div>`:``}
+    ${state.isAdmin?`<div class="srow" style="border-bottom:0" onclick="copyAdminToken()"><div class="si">${IC.shield(18)}</div><div style="flex:1"><b>Admin token</b><span>For the control panel. Paste once, it renews itself.</span></div><span style="font-size:12px;font-weight:800;color:var(--blu)">COPY</span></div>`:``}
+  </div>
+  <div class="sec">Saved addresses</div>
+  <div class="card" style="padding:2px 16px">
+    ${(state.addresses&&state.addresses.length)?state.addresses.map((a,i)=>`
+    <div class="srow" ${i===state.addresses.length-1?'style="border-bottom:0"':''}>
+      <div class="si">${IC.pin(18)}</div>
+      <div style="flex:1;min-width:0"><b>${esc(a.label)}</b><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block">${esc(a.addr)}</span></div>
+      <span onclick="deleteAddr('${a.id}')" style="color:var(--red);font-size:12px;font-weight:800;padding:8px;cursor:pointer">Remove</span>
+    </div>`).join(""):`
+    <div class="srow" style="border-bottom:0"><div class="si">${IC.pin(18)}</div><div style="flex:1"><b>No saved addresses yet</b><span>Save Home or Office when you post a task</span></div></div>`}
   </div>
   <div class="sec">Account</div>
   <div class="card" style="padding:2px 16px">
@@ -962,6 +1269,7 @@ ${header("Job details","",'pjobs')}
     <div class="divider"></div>
     <div class="rowbet"><span class="sub" style="font-size:13.5px">Customer budget</span><div class="price num">${rm(j.budget)}</div></div>
   </div>
+  ${taskExtras(j)}
   <div class="sec">Place your bid</div>
   <div class="card">
     <label class="f" style="margin-top:2px">Your price (RM)</label>
@@ -1102,7 +1410,11 @@ ${header("Partner Profile","How customers see you")}
 <div class="content">
   ${payoutCard}
   <div class="card" style="text-align:center;padding:24px 16px">
-    ${avat(state.user.name,"a72")}
+    <div style="position:relative;display:inline-block" onclick="document.getElementById('av-file').click()">
+      <div id="my-avatar" style="border-radius:50%;overflow:hidden">${avat(state.user.name,"a72")}</div>
+      <span style="position:absolute;bottom:-2px;right:-2px;width:26px;height:26px;border-radius:50%;background:var(--blu);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--clay-sm)">${IC.camera?IC.camera(13):IC.plus(13)}</span>
+    </div>
+    <input type="file" id="av-file" accept="image/*" capture="user" style="display:none" onchange="onAvatarPick(this)">
     <h2 style="margin-top:12px;font-size:18px">${esc(state.user.name)}</h2>
     <div class="stars" style="justify-content:center;margin-top:6px;font-size:15.5px">${IC.star(15)} ${((state.live&&state.live.prof&&state.live.prof.rating)||5.0).toFixed(1)} <span style="color:var(--dim);font-weight:600;font-size:13px">· ${(state.live&&state.live.earn?state.live.earn.jobs_paid:0)} jobs completed</span></div>
     <div class="rowg" style="justify-content:center;gap:8px;margin-top:13px;flex-wrap:wrap">
@@ -1114,7 +1426,7 @@ ${header("Partner Profile","How customers see you")}
   <div class="sec">Skills</div>
   <div class="rowg" style="flex-wrap:wrap;gap:8px">
     ${((state.live&&state.live.prof&&state.live.prof.skills)||[]).map(s=>`<span class="fchip on" style="cursor:default">${s}</span>`).join("")||`<span class="sub" style="font-size:12.5px">No skills added yet</span>`}
-    <span class="fchip">${"+ Add skill"}</span>
+    <span class="fchip" onclick="openSkillsSheet()">${"+ Add skill"}</span>
   </div>
   <div class="sec">Stats</div>
   <div class="statg">
@@ -1169,14 +1481,13 @@ ${header("Verify your identity","Required before you can bid",'pprofile')}
   ${showForm?`
   <label class="f">Full name (as on IC)</label>
   <input class="f" id="kyc-name" placeholder="e.g. Hafiz bin Roslan" style="width:100%">
-  <label class="f">IC number (last 4 digits only)</label>
-  <input class="f num" id="kyc-ic" placeholder="e.g. 4421" maxlength="4" inputmode="numeric" style="width:100%">
   <label class="f">IC front photo</label>
-  <input class="f" id="kyc-front" type="file" accept="image/*" style="width:100%;padding:11px">
+  <div class="sub" style="font-size:11.5px;margin:-2px 0 6px">Opens your camera — take the photo live, not from your gallery.</div>
+  <input class="f" id="kyc-front" type="file" accept="image/*" capture="environment" style="width:100%;padding:11px">
   <label class="f">IC back photo (optional)</label>
-  <input class="f" id="kyc-back" type="file" accept="image/*" style="width:100%;padding:11px">
+  <input class="f" id="kyc-back" type="file" accept="image/*" capture="environment" style="width:100%;padding:11px">
   <label class="f">Selfie holding your IC</label>
-  <input class="f" id="kyc-selfie" type="file" accept="image/*" style="width:100%;padding:11px">
+  <input class="f" id="kyc-selfie" type="file" accept="image/*" capture="user" style="width:100%;padding:11px">
   <div style="height:18px"></div>
   <button class="btn pri" onclick="kycSubmit()">${IC.shield(17)} Submit for verification</button>
   <div class="sub" style="font-size:11.5px;text-align:center;margin-top:12px;line-height:1.5">By submitting you agree to our identity verification under the Privacy Policy. Handled by Astaka Mega Sdn Bhd.</div>
@@ -1382,7 +1693,7 @@ function screenHTML(){
     if(state.sheet.type==="city") html += T.sheetCity();
     if(state.sheet.type==="filter") html += T.sheetFilter();
   }
-  if(state.toast) html += `<div class="toast">${state.toast}</div>`;
+  // toast is rendered into #toast-host, never here — see toast()
   return html;
 }
 /*__CORE_END__*/
@@ -1391,6 +1702,150 @@ function screenHTML(){
    BROWSER RUNTIME: routing, handlers
    ============================================================ */
 const APP_VER = "1.1.0";  // bumped: invalidates any stale cached demo/seed state from earlier test sessions
+/* ---- busy overlay ----
+   For the moments where the app is genuinely working and taps must not land:
+   the sign-in token exchange, posting a task, placing a bid. Imperative and
+   outside #app so a render can never strand or duplicate it. */
+function showBusy(msg){
+  const h = document.getElementById("busy-host");
+  if (h) h.innerHTML = `<div class="busy"><div class="spinner"></div><div>${esc(msg)}</div></div>`;
+}
+function hideBusy(){
+  const h = document.getElementById("busy-host");
+  if (h) h.innerHTML = "";
+}
+
+/* ---- full-screen map modal (Grab-style) ----
+   One reusable picker: a draggable pin over the whole screen, an address box
+   that pre-fills from reverse geocoding but always stays editable, and label
+   chips for saving the place as Home / Office / anything.
+
+   Reverse geocoding uses OSM Nominatim. It is rate-limited and can fail —
+   that is fine: the pin coordinates are the truth the backend needs, the text
+   is for humans, and the user can always type it. */
+let _mm = { map:null, marker:null, edited:false, geoT:null };
+async function mmRevGeo(lat, lng){
+  clearTimeout(_mm.geoT);
+  _mm.geoT = setTimeout(async () => {
+    if (_mm.edited) return;                    // never overwrite what a person typed
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18`,
+        { headers: { "Accept": "application/json" } });
+      const j = await r.json();
+      const el = document.getElementById("mm-addr");
+      if (el && !_mm.edited && j.display_name) el.value = j.display_name;
+    } catch (e) { /* offline or rate-limited: user types it instead */ }
+  }, 450);
+}
+function mmSetCoords(lat, lng){
+  const el = document.getElementById("mm-coords");
+  if (el) el.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  mmRevGeo(lat, lng);
+}
+async function openMapModal(opts){
+  // opts: { lat, lng, addr, label, showSave, onDone(res) }
+  //   res: { lat, lng, addr, label, save }
+  const host = document.getElementById("modal-host");
+  if (!host) return;
+  const start = [opts.lat ?? 3.139, opts.lng ?? 101.687];
+  host.innerHTML = `
+  <div class="mmodal">
+    <div class="mmtop">
+      <div class="mmback" onclick="closeMapModal()">${IC.chevL(20)}</div>
+      <b>Set location</b>
+    </div>
+    <div id="mm-map"></div>
+    <div class="mmsheet">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="sub" style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase">Pin location</div>
+        <div id="mm-coords" class="sub" style="font-size:11.5px"></div>
+      </div>
+      <input class="f" id="mm-addr" placeholder="Full address — unit, street, area" style="margin-top:8px" value="${esc(opts.addr||"")}" oninput="_mm.edited=true">
+      ${opts.showSave ? `
+      <div class="mmlbl" id="mm-lblrow">
+        <span class="chip" data-l="Home" onclick="mmPickLabel(this)">${IC.home ? IC.home(13) : ""} Home</span>
+        <span class="chip" data-l="Office" onclick="mmPickLabel(this)">Office</span>
+        <span class="chip" data-l="" onclick="mmPickLabel(this)">Other…</span>
+        <input class="f" id="mm-custom" placeholder="Label (e.g. Mak's house)" style="display:none;flex:1;min-width:140px;padding:9px 12px;font-size:13.5px">
+      </div>
+      <label style="display:flex;align-items:center;gap:9px;margin:10px 0 12px;font-size:13.5px;color:var(--mut);font-weight:600">
+        <input type="checkbox" id="mm-save" checked style="width:17px;height:17px;accent-color:var(--blu)"> Save this address for next time
+      </label>` : `<div style="height:12px"></div>`}
+      <button class="btn pri" onclick="mmConfirm()">Use this location</button>
+    </div>
+  </div>`;
+  _mm.edited = !!(opts.addr && opts.addr.trim());
+  _mm.onDone = opts.onDone;
+  _mm.label = opts.label || "";
+
+  let L;
+  try { L = await ensureLeaflet(); }
+  catch(e){ toast("Map unavailable. Type the address instead."); return; }
+  _mm.map = L.map(document.getElementById("mm-map"), { attributionControl:false }).setView(start, 16);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(_mm.map);
+  _mm.marker = L.marker(start, { draggable:true }).addTo(_mm.map);
+  _mm.marker.on("dragend", () => { const ll=_mm.marker.getLatLng(); mmSetCoords(ll.lat, ll.lng); });
+  _mm.map.on("click", (e) => { _mm.marker.setLatLng(e.latlng); mmSetCoords(e.latlng.lat, e.latlng.lng); });
+  setTimeout(()=>{ try{ _mm.map.invalidateSize(); }catch(e){} }, 260);
+  mmSetCoords(start[0], start[1]);
+
+  // GPS jump-to-me, same secure-context honesty as everywhere else
+  const blocked = geoBlockedReason();
+  if (!blocked){
+    navigator.geolocation.getCurrentPosition(
+      (pos)=>{ const {latitude:la,longitude:ln}=pos.coords;
+        if(!_mm.map) return;
+        _mm.map.setView([la,ln],17); _mm.marker.setLatLng([la,ln]); mmSetCoords(la,ln); },
+      ()=>{}, {enableHighAccuracy:true, timeout:8000});
+  }
+}
+function mmPickLabel(el){
+  document.querySelectorAll("#mm-lblrow .chip").forEach(c=>c.classList.remove("on"));
+  el.classList.add("on");
+  const custom = document.getElementById("mm-custom");
+  const isOther = el.getAttribute("data-l") === "";
+  if (custom){ custom.style.display = isOther ? "block" : "none"; if (isOther) custom.focus(); }
+  _mm.label = el.getAttribute("data-l");
+}
+function mmConfirm(){
+  if (!_mm.marker) { closeMapModal(); return; }
+  const ll = _mm.marker.getLatLng();
+  const addr = (document.getElementById("mm-addr")||{value:""}).value.trim();
+  if (!addr){ toast("Type the address — the pin alone isn't enough for the partner to find you"); return; }
+  const saveEl = document.getElementById("mm-save");
+  const save = !!(saveEl && saveEl.checked);
+  let label = _mm.label;
+  if (save){
+    if (label === "") label = (document.getElementById("mm-custom")||{value:""}).value.trim();
+    if (!label){ toast("Pick a label (Home, Office…) or untick save"); return; }
+  }
+  const done = _mm.onDone;
+  closeMapModal();
+  if (done) done({ lat: ll.lat, lng: ll.lng, addr, label, save });
+}
+function closeMapModal(){
+  if (_mm.map){ try{ _mm.map.remove(); }catch(e){} }
+  _mm = { map:null, marker:null, edited:false, geoT:null };
+  const host = document.getElementById("modal-host");
+  if (host) host.innerHTML = "";
+}
+
+/* ---- saved addresses sync ---- */
+async function syncAddresses(){
+  if (!LIVE() || !TOK.a) return;
+  try { const j = await api("/me/addresses"); state.addresses = j.addresses || []; persist(); }
+  catch(e){ /* non-fatal: chips just don't show */ }
+}
+async function saveAddress(label, addr, lat, lng){
+  if (!LIVE() || !TOK.a){
+    state.addresses = (state.addresses||[]).filter(a=>a.label.toLowerCase()!==label.toLowerCase());
+    state.addresses.push({ id:nid(), label, addr, lat, lng });
+    persist(); return;
+  }
+  try { await api("/me/addresses","POST",{ label, addr, lat, lng }); await syncAddresses(); }
+  catch(e){ toast(e.message); }
+}
+
 function persist(){
   try{
     const d = Object.assign({}, state);
@@ -1424,7 +1879,18 @@ window.onpopstate = e => {
   if(e.state && e.state.s){ state.screen=e.state.s; state.param=e.state.p; render(); }
 };
 let toastT;
-function toast(m){ state.toast=m; render(); clearTimeout(toastT); toastT=setTimeout(()=>{state.toast=null;render()},2200); }
+function toast(m){
+  state.toast = m;
+  const host = document.getElementById("toast-host");
+  if (!host) return;                       // pre-boot: nothing to show it in yet
+  host.innerHTML = m ? `<div class="toast">${esc(m)}</div>` : "";
+  clearTimeout(toastT);
+  toastT = setTimeout(() => {
+    state.toast = null;
+    const h = document.getElementById("toast-host");
+    if (h) h.innerHTML = "";
+  }, 2200);
+}
 function openSheet(type,taskId){ state.tmpStars=5; state.sheet={type,taskId}; render(); }
 function closeSheet(){ state.sheet=null; render(); }
 function chooseMode(m){
@@ -1478,11 +1944,30 @@ function setPin(lat,lng){
   const st=document.getElementById("pin-status");
   if(st) st.textContent = `Pin set (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
   persist();
+  if (typeof drawRoute === "function") drawRoute();
 }
 // Partner's own GPS position. Without this the feed measured distance from the
 // city centre, so "2.1 km away" was never a real number.
+function geoBlockedReason(){
+  // Geolocation is a secure-context API: on plain http:// the browser blocks it
+  // outright, no prompt, no error the user can act on. localhost is exempt.
+  const secure = window.isSecureContext ||
+    location.protocol === "https:" ||
+    /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+  if (!secure) return "Location needs a secure (https) connection. This site is on http, so the browser blocks GPS.";
+  if (!navigator.geolocation) return "Location is not supported on this device.";
+  return null;
+}
+function geoErrText(err){
+  if (!err) return "Couldn't get your location.";
+  if (err.code === 1) return "Location permission denied. Allow it in your browser's site settings.";
+  if (err.code === 2) return "Location unavailable. Move somewhere with a clearer signal and try again.";
+  if (err.code === 3) return "Location timed out. Try again.";
+  return "Couldn't get your location.";
+}
 function useMyPosition(){
-  if(!navigator.geolocation){ toast("Location not supported on this device"); return; }
+  const blocked = geoBlockedReason();
+  if (blocked){ toast(blocked); return; }
   toast("Finding your location\u2026");
   navigator.geolocation.getCurrentPosition(
     (pos)=>{
@@ -1494,9 +1979,385 @@ function useMyPosition(){
         syncFeed().catch(()=>render());
       } else { render(); }
     },
-    ()=>{ toast("Couldn't get your location. Check browser permission."); },
+    (err)=>{ toast(geoErrText(err)); },
     {enableHighAccuracy:true, timeout:8000}
   );
+}
+/* ---- delivery stops + Lalamove-style price suggestion ----
+   Stops live in _ptStops (module state, not app state) because they belong to
+   THIS half-filled form only. All DOM updates are imperative — the toast
+   lesson: a render() here would wipe the rest of the form. */
+let _ptStops = [];
+let _ptVehicle = "motor";
+let _ptPhotos = [];   // { key, dataUrl } — key null until uploaded
+const DELIVERY_CATS = ["moving","delivery"];
+function isDeliveryCat(){
+  const el = document.getElementById("pt-cat");
+  return !!el && DELIVERY_CATS.includes((el.value||"").toLowerCase());
+}
+function onCatChange(){
+  const w = document.getElementById("pt-stops-wrap");
+  if (w) w.style.display = isDeliveryCat() ? "block" : "none";
+  drawVehicles();
+  drawRoute();
+}
+function greeting(){
+  const h = new Date().getHours();
+  return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+}
+function vehiclePricing(v){
+  const dp = (state.live && state.live.delivery_pricing) || {};
+  return dp[v] || (v === "car" ? { base_cents:500, per_km_cents:150 }
+                               : { base_cents:400, per_km_cents:100 });
+}
+function drawVehicles(){
+  for (const v of ["motor","car"]){
+    const card = document.getElementById("v-"+v);
+    const price = document.getElementById("v-"+v+"-p");
+    if (!card) continue;
+    card.classList.toggle("on", _ptVehicle === v);
+    const pr = vehiclePricing(v);
+    if (price) price.textContent = `RM${(pr.base_cents/100).toFixed(0)} + RM${(pr.per_km_cents/100).toFixed(2)}/km`;
+  }
+}
+function pickVehicle(v){ _ptVehicle = v; drawVehicles(); drawRoute(); }
+function drawStops(){
+  const box = document.getElementById("pt-stops");
+  if (!box) return;
+  box.innerHTML = _ptStops.map((s,i)=>`
+    <div class="card" style="padding:11px 13px;margin-bottom:8px">
+      <div class="rowbet">
+        <div class="rowg" style="gap:9px;min-width:0">
+          <span style="width:22px;height:22px;border-radius:50%;background:var(--blu);color:#fff;font-size:11.5px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</span>
+          <span style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.addr)}</span>
+        </div>
+        <span onclick="removeStop(${i})" style="color:var(--red);font-size:12px;font-weight:800;padding:4px 6px;cursor:pointer;flex-shrink:0">Remove</span>
+      </div>
+    </div>`).join("");
+  drawRoute();
+}
+function addStop(){
+  if (_ptStops.length >= 5){ toast("Maximum 5 stops"); return; }
+  const last = _ptStops.length ? _ptStops[_ptStops.length-1] : null;
+  const from = last ? [last.lat,last.lng] : (state.pin || CITIES[(document.getElementById("pt-city")||{}).value] || [3.139,101.687]);
+  openMapModal({ lat:from[0], lng:from[1], addr:"", showSave:false,
+    onDone:(res)=>{ _ptStops.push({ addr:res.addr, lat:res.lat, lng:res.lng }); drawStops(); } });
+}
+function removeStop(i){ _ptStops.splice(i,1); drawStops(); }
+function routeKmLocal(){
+  if (!_ptStops.length || !state.pin) return null;
+  const hav=(a,b,c,d)=>{const R=6371,dLa=(c-a)*Math.PI/180,dLo=(d-b)*Math.PI/180,
+    h=Math.sin(dLa/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dLo/2)**2;
+    return 2*R*Math.asin(Math.sqrt(h));};
+  let km=0, prev=state.pin;
+  for (const s of _ptStops){ km+=hav(prev[0],prev[1],s.lat,s.lng); prev=[s.lat,s.lng]; }
+  return Math.round(km*10)/10;
+}
+function drawRoute(){
+  const el = document.getElementById("pt-route");
+  const hint = document.getElementById("pt-budget-hint");
+  if (!el) return;
+  const km = routeKmLocal();
+  if (!isDeliveryCat() || km == null){
+    el.textContent = _ptStops.length && !state.pin ? "Set the pickup pin first to see the route distance." : "";
+    if (hint) hint.textContent = "Partners can bid at, below, or slightly above your budget.";
+    return;
+  }
+  const pr = vehiclePricing(_ptVehicle);
+  const sug = Math.ceil((pr.base_cents + pr.per_km_cents * km) / 100);
+  const vname = _ptVehicle === "car" ? "Car" : "Motorbike";
+  el.innerHTML = `Route ≈ <b>${km} km</b> by <b>${vname}</b> · suggested <b>RM ${sug}</b> ` +
+    `<a href="javascript:void(0)" onclick="useSuggested(${sug})" style="color:var(--blu);font-weight:800">Use suggested</a>`;
+  if (hint) hint.textContent = `${vname}: RM${(pr.base_cents/100).toFixed(0)} base + RM${(pr.per_km_cents/100).toFixed(2)}/km. It's a suggestion — partners still bid.`;
+}
+function useSuggested(v){
+  const b = document.getElementById("pt-budget");
+  if (b){ b.value = v; toast("Budget set from route distance"); }
+}
+
+/* ---- photos: pick -> downscale on-device -> upload ----
+   Downscaling to ≤1600px JPEG in a canvas does two jobs at once: uploads go
+   from ~5MB to ~300KB on mobile data, and re-encoding STRIPS EXIF — including
+   the GPS position of wherever the photo was taken. Task photos are shown to
+   strangers; they must not leak where you live beyond the address you chose. */
+function onPhotoPick(input){
+  const files = [...(input.files||[])].slice(0, 4 - _ptPhotos.length);
+  input.value = "";
+  if (!files.length) return;
+  files.forEach(f => downscale(f).then(async ({blob, dataUrl}) => {
+    const entry = { key:null, dataUrl };
+    _ptPhotos.push(entry); drawPhotos();
+    if (LIVE() && TOK.a){
+      try {
+        const r = await fetch(CFG.base + "/tasks/photo-upload", { method:"POST",
+          headers:{ authorization:"Bearer "+TOK.a }, body: blob });
+        const j = await r.json();
+        if (r.ok) entry.key = j.key;
+        else { toast(j.error && j.error.message || "Photo upload failed"); _ptPhotos = _ptPhotos.filter(x=>x!==entry); drawPhotos(); }
+      } catch(e){ toast("Photo upload failed — check your connection"); _ptPhotos = _ptPhotos.filter(x=>x!==entry); drawPhotos(); }
+    }
+  }).catch(()=>toast("Couldn't read that image")));
+}
+function downscale(file){
+  return new Promise((res, rej) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const MAX = 1600;
+      const sc = Math.min(1, MAX / Math.max(img.width, img.height));
+      const cv = document.createElement("canvas");
+      cv.width = Math.round(img.width*sc); cv.height = Math.round(img.height*sc);
+      cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+      cv.toBlob(b => b ? res({ blob:b, dataUrl:cv.toDataURL("image/jpeg",.82) }) : rej(), "image/jpeg", .82);
+    };
+    img.onerror = rej;
+    img.src = url;
+  });
+}
+function drawPhotos(){
+  const box = document.getElementById("pt-photos");
+  if (!box) return;
+  const tiles = _ptPhotos.map((ph,i)=>`
+    <div style="position:relative;width:74px;height:74px">
+      <img src="${ph.dataUrl}" style="width:74px;height:74px;object-fit:cover;border-radius:13px;${ph.key||!LIVE()?"":"opacity:.45"}">
+      <span onclick="removePhoto(${i})" style="position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;background:var(--red);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer">×</span>
+    </div>`).join("");
+  const add = _ptPhotos.length < 4
+    ? `<div onclick="document.getElementById('pt-file').click()" style="width:74px;height:74px;border:1.5px dashed var(--line2);border-radius:13px;display:flex;align-items:center;justify-content:center;color:var(--dim);cursor:pointer">${IC.plus(22)}</div>` : "";
+  box.innerHTML = tiles + add;
+}
+function removePhoto(i){ _ptPhotos.splice(i,1); drawPhotos(); }
+
+/* ---- skills sheet (partner) ----
+   The full category list as toggles. Picking delivery/moving without a licence
+   on file first walks through the licence camera capture — the SERVER enforces
+   this too (licence_required); the app just makes the path obvious. */
+const SKILL_LIST = ["cleaning","handyman","moving","delivery","aircon","plumbing","electrical","gardening"];
+let _skillsDraft = null;
+function openSkillsSheet(){
+  _skillsDraft = [ ...(state.live&&state.live.prof&&state.live.prof.skills)||[] ].map(s=>s.toLowerCase());
+  const host = document.getElementById("modal-host");
+  host.innerHTML = `
+  <div class="mmodal" style="justify-content:flex-end;background:rgba(7,16,32,.55)" onclick="if(event.target===this)closeSkillsSheet()">
+    <div class="mmsheet" onclick="event.stopPropagation()">
+      <b style="font-size:16px">Your skills</b>
+      <div class="sub" style="font-size:12.5px;margin:4px 0 12px">Customers see these on your bids. Delivery and Moving need a driving licence.</div>
+      <div class="rowg" style="flex-wrap:wrap;gap:8px" id="sk-list"></div>
+      <div style="height:16px"></div>
+      <button class="btn pri" onclick="saveSkills()">Save skills</button>
+    </div>
+  </div>`;
+  drawSkills();
+}
+function drawSkills(){
+  const box = document.getElementById("sk-list");
+  if (!box) return;
+  box.innerHTML = SKILL_LIST.map(s=>{
+    const on = _skillsDraft.includes(s);
+    const needsLic = (s==="delivery"||s==="moving");
+    return `<span class="fchip ${on?"on":""}" onclick="toggleSkill('${s}')">${s.charAt(0).toUpperCase()+s.slice(1)}${needsLic?" \u{1F698}":""}</span>`;
+  }).join("");
+}
+function toggleSkill(s){
+  const i = _skillsDraft.indexOf(s);
+  if (i>=0){ _skillsDraft.splice(i,1); drawSkills(); return; }
+  const needsLic = (s==="delivery"||s==="moving");
+  const hasLic = state.live && state.live.me && state.live.me.has_licence;
+  if (needsLic && !hasLic && LIVE()){ promptLicence(s); return; }
+  _skillsDraft.push(s); drawSkills();
+}
+function promptLicence(pendingSkill){
+  const host = document.getElementById("modal-host");
+  // second layer replaces the sheet content (simple, no stacking)
+  host.innerHTML = `
+  <div class="mmodal" style="justify-content:flex-end;background:rgba(7,16,32,.55)">
+    <div class="mmsheet">
+      <b style="font-size:16px">Driving licence needed</b>
+      <div class="sub" style="font-size:13px;margin:6px 0 12px;line-height:1.55">
+        ${pendingSkill.charAt(0).toUpperCase()+pendingSkill.slice(1)} jobs mean driving customers' goods.
+        Take a photo of your licence — opens your camera directly.</div>
+      <input class="f" id="lic-file" type="file" accept="image/*" capture="environment" style="width:100%;padding:11px">
+      <div style="height:12px"></div>
+      <button class="btn pri" onclick="uploadLicenceGo('${pendingSkill}')">Upload licence</button>
+      <div style="height:8px"></div>
+      <button class="btn dark" onclick="openSkillsSheet()">Back</button>
+    </div>
+  </div>`;
+}
+async function uploadLicenceGo(pendingSkill){
+  const f = (document.getElementById("lic-file")||{}).files;
+  if (!f || !f[0]){ toast("Take a photo of your licence first"); return; }
+  showBusy("Uploading licence\u2026");
+  try {
+    const { blob } = await downscale(f[0]);
+    const r = await fetch(CFG.base + "/me/licence", { method:"POST",
+      headers:{ authorization:"Bearer "+TOK.a }, body: blob });
+    const j = await r.json();
+    hideBusy();
+    if (!r.ok){ toast(j.error && j.error.message || "Upload failed"); return; }
+    state.live = state.live||{}; state.live.me = state.live.me||{}; state.live.me.has_licence = true;
+    toast("Licence uploaded");
+    openSkillsSheet();
+    _skillsDraft.push(pendingSkill); drawSkills();
+  } catch(e){ hideBusy(); toast("Upload failed \u2014 check your connection"); }
+}
+async function saveSkills(){
+  if (!LIVE()){ toast("Connect a server to save skills"); return; }
+  showBusy("Saving\u2026");
+  try {
+    const j = await api("/me","PATCH",{ skills:_skillsDraft });
+    hideBusy();
+    state.live = state.live||{}; state.live.prof = state.live.prof||{};
+    state.live.prof.skills = j.user.skills;
+    if (state.live.me) state.live.me.has_licence = j.user.has_licence;
+    closeSkillsSheet(); render(); toast("Skills updated");
+  } catch(e){
+    hideBusy();
+    if (e.code==="licence_required"){ toast(e.message); }
+    else toast(e.message);
+  }
+}
+function closeSkillsSheet(){ const h=document.getElementById("modal-host"); if(h) h.innerHTML=""; _skillsDraft=null; }
+
+/* ---- tips ----
+   Offered right after the customer releases payment, while the good service is
+   fresh. Deliberately skippable in one tap and never pre-selected: a tip that
+   feels extracted is worse than no tip. 100% goes to the partner. */
+let _tipTask = null;
+function openTipSheet(taskId){
+  const t = state.tasks.find(x=>x.id===taskId);
+  const pname = (t && t.accepted!=null && t.bids[t.accepted] && PARTNERS[t.bids[t.accepted].p])
+    ? PARTNERS[t.bids[t.accepted].p].name : "your partner";
+  _tipTask = taskId;
+  const host = document.getElementById("modal-host");
+  if (!host) return;
+  host.innerHTML = `
+  <div class="mmodal" style="justify-content:flex-end;background:rgba(7,16,32,.55)" onclick="if(event.target===this)closeTipSheet()">
+    <div class="mmsheet" onclick="event.stopPropagation()">
+      <b style="font-size:16.5px">Add a tip for ${esc(pname)}?</b>
+      <div class="sub" style="font-size:13px;margin:6px 0 14px;line-height:1.55">
+        Completely optional. Every sen goes to ${esc(pname)} — Berespro takes nothing from tips.
+      </div>
+      <div class="rowg" style="gap:9px;flex-wrap:wrap" id="tip-amts">
+        ${[3,5,10,20].map(v=>`<span class="fchip" onclick="pickTip(${v*100},this)">RM ${v}</span>`).join("")}
+      </div>
+      <input class="f num" id="tip-custom" type="number" inputmode="decimal" placeholder="Other amount (RM)" style="margin-top:10px" oninput="clearTipChips()">
+      <div style="height:14px"></div>
+      <button class="btn pri" onclick="sendTip()">Send tip</button>
+      <div style="height:9px"></div>
+      <button class="btn dark" onclick="skipTip()">No thanks</button>
+    </div>
+  </div>`;
+}
+let _tipCents = 0;
+function pickTip(cents, el){
+  _tipCents = cents;
+  document.querySelectorAll("#tip-amts .fchip").forEach(c=>c.classList.remove("on"));
+  el.classList.add("on");
+  const c = document.getElementById("tip-custom"); if (c) c.value = "";
+}
+function clearTipChips(){
+  _tipCents = 0;
+  document.querySelectorAll("#tip-amts .fchip").forEach(c=>c.classList.remove("on"));
+}
+function closeTipSheet(){ const h=document.getElementById("modal-host"); if(h) h.innerHTML=""; _tipCents=0; }
+function skipTip(){ const tid=_tipTask; closeTipSheet(); setTimeout(()=>openSheet("review",tid),200); }
+async function sendTip(){
+  const custom = parseFloat((document.getElementById("tip-custom")||{value:""}).value);
+  const cents = _tipCents || (custom>0 ? Math.round(custom*100) : 0);
+  if (!cents){ toast("Pick an amount, or tap No thanks"); return; }
+  const tid = _tipTask;
+  const t = state.tasks.find(x=>x.id===tid);
+  if (!LIVE() || !t || !t.srv){ closeTipSheet(); toast("Connect a server to send tips"); return; }
+  showBusy("Sending tip\u2026");
+  try {
+    await api(`/jobs/${t.srv}/tip`, "POST", { amount_cents: cents });
+    hideBusy(); closeTipSheet();
+    toast(`Tip sent \u2014 RM${(cents/100).toFixed(2)} to your partner`);
+    setTimeout(()=>openSheet("review",tid),400);
+  } catch(e){
+    hideBusy();
+    if (e.code==="already_tipped") toast("You've already tipped for this job");
+    else if (e.code==="bad_amount") toast("Tip must be between RM1 and RM500");
+    else toast(e.message);
+  }
+}
+
+/* ---- profile photo ---- */
+async function onAvatarPick(input){
+  const f = input.files && input.files[0];
+  input.value = "";
+  if (!f) return;
+  if (!LIVE()){ toast("Connect a server to save a profile photo"); return; }
+  showBusy("Uploading photo\u2026");
+  try {
+    const { blob, dataUrl } = await downscale(f);
+    const r = await fetch(CFG.base + "/me/avatar", { method:"POST",
+      headers:{ authorization:"Bearer "+TOK.a }, body: blob });
+    const j = await r.json();
+    hideBusy();
+    if (!r.ok){ toast(j.error && j.error.message || "Upload failed"); return; }
+    const el = document.getElementById("my-avatar");
+    if (el) el.innerHTML = `<img src="${dataUrl}" style="width:72px;height:72px;object-fit:cover;border-radius:50%">`;
+    _avatarCache = dataUrl;
+    if (state.live && state.live.me) state.live.me.has_avatar = true;
+    toast("Profile photo updated");
+  } catch(e){ hideBusy(); toast("Upload failed \u2014 check your connection"); }
+}
+let _avatarCache = null;
+async function hydrateMyAvatar(){
+  const el = document.getElementById("my-avatar");
+  if (!el) return;
+  if (_avatarCache){ el.innerHTML = `<img src="${_avatarCache}" style="width:72px;height:72px;object-fit:cover;border-radius:50%">`; return; }
+  if (!LIVE() || !TOK.a || !(state.live&&state.live.me&&state.live.me.has_avatar)) return;
+  try {
+    const r = await fetch(CFG.base + "/avatar/" + state.liveUid, { headers:{ authorization:"Bearer "+TOK.a } });
+    if (!r.ok) return;
+    _avatarCache = URL.createObjectURL(await r.blob());
+    el.innerHTML = `<img src="${_avatarCache}" style="width:72px;height:72px;object-fit:cover;border-radius:50%">`;
+  } catch(e){}
+}
+
+async function deleteAddr(aid){
+  if (!confirm("Remove this saved address?")) return;
+  if (LIVE() && TOK.a){
+    try { await api("/me/addresses/"+aid, "DELETE"); } catch(e){ toast(e.message); return; }
+    await syncAddresses();
+  } else {
+    state.addresses = (state.addresses||[]).filter(a=>String(a.id)!==String(aid));
+    persist();
+  }
+  render(); toast("Address removed");
+}
+function pickSavedAddr(aid){
+  const a = (state.addresses||[]).find(x=>String(x.id)===String(aid));
+  if (!a) return;
+  const f = document.getElementById("pt-addr");
+  if (f) f.value = a.addr;
+  setPin(a.lat, a.lng);                      // updates #pin-status text only
+  document.querySelectorAll("#addr-chips .chip").forEach(c=>c.classList.remove("on"));
+  const chips = [...document.querySelectorAll("#addr-chips .chip")];
+  const idx = (state.addresses||[]).findIndex(x=>String(x.id)===String(aid));
+  if (chips[idx]) chips[idx].classList.add("on");
+  toast(`Using ${a.label}`);
+}
+function openTaskMap(){
+  const city = (document.getElementById("pt-city")||{}).value || (state.user&&state.user.city);
+  const start = state.pin || (state.myPos) || CITIES[city] || [3.139,101.687];
+  const typed = (document.getElementById("pt-addr")||{value:""}).value.trim();
+  openMapModal({
+    lat:start[0], lng:start[1], addr:typed, showSave:true,
+    onDone:(res)=>{
+      setPin(res.lat, res.lng);
+      const f = document.getElementById("pt-addr");
+      if (f) f.value = res.addr;
+      const btn = document.querySelector('[onclick="openTaskMap()"]');
+      if (btn) btn.innerHTML = `${IC.pin(15)} Change`;
+      if (res.save && res.label) saveAddress(res.label, res.addr, res.lat, res.lng);
+      toast("Location set");
+    }
+  });
 }
 async function usePin(){
   const box=document.getElementById("pt-map");
@@ -1523,17 +2384,18 @@ async function usePin(){
   setPin(start[0], start[1]);
 
   // try GPS for a genuinely accurate starting point
-  if(navigator.geolocation){
+  const geoBlocked = geoBlockedReason();
+  if (!geoBlocked){
     toast("Finding your location\u2026");
     navigator.geolocation.getCurrentPosition(
       (pos)=>{ const {latitude:la,longitude:ln}=pos.coords;
         _map.setView([la,ln],17); _marker.setLatLng([la,ln]); setPin(la,ln);
         toast("Location found. Drag the pin to adjust."); },
-      ()=>{ toast("Couldn't get GPS. Drag the pin to set it."); },
+      (err)=>{ toast(geoErrText(err) + " Drag the pin instead."); },
       {enableHighAccuracy:true, timeout:8000}
     );
   } else {
-    toast("Drag the pin to set the exact spot.");
+    toast(geoBlocked + " Drag the pin to set the spot.");
   }
 }
 
@@ -1546,12 +2408,18 @@ function postTask(){
     // Use the exact pin when the customer set one; fall back to city centre.
     const ll = state.pin || CITIES[city] || [3.139,101.687];
     if (!state.pin) toast("No pin set, using city centre. Distances will be rough.");
+    if (_ptPhotos.some(ph=>!ph.key)){ toast("Photos are still uploading \u2014 a moment"); return; }
+    showBusy("Posting your task\u2026");
     livePostTask({ title, category:g("pt-cat").value, city, addr:g("pt-addr").value.trim()||city,
       lat:ll[0], lng:ll[1], budget_cents:Math.round(budget*100),
       date_label:(g("pt-date")&&g("pt-date").value)||"", time_slot:g("pt-time").value,
-      description:g("pt-desc").value.trim() })
-    .then(m=>{ state.pin=null; go("ctask",m.id); toast("Task posted. Partners are being notified"); })
+      description:g("pt-desc").value.trim(),
+      vehicle: isDeliveryCat() ? _ptVehicle : undefined,
+      stops: isDeliveryCat() && _ptStops.length ? _ptStops : undefined,
+      photo_keys: _ptPhotos.filter(ph=>ph.key).map(ph=>ph.key) })
+    .then(m=>{ hideBusy(); state.pin=null; _ptStops=[]; _ptPhotos=[]; go("posted", m.id); })
     .catch(e=>{
+      hideBusy();
       // Coverage: we are not open where they pinned. Say so plainly and point at
       // the pin, since that (not the city dropdown) is what decides the area.
       if (e.code==="area_not_covered"){
@@ -1567,8 +2435,8 @@ function postTask(){
     ll:(state.pin||CITIES[city]||[3.14,101.69]),budget,date:g("pt-date")?g("pt-date").value:"",time:g("pt-time").value,posted:"Just now",status:"open",
     desc:g("pt-desc").value.trim()||"—",bids:[],accepted:null,reviewed:false});
   const t=state.tasks[0];
-  state.pin=null;
-  go("ctask",t.id); toast("Task posted");
+  state.pin=null; _ptStops=[]; _ptPhotos=[];
+  go("posted", t.id);
 }
 function openPay(taskId,bidIdx){ state.sheet={type:"pay",taskId,bidIdx}; render(); }
 function payNow(taskId,bidIdx){
@@ -1600,7 +2468,7 @@ function completeTask(taskId){
   if (LIVE()){
     liveConfirm(taskId).then(j=>{
       render(); toast("Payment released to your partner");
-      setTimeout(()=>openSheet("review",taskId),700);
+      setTimeout(()=>openTipSheet(taskId),600);
     }).catch(e=>{
       if(e.code==="dispute_open") toast("Payment frozen. A dispute is open on this job");
       else toast(e.message);
@@ -1634,9 +2502,11 @@ function placeBid(jobId){
   if(!amt){ toast("Enter your bid price"); return; }
   if (LIVE()){
     const msg=(document.getElementById("bid-msg")||{value:""}).value.trim();
+    showBusy("Sending your bid\u2026");
     livePlaceBid(jobId, amt, msg).then(()=>{
-      render(); toast("Bid submitted, customer notified");
+      hideBusy(); render(); toast("Bid submitted, customer notified");
     }).catch(e=>{
+      hideBusy();
       if(e.code==="kyc_required"){ toast("Verify your identity first to start bidding"); go("pkyc"); }
       else toast(e.message);
     });
@@ -1735,7 +2605,8 @@ function mapTask(t){
     status: t.status, desc: t.description||"—", bids, accepted, reviewed: false,
     customer: t.customer_name||"Customer", bidCount: t.bid_count||bids.length,
     myBid: t.my_bid ? {live:true} : (state.tasks.find(x=>x.srv===t.id)||{}).myBid || null,
-    distance: t.distance_km };
+    distance: t.distance_km,
+    stops: t.stops||[], routeKm: t.route_km??null, photos: t.photos||[] };
 }
 function upsertTask(mapped){
   const i = state.tasks.findIndex(x=>x.srv===mapped.srv);
@@ -1750,8 +2621,11 @@ async function syncSession(){
   const user = j.user;
   state.live = state.live||{};
   if (j.commission_bps != null) state.live.commission_bps = j.commission_bps;
+  if (j.delivery_pricing) state.live.delivery_pricing = j.delivery_pricing;
   if (j.cancel_policy) state.live.cancel_policy = j.cancel_policy;
   state.liveUid = user.id;
+  state.live.me = user;              // full server profile (has_licence, has_avatar…)
+  state.isAdmin = !!user.is_admin;   // server-decided; the app never guesses
   state.user = { name:user.name, phone:user.phone||"", email:user.email||"",
                  city:user.city||"Kuala Lumpur", memberSince:"2026" };
   state.mode = user.mode==="partner" ? "partner" : "customer";
@@ -1824,6 +2698,9 @@ function liveSync(screen){
   const run = (fn)=>fn().catch(e=>{ if(e.status!==401) toast(e.message); });
   if (screen==="threads") run(liveThreads);
   if (screen==="closeaccount") run(async()=>{ state.live=state.live||{}; state.live.closure = await liveClosureCheck(); render(); });
+  if (screen==="cpost") setTimeout(()=>{ try{ onCatChange(); drawStops(); drawPhotos(); drawVehicles(); }catch(e){} }, 0);
+  if (screen==="ctask" || screen==="pjob") setTimeout(()=>{ try{ hydrateTimgs(); }catch(e){} }, 0);
+  if (screen==="cprofile" || screen==="pprofile") setTimeout(()=>{ try{ hydrateMyAvatar(); }catch(e){} }, 0);
   if (screen==="notifs"||screen==="cprofile"||screen==="pprofile") run(liveThreads);
   if (screen==="chome"||screen==="ctasks") run(syncMyTasks);
   if (screen==="chome") run(syncNotifs);
@@ -2155,12 +3032,16 @@ async function clerkBootstrap(){
   if (_cbRunning || state.user) return;
   _cbRunning = true;
   try { return await _clerkBootstrapInner(); }
-  finally { _cbRunning = false; }
+  finally { _cbRunning = false; hideBusy(); }
 }
 async function _clerkBootstrapInner(){
   if (!window.BP_CLERK_PUBLISHABLE_KEY) return;
   const clerk = await ensureClerk().catch(()=>null);
   if (!clerk || !clerk.user) return;
+  // From here we are genuinely signing in: token exchange + profile sync can
+  // take a few seconds, and a silent screen reads as "stuck". Say what's
+  // happening; hideBusy() lives in clerkBootstrap's finally.
+  showBusy("Signing you in\u2026");
 
   // Pull the real signed-in identity from Clerk (name/email from Google).
   const cu = clerk.user;
@@ -2394,9 +3275,9 @@ function reportProblem(taskId){
 }
 async function kycSubmit(){
   const g=id=>document.getElementById(id);
-  const name=g("kyc-name").value.trim(), last4=g("kyc-ic").value.trim();
+  const name=g("kyc-name").value.trim();
   const f=g("kyc-front").files[0], sf=g("kyc-selfie").files[0], bk=g("kyc-back").files[0];
-  if(!name||!/^\d{4}$/.test(last4)||!f||!sf){ toast("Name, last 4 IC digits, IC front and selfie are required"); return; }
+  if(!name||!f||!sf){ toast("Name, IC front photo and selfie are required"); return; }
   if (!LIVE()){ toast("Connect your server to submit documents"); return; }
 
   const btn = document.querySelector('button[onclick="kycSubmit()"]');
@@ -2408,7 +3289,7 @@ async function kycSubmit(){
     const front = await liveKycUpload(f, "front");
     const selfie = await liveKycUpload(sf, "selfie");
     const back = bk ? await liveKycUpload(bk, "back") : null;
-    await liveKycSubmit({ full_name:name, ic_last4:last4,
+    await liveKycSubmit({ full_name:name,
                           doc_front_key:front, doc_back_key:back, selfie_key:selfie });
     toast("Submitted. Verification usually takes under 24 hours");
     syncKyc();

@@ -26,6 +26,51 @@ export async function createTask(req, env) {
   b.lat = vnum(b.lat, -90, 90); b.lng = vnum(b.lng, -180, 180);
   b.budget_cents = vint(b.budget_cents, LIMITS.BUDGET_MIN, LIMITS.BUDGET_MAX);
   if (b.description) b.description = vstr(b.description, LIMITS.DESC_MAX);
+
+  // ---- delivery stops (Moving/Delivery multi-drop, like Lalamove) ----
+  // Each stop is a real place: address text AND a pin. route_km is computed
+  // HERE, never trusted from the client — the price suggestion and what the
+  // partner sees must come from the same arithmetic.
+  // Vehicle only means anything on a delivery-style task; storing it on a
+  // cleaning job would be noise that later code might wrongly price on.
+  let vehicle = null;
+  const isDelivery = ["delivery", "moving"].includes((b.category || "").toLowerCase());
+  if (isDelivery) {
+    vehicle = (b.vehicle || "motor").toLowerCase();
+    if (!["motor", "car"].includes(vehicle))
+      return err("vehicle must be motor or car", 400, "bad_vehicle");
+  }
+
+  let stops = null, routeKm = null;
+  if (Array.isArray(b.stops) && b.stops.length) {
+    if (b.stops.length > 5) return err("maximum 5 delivery stops", 400);
+    stops = [];
+    for (const s of b.stops) {
+      const sAddr = vstr(s && s.addr, 200);
+      const sLat = vnum(s && s.lat, -90, 90);
+      const sLng = vnum(s && s.lng, -180, 180);
+      if (!sAddr || sLat == null || sLng == null)
+        return err("each delivery stop needs an address and a map pin", 400, "bad_stop");
+      stops.push({ addr: sAddr, lat: sLat, lng: sLng });
+    }
+    let prev = [b.lat, b.lng]; routeKm = 0;
+    for (const s of stops) { routeKm += haversineKm(prev[0], prev[1], s.lat, s.lng); prev = [s.lat, s.lng]; }
+    routeKm = Math.round(routeKm * 10) / 10;
+    if (routeKm > 400) return err("route is over 400 km — split this into separate tasks", 400);
+  }
+
+  // ---- photos (max 4). Keys must sit under the uploader's own prefix: the
+  // upload route is what put them there, so a key outside taskimg/<me>/ is a
+  // forgery attempt, not a mistake. ----
+  let photos = null;
+  if (Array.isArray(b.photo_keys) && b.photo_keys.length) {
+    if (b.photo_keys.length > 4) return err("maximum 4 photos", 400);
+    for (const k of b.photo_keys) {
+      if (typeof k !== "string" || !k.startsWith(`taskimg/${user.id}/`) || k.includes(".."))
+        return err("invalid photo reference", 400);
+    }
+    photos = b.photo_keys;
+  }
   for (const f of ["title", "category", "city", "lat", "lng", "budget_cents"]) {
     if (b[f] === undefined || b[f] === null || b[f] === "") return err(`${f} invalid or missing`, 400);
   }
@@ -42,11 +87,13 @@ export async function createTask(req, env) {
 
   const tid = id("tsk");
   await env.DB.prepare(
-    "INSERT INTO tasks (id,customer_id,title,category,city,addr,lat,lng,budget_cents,date_label,time_slot,description,status,created_at,state,district) " +
-    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?, 'open', ?,?,?)"
+    "INSERT INTO tasks (id,customer_id,title,category,city,addr,lat,lng,budget_cents,date_label,time_slot,description,status,created_at,state,district,stops,route_km,photos,vehicle) " +
+    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?, 'open', ?,?,?,?,?,?,?)"
   ).bind(tid, user.id, b.title, b.category, b.city, b.addr || null, b.lat, b.lng,
          b.budget_cents, b.date_label || null, b.time_slot || null, b.description || null, now(),
-         area.state, area.district).run();
+         area.state, area.district,
+         stops ? JSON.stringify(stops) : null, routeKm, photos ? JSON.stringify(photos) : null,
+         vehicle).run();
   const task = await env.DB.prepare("SELECT * FROM tasks WHERE id = ?").bind(tid).first();
 
   // Tell nearby partners a job just appeared. Without this, partners have to keep
@@ -218,6 +265,10 @@ export function shapeTask(t) {
     budget_cents: t.budget_cents, date_label: t.date_label, time_slot: t.time_slot,
     description: t.description, status: t.status, accepted_bid_id: t.accepted_bid_id,
     created_at: t.created_at,
+    stops: t.stops ? JSON.parse(t.stops) : [],
+    route_km: t.route_km ?? null,
+    photos: t.photos ? JSON.parse(t.photos) : [],
+    vehicle: t.vehicle || null,
   };
 }
 export function shapeBidRow(b) {

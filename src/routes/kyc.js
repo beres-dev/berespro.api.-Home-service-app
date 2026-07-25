@@ -84,14 +84,18 @@ export async function submitKyc(req, env) {
 
   const b = await readBody(req);
   const fullName = vstr(b.full_name, LIMITS.NAME_MAX);
-  const icLast4 = vstr(b.ic_last4, 4, 4);
+  // Optional since v43: the IC number is ON the document photo the admin
+  // reviews; typing 4 digits added friction without adding verification.
+  const icLast4 = b.ic_last4 ? vstr(b.ic_last4, 4, 4) : "";
   // Keys come from /kyc/upload. Accept the legacy *_url names too so an older
   // app build gets a clear rejection below rather than a confusing 400.
   const front = vstr(b.doc_front_key || b.doc_front_url || "", 300);
   const selfie = vstr(b.selfie_key || b.selfie_url || "", 300);
   const back = vstr(b.doc_back_key || b.doc_back_url || "", 300) || null;
-  if (!fullName || !icLast4 || !/^\d{4}$/.test(icLast4) || !front || !selfie)
-    return err("full_name, ic_last4 (4 digits), doc_front_key, selfie_key required", 400);
+  if (icLast4 && !/^\d{4}$/.test(icLast4))
+    return err("ic_last4 must be 4 digits when provided", 400);
+  if (!fullName || !front || !selfie)
+    return err("full_name, doc_front_key, selfie_key required", 400);
 
   // THE CHECK THAT MATTERS: you may only submit documents you uploaded. Without
   // it, a partner could claim someone else's key — or, as before, invent a

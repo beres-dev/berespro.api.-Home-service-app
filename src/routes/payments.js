@@ -222,7 +222,14 @@ export async function myEarnings(req, env) {
   const held = await env.DB.prepare(
     "SELECT COALESCE(SUM(net_cents),0) s FROM payments WHERE partner_id=? AND status='held'"
   ).bind(user.id).first();
-  return json({ total_earned_cents: total, pending_release_cents: held.s, payouts: results });
+  // Tips are reported SEPARATELY, not folded into job earnings. A partner
+  // should be able to see what their work earned and what people chose to add
+  // on top — merging them hides which is which.
+  const tips = await env.DB.prepare(
+    "SELECT COALESCE(SUM(amount_cents),0) s FROM tips WHERE partner_id=? AND status='captured'"
+  ).bind(user.id).first();
+  return json({ total_earned_cents: total, pending_release_cents: held.s,
+                tips_cents: tips.s, payouts: results });
 }
 
 // GET /dev/simulate-pay?ref=sim_xxx

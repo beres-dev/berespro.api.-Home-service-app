@@ -182,8 +182,12 @@ export async function patchAdminSettings(req, env) {
   const admin = await requireAdmin(req, env); if (!admin) return deny();
   const b = await readBody(req);
   const ALLOWED = ["algo_w_distance", "algo_w_recency", "algo_w_budget", "commission_bps",
-                   "cancel_grace_min", "cancel_fee_bps"];
-  const CAPS = { commission_bps: 5000, cancel_fee_bps: 5000, cancel_grace_min: 1440 };
+                   "cancel_grace_min", "cancel_fee_bps",
+                   "delivery_motor_base_cents", "delivery_motor_per_km_cents",
+                   "delivery_car_base_cents", "delivery_car_per_km_cents"];
+  const CAPS = { commission_bps: 5000, cancel_fee_bps: 5000, cancel_grace_min: 1440,
+                 delivery_motor_base_cents: 10000, delivery_motor_per_km_cents: 2000,
+                 delivery_car_base_cents: 10000, delivery_car_per_km_cents: 2000 };
   const applied = {};
   for (const k of ALLOWED) {
     if (b[k] === undefined) continue;
