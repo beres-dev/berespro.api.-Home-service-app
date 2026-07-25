@@ -899,3 +899,41 @@ Butang "Sign in with phone (DEV)" (dan skrin DEV MODE di belakangnya,
 yang tiada laluan masuk lain) kini hanya nampak pada build dev.
 
 Bina production (pk_live_) sekarang tunjuk HANYA "Continue with Google".
+
+
+---
+
+# v39 — KRITIKAL: wrangler.toml menimpa CLERK_ISSUER pada setiap deploy
+
+Bug ditemui SELEPAS Clerk production disahkan berfungsi, bila Zaini upload
+v38 dan CLERK_ISSUER SENYAP kembali ke dev instance.
+
+## Punca
+
+Cloudflare Git integration jalankan `npx wrangler deploy` pada setiap push
+ke main. `wrangler deploy` anggap [vars] dalam wrangler.toml sebagai PUNCA
+KEBENARAN untuk semua var plaintext. wrangler.toml dalam repo masih ada
+CLERK_ISSUER hard-code ke dev instance (good-penguin-19) sejak awal projek.
+Bila Zaini tukar nilai tu di dashboard Cloudflare terus (bukan dalam
+wrangler.toml), ia berfungsi buat sementara — tapi deploy SETERUSNYA
+timpa balik ke nilai lama dalam fail.
+
+Kesan lebih luas: SEMUA var plaintext yang diset via dashboard tapi TIADA
+dalam wrangler.toml berisiko sama, termasuk ADMIN_IDS yang bakal diset.
+
+## Fix
+
+wrangler.toml kini punca kebenaran sebenar:
+- CLERK_ISSUER = https://clerk.berespro.my (production, betul)
+- ADMIN_IDS didokumenkan dengan jelas (baris dikomen, tinggal isi user id)
+- Amaran besar ditulis dalam fail: apa-apa var plaintext yang Zaini nak
+  KEKAL selepas deploy MESTI masuk fail ni, bukan cuma dashboard.
+
+Secrets (JWT_SECRET, SETUP_KEY, kunci Xendit) TAK terjejas — jenis
+Encrypted diurus berasingan daripada [vars], selamat dari dashboard.
+
+## PELAJARAN
+
+Lepas ni, apa-apa perubahan config production kena masuk wrangler.toml
+DAN dashboard sekali, bukan dashboard sahaja. Kalau tidak, ia hilang pada
+upload seterusnya tanpa amaran.

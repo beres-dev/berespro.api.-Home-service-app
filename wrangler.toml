@@ -26,15 +26,48 @@ database_id = "9595441c-9638-4b61-ad6a-0e15c0be23af"
 # binding = "RL_KV"
 # id = "PASTE_KV_NAMESPACE_ID_HERE"
 
+# IMPORTANT — `wrangler deploy` treats [vars] below as the SOURCE OF TRUTH for
+# every plaintext variable. Cloudflare's Git integration runs `npx wrangler
+# deploy` on every push to main, and that REVERTS OR REMOVES any plaintext var
+# you set by hand in the dashboard but did NOT also add here. This is exactly
+# how CLERK_ISSUER silently reverted to the dev instance after a routine app
+# upload. Only Secret/Encrypted vars (JWT_SECRET, SETUP_KEY, Xendit keys) are
+# safe to manage purely from the dashboard — they are not touched by [vars].
+# Rule: any plaintext value you want to SURVIVE a deploy must live here.
 [vars]
-CLERK_ISSUER = "https://good-penguin-19.clerk.accounts.dev"
+CLERK_ISSUER = "https://clerk.berespro.my"   # PRODUCTION — do not revert to *.clerk.accounts.dev
 COMMISSION_BPS = "2000"        # 20% platform fee (2000 bps)
 REQUIRE_KYC_TO_BID = "1"       # partners must pass KYC before bidding
 
-# Secrets: set these in the Cloudflare dashboard (Workers > Settings > Variables):
-#   JWT_SECRET     (Encrypt)  random 40+ char string for signing session JWTs
-#   CLERK_ISSUER   already set above as a plain var
-#   ADMIN_IDS      (plain)    your user id(s), comma-separated, for admin dashboard
+# --- Plaintext vars not set yet. EVERY one of these must be uncommented HERE
+# --- when you set it, not just typed into the dashboard, or the next deploy
+# --- silently wipes it (this is what happened to CLERK_ISSUER).
+#
+# ADMIN_IDS = "usr_xxx"
+#   Your user id, from the app: Settings -> "My user ID". Comma-separated for
+#   several admins. Without it the control panel returns 403 for everyone.
+#
+# PUBLIC_URL = "https://app.berespro.my"
+#   Where the APP lives (not this worker). Only used to build the payment
+#   success/failure return URLs handed to Xendit. Harmless while payments are
+#   in simulation mode; set it before switching Xendit live, or customers get
+#   sent to a broken address after paying.
+#   NOTE: /pay/return is currently handled by NEITHER the worker nor the app —
+#   the app polls for payment status instead of relying on the redirect. Wire
+#   that route up (or drop the return URLs) when Xendit goes live.
+#
+# XENDIT_SPLIT_RULE_ID = "splitru_xxx"
+#   xenPlatform split rule id. Plaintext, so it belongs here — NOT only in the
+#   dashboard. (XENDIT_SECRET_KEY and XENDIT_CALLBACK_TOKEN are Secrets and are
+#   safe to keep dashboard-only.)
+#
+# DEV_LOGIN — deliberately ABSENT. Adding it with "1" re-opens /auth/dev-login
+#   and /dev/simulate-pay. Never set it on this production worker.
+
+# Secrets: set these in the Cloudflare dashboard (Workers > Settings > Variables),
+# type Secret/Encrypted — these DO persist across deploys, unlike plaintext vars:
+#   JWT_SECRET     random 40+ char string for signing session JWTs
+#   SETUP_KEY      random string, gates /setup and /health/config
 #
 # Xendit (set as Secret/Encrypt in Settings > Runtime > Variables and secrets):
 #   XENDIT_SECRET_KEY      Xendit dashboard > Settings > Developers > API Keys
