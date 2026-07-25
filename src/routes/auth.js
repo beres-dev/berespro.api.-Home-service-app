@@ -15,7 +15,22 @@ export async function postSession(req, env) {
   if (!clerkToken) return err("clerkToken required", 400);
 
   const c = await verifyClerkToken(clerkToken, env);
-  if (!c) return err("invalid clerk token", 401, "bad_token");
+  if (!c) {
+    // Diagnose the common misconfiguration without weakening the rejection or
+    // leaking config: decode the (already-rejected) token's issuer locally and
+    // compare. Values are logged server-side for `wrangler tail`, never returned.
+    let iss = null;
+    try { iss = JSON.parse(atob(clerkToken.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).iss; } catch (_) {}
+    if (!env.CLERK_ISSUER) {
+      console.error("auth: CLERK_ISSUER is not set");
+      return err("server auth is not configured — contact support", 503, "issuer_not_set");
+    }
+    if (iss && iss !== env.CLERK_ISSUER.replace(/\/+$/, "")) {
+      console.error("auth: issuer mismatch. token iss=", iss, " expected=", env.CLERK_ISSUER);
+      return err("sign-in is pointing at the wrong Clerk instance", 401, "issuer_mismatch");
+    }
+    return err("invalid clerk token", 401, "bad_token");
+  }
 
   // Clerk user id lives in `sub`. Phone/email/name come through if you add them to
   // the Clerk JWT template (see GUIDE §5). We store the Clerk id in firebase_uid

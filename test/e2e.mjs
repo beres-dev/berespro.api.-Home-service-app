@@ -2,8 +2,17 @@ import { MockDB } from './mockdb.mjs';
 import worker from '../src/index.js';
 import { signJWT, sha256hex } from '../src/lib/util.js';
 
+// /kyc/submit now refuses without storage — a partner must never be "verified"
+// having uploaded nothing — so e2e needs a bucket like production has.
+class FakeR2 {
+  constructor(){ this.o = new Map(); }
+  async put(k, b, o){ this.o.set(k, { body:b, httpMetadata:o&&o.httpMetadata }); return {}; }
+  async get(k){ const v=this.o.get(k); return v ? { body:v.body, httpMetadata:v.httpMetadata } : null; }
+  async delete(k){ this.o.delete(k); }
+}
 const env = {
   DB: new MockDB(),
+  KYC_DOCS: new FakeR2(),
   JWT_SECRET: 'test-secret-'.repeat(3),
   FIREBASE_PROJECT_ID: 'berespro-test',
   COMMISSION_BPS: '2000',
@@ -23,6 +32,14 @@ async function seedUser(uid,name,mode){
 const H=(t)=>({authorization:'Bearer '+t});
 const call=(method,path,token,body)=>worker.fetch(new Request('https://api.test'+path,{method,headers:{...(token?H(token):{}),'content-type':'application/json'},body:body?JSON.stringify(body):undefined}),env);
 const j=async r=>({status:r.status,body:await r.json()});
+// KYC documents now go up as raw bytes and the SERVER returns the key; the
+// client can no longer invent a "url". These helpers mirror what the app does.
+const JPEG_BYTES = new Uint8Array([0xFF,0xD8,0xFF,0xE0,0,0x10,0x4A,0x46,0x49,0x46,0,1,...new Array(64).fill(0x41)]);
+const upDoc = async (token, kind) => {
+  const r = await worker.fetch(new Request('https://api.test/kyc/upload?kind='+kind,
+    { method:'POST', headers:{ ...H(token), 'content-type':'image/jpeg' }, body:JPEG_BYTES }), env);
+  return (await r.json()).key;
+};
 // Xendit verifies webhooks with a static token in x-callback-token (not an HMAC),
 // and wraps the payload as { event, data }. The harness mirrors that exactly so
 // these tests fail if the real contract is ever broken.
@@ -57,7 +74,9 @@ r=await j(await call('POST','/tasks',cust,{title:'KYC probe task',category:'clea
 const probeTask=r.body.task.id;
 r=await j(await call('POST',`/tasks/${probeTask}/bids`,part,{amount_cents:15000}));
 ok('bid blocked before KYC (403 kyc_required)', r.status===403 && r.body.error.code==='kyc_required', r.body);
-r=await j(await call('POST','/kyc/submit',part,{full_name:'Hafiz Roslan',ic_last4:'4421',doc_front_url:'r2://kyc/f1.jpg',selfie_url:'r2://kyc/s1.jpg'}));
+const kF1=await upDoc(part,'front'), kS1=await upDoc(part,'selfie');
+ok('kyc upload returns a server-chosen key', typeof kF1==='string' && kF1.startsWith('kyc/'), kF1);
+r=await j(await call('POST','/kyc/submit',part,{full_name:'Hafiz Roslan',ic_last4:'4421',doc_front_key:kF1,selfie_key:kS1}));
 ok('KYC submitted (pending)', r.status===201 && r.body.status==='pending', r.body);
 const kycId=r.body.kyc_id;
 r=await j(await call('GET','/me/kyc',part));
@@ -65,7 +84,9 @@ ok('my kyc = pending', r.body.status==='pending', r.body);
 r=await j(await call('POST',`/kyc/${kycId}/review`,admin,{action:'approve'}));
 ok('admin approves KYC', r.body.status==='approved', r.body);
 // second partner: approve via direct flag path for the payout-block test
-r=await j(await call('POST','/kyc/submit',part2Token(),{full_name:'X',ic_last4:'1111',doc_front_url:'r2://x',selfie_url:'r2://y'}));
+const p2t=part2Token();
+const kF2=await upDoc(p2t,'front'), kS2=await upDoc(p2t,'selfie');
+r=await j(await call('POST','/kyc/submit',p2t,{full_name:'X',ic_last4:'1111',doc_front_key:kF2,selfie_key:kS2}));
 
 console.log('\n— Partner connects payout (PSP sub-merchant) —');
 r=await j(await call('POST','/partners/connect',part));

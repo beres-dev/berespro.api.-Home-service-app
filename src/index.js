@@ -9,8 +9,10 @@ import * as PAY from "./routes/payments.js";
 import * as P from "./routes/partners.js";
 import * as N from "./routes/notifications.js";
 import * as K from "./routes/kyc.js";
+import * as ACC from "./routes/account.js";
 import * as D from "./routes/disputes.js";
 import * as ADM from "./routes/admin.js";
+import * as MSG from "./routes/messages.js";
 
 const ROUTES = [
   ["POST", "/auth/session", A.postSession],
@@ -61,10 +63,21 @@ const ROUTES = [
   ["PATCH","/admin/vouchers/:id", ADM.patchVoucher],
   ["GET",  "/admin/settings", ADM.getAdminSettings],
   ["PATCH","/admin/settings", ADM.patchAdminSettings],
+  ["GET",  "/tasks/:taskId/messages", MSG.listMessages],
+  ["POST", "/tasks/:taskId/messages", MSG.sendMessage],
+  ["POST", "/tasks/:taskId/messages/read", MSG.markThreadRead],
+  ["GET",  "/me/threads", MSG.listThreads],
+  ["GET",  "/admin/threads/:taskId", MSG.adminGetThread],
   ["GET",  "/admin/coverage", ADM.getAdminCoverage],
   ["PATCH","/admin/coverage", ADM.patchAdminCoverage],
   ["GET",  "/admin/audit", ADM.listAudit],
 
+  ["GET",  "/account/closure-check", ACC.closureCheck],
+  ["POST", "/account/deactivate", ACC.deactivateAccount],
+  ["POST", "/account/reactivate", ACC.reactivateAccount],
+  ["DELETE","/account", ACC.deleteAccount],
+  ["POST", "/kyc/upload", K.uploadKycDoc],
+  ["GET",  "/kyc/doc/:kycId/:kind", K.getKycDoc],
   ["POST", "/kyc/submit", K.submitKyc],
   ["GET",  "/me/kyc", K.myKyc],
   ["GET",  "/kyc/pending", K.pendingKyc],
@@ -119,6 +132,40 @@ export default {
       });
     }
 
+    // ── production readiness check. Visit /health/config?key=<SETUP_KEY>.
+    // Switching to production means four Clerk settings, an R2 bucket, a KV
+    // namespace and the PSP keys all lining up at once; getting one wrong
+    // produces a login failure that is near-impossible to diagnose from a
+    // browser. This reports WHAT IS CONFIGURED, never a secret's value.
+    if (path === "/health/config") {
+      const key = url.searchParams.get("key") || "";
+      if (!env.SETUP_KEY || key !== env.SETUP_KEY)
+        return err("forbidden — pass ?key=<SETUP_KEY>", 403);
+
+      const issuer = env.CLERK_ISSUER || null;   // public (appears in every JWT)
+      const isDevClerk = !!issuer && /\.clerk\.accounts\.dev$/.test(issuer.replace(/^https?:\/\//, ""));
+      const blockers = [];
+      if (!issuer) blockers.push("CLERK_ISSUER not set — nobody can sign in");
+      if (isDevClerk) blockers.push("CLERK_ISSUER is a Clerk DEV instance, not production");
+      if (env.DEV_LOGIN === "1") blockers.push("DEV_LOGIN is ON — dev backdoors are reachable");
+      if (!env.ADMIN_IDS) blockers.push("ADMIN_IDS not set — control panel is locked");
+      if (!env.KYC_DOCS) blockers.push("R2 bucket KYC_DOCS not bound — KYC returns 503");
+      if (!env.XENDIT_SECRET_KEY) blockers.push("XENDIT_SECRET_KEY not set — payments are SIMULATED, no real money moves");
+      if (!env.XENDIT_CALLBACK_TOKEN) blockers.push("XENDIT_CALLBACK_TOKEN not set — real webhooks would be rejected");
+
+      return json({
+        production_ready: blockers.length === 0,
+        blockers,
+        auth:     { clerk_issuer: issuer, clerk_instance: isDevClerk ? "development" : (issuer ? "production" : null),
+                    jwt_secret_set: !!env.JWT_SECRET, dev_login_enabled: env.DEV_LOGIN === "1" },
+        storage:  { d1_bound: !!env.DB, kyc_r2_bound: !!env.KYC_DOCS, rate_limit_kv_bound: !!env.RL_KV },
+        payments: { xendit_secret_set: !!env.XENDIT_SECRET_KEY, xendit_callback_token_set: !!env.XENDIT_CALLBACK_TOKEN,
+                    split_rule_set: !!env.XENDIT_SPLIT_RULE_ID, mode: env.XENDIT_SECRET_KEY ? "live" : "simulation" },
+        admin:    { admin_ids_set: !!env.ADMIN_IDS, admin_count: env.ADMIN_IDS ? env.ADMIN_IDS.split(",").filter(Boolean).length : 0 },
+        policy:   { require_kyc_to_bid: env.REQUIRE_KYC_TO_BID === "1", commission_bps: env.COMMISSION_BPS || null },
+      });
+    }
+
     // ── one-time DB setup: initialise all tables. Safe to run again (IF NOT EXISTS).
     // Visit https://<worker-url>/setup?key=<SETUP_KEY> once after first deploy.
     if (path === "/setup") {
@@ -157,6 +204,22 @@ export default {
 
     const m = match(req.method, path);
     if (!m) return err("not found", 404);
+
+    // Deactivated accounts: default DENY, explicit allow. An allowlist fails
+    // safe — a new route is blocked until someone deliberately opens it —
+    // whereas a per-route check fails open the first time one is forgotten.
+    const DEACTIVATED_OK = new Set([
+      "GET /me", "GET /account/closure-check",
+      "POST /account/reactivate", "DELETE /account",
+      "POST /auth/session", "POST /auth/refresh",
+    ]);
+    if (!DEACTIVATED_OK.has(`${req.method} ${path}`)) {
+      const { requireUser } = await import("./lib/auth.js");
+      const u = await requireUser(req, env).catch(() => null);
+      if (u && u.deactivated_at) {
+        return err("your account is deactivated — reactivate it to continue", 403, "account_deactivated");
+      }
+    }
     try { return await m.handler(req, env, m.params); }
     catch (e) {
       // Never leak internal exception text to the client (it can reveal table

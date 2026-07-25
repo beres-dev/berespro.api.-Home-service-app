@@ -469,3 +469,353 @@ kawasan.
 
 WAJIB run /setup sekali: cipta jadual coverage + kolum tasks.state/district.
 Tanpa dia, post task akan gagal.
+
+
+---
+
+# v31 — CHAT: customer dan partner boleh berkomunikasi dalam app
+
+Suite baru test/messages.mjs: 36 ujian. Jumlah kini 354 lulus, 0 gagal.
+5 route baru (jumlah 60).
+
+## Kenapa ini penting (bukan sekadar feature)
+
+Sebelum ni butang "Chat" cuma toast palsu. Tanpa mesej, partner yang nak
+tanya "pintu belakang ada akses?" TERPAKSA tukar nombor telefon, dan saat
+mereka buat tu, kerja tu KELUAR dari platform: mereka settle sendiri,
+Berespro hilang komisen DAN hilang rekod untuk dispute. Chat kekalkan
+perbualan di tempat yang ada escrow, audit trail, dan bukti dispute.
+
+## Reka bentuk
+
+THREAD = (task_id, partner_id). Satu task terbuka boleh ada 5 partner
+bida, jadi customer dapat 5 thread berasingan; setiap partner nampak
+thread dia SAHAJA. Partner tak boleh nampak harga atau mesej partner lain.
+
+ANTI-SPAM: partner mesti BIDA dahulu sebelum boleh mesej. Kalau tidak,
+mana-mana partner boleh spam mana-mana customer. Medan mesej dalam bid
+sudah jadi tempat perkenalan.
+
+POLLING, bukan WebSocket: realtime sebenar perlukan Durable Objects (kos +
+kompleksiti). Polling 4 saat SEMASA skrin chat terbuka sahaja, berhenti
+sebaik keluar skrin. Untuk thread dua orang, ini satu bacaan kecil setiap
+beberapa saat dan sifar infrastruktur tambahan.
+
+CHAT KEKAL TERBUKA semasa dispute — waktu itulah mereka paling perlu
+bercakap. Ada ujian khusus.
+
+ADMIN BOLEH BACA thread sebagai bukti dispute (/admin/threads/:taskId),
+tapi READ-ONLY. Admin tak boleh menulis, jadi thread sentiasa boleh
+dipercayai sebagai rekod apa yang dua pihak betul-betul cakap.
+
+## Bug yang ditangkap semasa membina
+
+1. POLL BOLEH HILANGKAN MESEJ: `created_at > after` menggugurkan mesej yang
+   ditulis dalam SAAT YANG SAMA dengan mesej terakhir klien. Dua orang
+   menaip serentak bukan perkara jarang. Ditukar ke >= dan klien de-dupe
+   ikut id: paling teruk ia ambil semula satu mesej yang dia dah ada
+   (tak nampak), berbanding alternatifnya yang HILANGKAN mesej.
+2. Query "last message" padan ikut created_at sahaja boleh ambil mesej
+   dari thread LAIN yang sama saat. Diskop ikut thread.
+3. Text input dikembalikan kalau hantar gagal — jangan sesekali hilangkan
+   apa yang orang dah taip.
+
+## MockDB (pelajaran #1 lagi, tiga kali dalam satu sesi)
+
+Shim tak sokong: GROUP BY dengan JOIN, OR dalam WHERE, dan ia ABAIKAN
+penapis pada jadual yang di-JOIN (t.customer_id) — senyap, pulang kosong.
+listThreads ditulis semula tanpa JOIN/OR/GROUP BY: dua lookup berindeks
+rata + stitch dalam JS. Ini BUKAN kompromi untuk shim — SQLite selalunya
+BUANG index bila WHERE ada OR merentas dua jadual, jadi bentuk ni memang
+lebih laju pada D1 sebenar.
+
+## App
+
+- Skrin senarai thread + skrin chat (bubble, timestamp, auto-scroll)
+- 3 butang palsu disambung: customer→bidder, customer→partner (job aktif),
+  partner→customer ("Ask")
+- Pintu masuk: Profile → Messages (kedua-dua mod) + kad dalam Activity,
+  dengan badge unread
+- Notifikasi jenis "msg" baru
+
+## SELEPAS UPLOAD
+
+WAJIB run /setup sekali: cipta jadual messages + 2 index.
+
+
+---
+
+# v32 — KYC SEBENAR: dokumen ke R2 peribadi, bukan lagi teater
+
+Suite baru test/kycdocs.mjs: 32 ujian. Jumlah kini 386 lulus, 0 gagal.
+2 route baru (jumlah 62).
+
+## APA YANG SEBENARNYA BERLAKU SEBELUM NI (teruk)
+
+KYC awak PALSU sepenuhnya:
+- App cipta string "upload://1784...-ic.jpg" dan hantar sebagai "URL"
+- GAMBAR SEBENAR TAK PERGI KE MANA-MANA — duduk dalam browser, hilang
+- /kyc/submit terima APA-APA string sebagai doc_front_url. Partner boleh
+  hantar doc_front_url:"haha" dan masuk queue
+- Admin nampak link rosak. Pilihan dia: LULUS MEMBUTA atau tolak semua
+- REQUIRE_KYC_TO_BID=1, jadi setiap partner tersekat di gate palsu ni
+
+Lulus membuta LEBIH BAHAYA dari tiada KYC: awak dapat rekod bertulis yang
+awak "sahkan" seseorang yang awak tak pernah sahkan. Itu liabiliti.
+
+## MODEL ANCAMAN (gambar IC + selfie = data paling sensitif di platform)
+
+1. Bucket PERIBADI. Tiada URL awam kepada dokumen wujud, langsung.
+2. KLIEN TAK PERNAH PILIH KUNCI. Ia hantar bait; Worker tentukan kunci,
+   nama, dan lokasi. Kunci: kyc/<userId>/<random>-<kind>.
+3. Admin baca dokumen MELALUI Worker, yang semak admin pada SETIAP
+   permintaan. Tiada signed URL yang boleh diforward atau hidup lebih lama
+   dari review.
+4. Kandungan disahkan ikut MAGIC BYTES, bukan header Content-Type yang
+   mana-mana klien boleh tipu. JPEG/PNG/WebP sahaja, maks 6MB.
+5. Awak hanya boleh submit dokumen yang AWAK upload (kunci mesti bawah
+   prefix awak DAN wujud dalam storan). Tanpa ni, partner boleh tuntut
+   dokumen orang lain, atau reka string dan "disahkan" tanpa upload apa-apa.
+6. Kunci dokumen TAK PERNAH masuk audit log — audit dibaca ramai admin,
+   dan kunci itu satu-satunya yang menjaga storan.
+
+## STORAN TIADA = MENOLAK, BUKAN BERPURA-PURA
+
+Kalau KYC_DOCS tak bound, /kyc/upload dan /kyc/submit pulang 503. Kod lama
+berpura-pura berjaya. Ada ujian khusus untuk ni.
+
+## Admin panel
+
+Link "#" palsu diganti pemapar sebenar. <img src> TAK BOLEH hantar header
+Authorization, jadi panel fetch dengan token, tukar jadi blob, papar dari
+memori, dan revoke object URL bila ditutup. Tiada apa ditulis ke cache atau
+disk. Setiap view masuk audit log.
+
+## Retensi (keputusan Zaini)
+
+Dokumen disimpan SELAGI PARTNER AKTIF. Set yang DITOLAK dipadam bila
+partner submit semula — set ditolak bukan sebahagian dari retensi.
+
+## HAD YANG DIAKUI (tak disembunyikan)
+
+EXIF TAK dibuang. Gambar boleh bawa koordinat GPS tempat ia diambil.
+Membuang EXIF perlukan decoder imej, berat dalam Worker. Bucket peribadi
+dan hanya admin boleh baca, jadi pendedahan bersifat dalaman. Semak semula
+kalau dokumen pernah dikendali sesiapa di luar syarikat.
+
+## LANGKAH AWAK DI CLOUDFLARE (WAJIB, kalau tidak KYC pulang 503)
+
+1. Dashboard > R2 Object Storage > Create bucket
+2. Nama: berespro-kyc
+3. JANGAN sesekali enable Public Access pada bucket ni
+4. Dalam wrangler.toml, buang komen pada blok [[r2_buckets]]
+5. Commit. Auto-deploy.
+
+R2 percuma sehingga 10GB. Gambar IC ~1MB, jadi 10GB = ~10,000 dokumen.
+
+
+---
+
+# v33 — TUTUP AKAUN: deactivate + delete (compliance PDPA)
+
+Suite baru test/account.mjs: 38 ujian. Jumlah kini 424 lulus, 0 gagal.
+4 route baru (jumlah 66).
+
+## RESET / FORGOT PASSWORD: tiada, dan itu BETUL
+
+Berespro LANGSUNG tiada password. Sifar. Tiada disimpan, tiada disemak.
+Auth ialah Clerk + Google. Lupa password Google = masalah Google. Kalau
+email+password dihidupkan dalam Clerk nanti, Clerk yang handle reset,
+ada UI siap. JANGAN sesekali bina sendiri — password ialah punca kebocoran
+paling biasa, dan awak tak simpan satu pun.
+
+## KENAPA INI BUKAN "DELETE FROM users"
+
+Ini marketplace pegang duit:
+- partner boleh ada RM800 dalam escrow untuk kerja belum siap
+- customer boleh ada dispute terbuka
+- baris payment ialah rekod PERAKAUNAN (Malaysia: simpan 7 tahun)
+- review yang dia tulis ialah reputasi ORANG LAIN
+
+Jadi dua peringkat, dan KEDUA-DUA DITOLAK selagi ada duit atau dispute
+hidup — kalau tidak, "padam akaun" jadi jalan lari dari dispute. Ada ujian
+khusus: customer DAN partner dua-dua tak boleh padam masa dispute terbuka.
+
+  DEACTIVATE  boleh pulih. Hilang dari feed, tak boleh bida/post/mesej,
+              sesi dibunuh. TIADA apa dimusnahkan.
+  DELETE      kekal. Identiti dianonimkan, gambar IC DIPADAM dari R2.
+              Baris kewangan kekal, menunjuk kepada pengguna tanpa nama.
+
+## GATE: DEFAULT TOLAK, BUKAN TAMPAL SEMAKAN
+
+Akaun deactivated diblok di peringkat ROUTER dengan allowlist, bukan
+semakan dalam setiap route. Sebabnya: hari seseorang tambah route baru dan
+terlupa semakan, pengguna deactivated boleh bida semula secara senyap.
+Allowlist gagal SELAMAT — route baru diblok sampai seseorang sengaja buka.
+Dibenarkan masa deactivated: GET /me, closure-check, reactivate, DELETE
+/account, auth/session, auth/refresh. Semua lain 403.
+
+## DEACTIVATE BEBASKAN ORANG LAIN
+
+Task terbuka awak dibatalkan dan setiap pembida DIBERITAHU. Bid pending
+awak ditarik. Kalau tidak, partner tunggu selama-lamanya pada task yang
+tuannya dah pergi.
+
+## DELETE: apa yang pergi, apa yang kekal
+
+PERGI: nama, telefon, emel, lokasi, skills, id_verified, GAMBAR IC DARI R2,
+        nama + IC last4 dalam baris kyc, sesi, token push.
+KEKAL: baris payment (perakaunan), task, bid, review, mesej — semua kini
+       menunjuk kepada "Deleted user".
+firebase_uid dikosongkan, jadi sign-in Google yang sama cipta akaun BARU,
+bukan hidupkan semula yang ini.
+
+## Sengaja menyusahkan
+
+Delete perlukan confirm:"DELETE" tepat (huruf besar). App minta pengesahan
+DUA kali dan yang kedua kena taip perkataan tu. Ini tindakan tak boleh
+undur — ia tak patut boleh dicapai dengan tersalah tekan.
+
+## Bug yang ujian tangkap
+
+"IC DOCUMENTS PURGED FROM STORAGE" GAGAL pada mulanya — dokumen terselamat
+dari padam akaun. Itu tepat kegagalan compliance yang suite ni wujud untuk
+halang. (Punca: ujian saya seed partner dengan id_verified=1, jadi
+submitKyc pulang awal dan tiada baris KYC pernah wujud untuk dipadam.)
+
+## SELEPAS UPLOAD
+
+WAJIB run /setup: kolum users.deactivated_at + users.deleted_at.
+
+
+---
+
+# v34 — UI claymorphism
+
+Rupa sahaja. SIFAR perubahan logik. 424 ujian masih lulus (kod backend tak
+disentuh). Diesahkan dengan render sebenar (Playwright screenshot) pada
+skrin home, post, profile, dan partner jobs — bukan diteka.
+
+## Apa itu claymorph
+
+Bentuk lembut menggelembung: radius besar, bayang LUARAN dua arah (cahaya
+atas-kiri, gelap bawah-kanan) yang buat elemen nampak ditimbulkan dari
+tanah liat, plus rim dalaman halus. Elemen "ditekan" (input, carian) guna
+bayang INSET supaya nampak macam ditenggelamkan.
+
+## Cara ia dibuat tanpa sentuh markup
+
+Sistem gaya app dah berpusat: semua guna .card / .btn / .chip / .cat /
+.srow / token warna :root. Jadi claymorph diterap dengan tukar DEFINISI
+kelas tu sahaja — tiada satu baris markup atau logik berubah. Kalau nak
+patah balik, ia perubahan CSS terpencil.
+
+## Perubahan
+
+- Token: permukaan dibuat sedikit berwarna (bukan putih tulen) supaya
+  bayang clay nampak; tambah --clay, --clay-sm, --clay-in, --clay-blu.
+- Radius dibesarkan (16->22px) untuk rupa pillowy.
+- Timbul (raised): card, chip, cat tile, filter chip, avatar, alert
+  banner, escrow strip, butang, bottom-nav post button.
+- Tenggelam (inset): input, textarea, OTP box, search bar, settings-row
+  icon, ghost button.
+- Butang primary + post + filter-on: gradient biru dengan bayang biru.
+- :active pada butang/tile: tekan ke dalam (inset) untuk maklum balas
+  sentuh.
+
+## Kebolehbacaan
+
+Bayang ditala LEMBUT dengan sengaja — claymorph yang berlebihan jadi kabur.
+Teks kekal tajam, kontras dikekalkan. Disahkan pada screenshot sebenar.
+
+
+---
+
+# v35 — AUDIT PRODUCTION: bug schema drift dibaiki (KRITIKAL)
+
+Audit kesediaan production sebelum bungkus APK. Satu bug production sebenar
+dijumpai dan dibaiki; selebihnya konfigurasi, bukan kod.
+
+## KRITIKAL — schema_sql.js drift dari schema.sql
+
+/setup guna src/schema_sql.js (schema.sql dibungkus JS). Fail tu sepatutnya
+auto-jana dari schema.sql tapi dikemas kini secara MANUAL, dan dah drift:
+ia HILANG jadual `coverage` (v30) dan `messages` (v31).
+
+Kesan kalau tak dibaiki: awak upload v31-v33, run /setup, dan jadual chat +
+coverage TAK dicipta. Chat dan coverage pecah di production dengan "no such
+table" — sementara SEMUA 424 ujian lulus, sebab ujian guna MockDB yang cipta
+jadual sendiri, bukan /setup.
+
+Ini tepat kelas bug yang hanya muncul di production sebenar. Dibaiki:
+- schema_sql.js dijana semula dari schema.sql (kini ada semua 20 jadual)
+- test/gen-schema.mjs: skrip jana rasmi (npm run gen:schema)
+- test/schema-sync.mjs: GUARD yang gagal CI kalau dua fail tak selari lagi.
+  Drift ni tak boleh berlaku senyap lagi.
+
+## Disahkan SELAMAT untuk production (tiada perubahan perlu)
+
+- Backdoor dev (dev-login, simulate-pay) fail-closed: 404 bila DEV_LOGIN
+  tak diset. Butang DEV dalam app dipagar oleh LIVE().
+- Tiada rahsia hard-code dalam src/ atau app (JWT_SECRET, SETUP_KEY,
+  XENDIT keys semua dari env).
+- Security headers, JWT alg-pin, IDOR guards, dispute locks — semua kekal.
+
+## KONFIGURASI PRODUCTION (bukan kod — LANGKAH AWAK sebelum go-live)
+
+Ini yang bezakan "berjalan" dari "production". Semua di app baris 14-21 +
+Cloudflare:
+
+1. Clerk: tukar pk_test_ (dev good-penguin-19) -> pk_live_ dari Clerk
+   PRODUCTION instance. Buat production instance di Clerk dulu.
+2. CLERK_ISSUER di Cloudflare: good-penguin-19.clerk.accounts.dev ->
+   https://clerk.berespro.my (production instance).
+3. Google OAuth: production instance perlu OAuth credentials sendiri
+   (projek "Berespro" dah dicipta; sambungkan di Clerk).
+4. Domain: app kena di berespro.my, bukan URL netlify rawak, untuk APK
+   production yang bermakna.
+5. R2 bucket berespro-kyc + KV RL_KV (uncomment wrangler.toml).
+6. XENDIT_SECRET_KEY + CALLBACK_TOKEN bila sedia terima duit.
+7. Pusing SETUP_KEY + JWT_SECRET (pernah dalam fail plaintext).
+
+
+---
+
+# v36 — alat untuk tukar ke production dengan selamat
+
+Suite baru test/prodconfig.mjs: 22 ujian. Jumlah 474 lulus, 0 gagal.
+
+## Masalah yang ini selesaikan
+
+Tukar ke production bukan satu suis. EMPAT benda kena sejajar SERENTAK:
+kunci pk_live_ dalam app, CLERK_ISSUER di Cloudflare, Google OAuth
+credentials dalam Clerk, dan JWT template "berespro" di production instance.
+Kalau SATU salah, semua orang dapat "invalid clerk token" 401 — mesej sama
+untuk semua punca. Dari laptop browser-only, itu boleh jadi sejam meneka.
+
+## 1. GET /health/config?key=<SETUP_KEY>
+
+Satu URL, jawapan penuh: apa yang dikonfigur, apa yang belum, dan sama ada
+awak production-ready. Melaporkan STATUS, tidak pernah nilai rahsia (ada
+ujian khusus yang sahkan JWT_SECRET dan SETUP_KEY tak bocor).
+
+Contoh jawapan bila belum sedia:
+  production_ready: false
+  blockers: ["CLERK_ISSUER is a Clerk DEV instance, not production",
+             "DEV_LOGIN is ON — dev backdoors are reachable",
+             "ADMIN_IDS not set — control panel is locked",
+             "R2 bucket KYC_DOCS not bound — KYC returns 503",
+             "XENDIT_SECRET_KEY not set — payments are SIMULATED"]
+
+Dipagar SETUP_KEY, jadi tidak awam.
+
+## 2. Kod ralat yang menamakan punca sebenar
+
+/auth/session kini bezakan:
+  issuer_not_set   CLERK_ISSUER langsung tak diset (503)
+  issuer_mismatch  app tunjuk instance Clerk lain dari backend (401)
+  bad_token        token betul-betul tak sah (401)
+
+Diagnosis TIDAK PERNAH melonggarkan penolakan — token tetap ditolak. Nilai
+config di-log server-side untuk `wrangler tail`, tidak dihantar ke client
+(ada ujian yang sahkan issuer yang dijangka tak bocor ke luar).

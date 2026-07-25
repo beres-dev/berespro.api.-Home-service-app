@@ -426,12 +426,52 @@ async function loadKyc(){
     ${submissions.map(k => `<tr>
       <td><b>${esc(k.full_name)}</b><div class="mono">${esc(k.user_id)}</div></td>
       <td class="num">•••• ${esc(k.ic_last4)}</td>
-      <td><a class="docimg" href="${esc(k.doc_front_url)}" target="_blank">IC front</a>${k.doc_back_url?`<a class="docimg" href="${esc(k.doc_back_url)}" target="_blank">IC back</a>`:""}<a class="docimg" href="${esc(k.selfie_url)}" target="_blank">Selfie</a></td>
+      <td><button class="act sm" onclick="viewDoc('${k.id}','front')">IC front</button>${k.doc_back_url?`<button class="act sm" onclick="viewDoc('${k.id}','back')">IC back</button>`:""}<button class="act sm" onclick="viewDoc('${k.id}','selfie')">Selfie</button></td>
       <td class="mono">${when(k.created_at)}</td>
       <td><button class="act grn" onclick="kycReview('${k.id}','approve')">Approve</button>
           <button class="act red" onclick="kycReview('${k.id}','reject')">Reject</button></td>
     </tr>`).join("")}</table>` : `<div class="empty">Queue clear — no pending verifications.</div>`;
 }
+/* ---- KYC document viewer ----
+   Documents are private: there is no URL that works without an admin token, so
+   an <img src> cannot load one. We fetch WITH the token and render the bytes
+   from memory. The object URL is revoked on close so it does not linger, and
+   nothing is ever written to disk or cache. */
+let _docUrl = null;
+async function viewDoc(kycId, kind){
+  if (DEMO){ toast("Demo mode — no real documents"); return; }
+  try {
+    const r = await fetch(`${CFG.base}/kyc/doc/${kycId}/${kind}`, {
+      headers: { authorization: "Bearer " + CFG.token },
+    });
+    if (!r.ok){
+      const j = await r.json().catch(()=>({}));
+      toast((j.error && j.error.message) || `Could not load document (${r.status})`);
+      return;
+    }
+    const blob = await r.blob();
+    if (_docUrl) URL.revokeObjectURL(_docUrl);
+    _docUrl = URL.createObjectURL(blob);
+    const ovl = document.createElement("div");
+    ovl.id = "doc-ovl";
+    ovl.style.cssText = "position:fixed;inset:0;background:rgba(8,15,30,.85);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px";
+    ovl.innerHTML = `<div style="max-width:900px;max-height:90vh;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;color:#fff">
+          <b style="font-size:14px">${esc(kind.toUpperCase())} — ${esc(kycId)}</b>
+          <button class="act" onclick="closeDoc()">Close</button>
+        </div>
+        <img src="${_docUrl}" style="max-width:100%;max-height:78vh;object-fit:contain;border-radius:10px;background:#fff">
+        <div style="color:#9FB0CF;font-size:11.5px">Sensitive document. Do not screenshot, download, or share. Every view is written to the audit log.</div>
+      </div>`;
+    ovl.onclick = (e)=>{ if (e.target===ovl) closeDoc(); };
+    document.body.appendChild(ovl);
+  } catch(e){ toast("Could not load document: " + e.message); }
+}
+function closeDoc(){
+  const o = document.getElementById("doc-ovl"); if (o) o.remove();
+  if (_docUrl){ URL.revokeObjectURL(_docUrl); _docUrl = null; }
+}
+
 async function kycReview(id, action){
   const reason = action === "reject" ? (prompt("Rejection reason (sent to partner):") || "documents unclear") : undefined;
   await api(`/kyc/${id}/review`, "POST", { action, reason });

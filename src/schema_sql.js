@@ -1,4 +1,5 @@
-// Auto-generated from schema.sql. Do not edit here; edit schema.sql and regenerate.
+// Auto-generated from schema.sql. Do not edit here; edit schema.sql and
+// run `npm run gen:schema` (test/gen-schema.mjs). CI fails if this drifts.
 export default `-- ============================================================
 -- BERESPRO API — D1 schema (prepaid wallet model)
 -- Money is stored in CENTS (integer) everywhere. Never floats.
@@ -68,6 +69,9 @@ CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 CREATE INDEX IF NOT EXISTS idx_tasks_customer ON tasks(customer_id);
 -- bounding-box prefilter for the geo feed:
 CREATE INDEX IF NOT EXISTS idx_tasks_geo ON tasks(status, lat, lng);
+-- partner geo scan: notifyNearbyPartners + any partner lookup filter on these.
+-- Without it, every new task posted does a full users table scan.
+CREATE INDEX IF NOT EXISTS idx_users_partner_geo ON users(mode, suspended, lat, lng);
 
 -- ---------- bids ----------
 CREATE TABLE IF NOT EXISTS bids (
@@ -84,6 +88,8 @@ CREATE TABLE IF NOT EXISTS bids (
 );
 CREATE INDEX IF NOT EXISTS idx_bids_task ON bids(task_id);
 CREATE INDEX IF NOT EXISTS idx_bids_partner ON bids(partner_id);
+-- feed's "did I bid on these tasks" check: partner_id + task_id together.
+CREATE INDEX IF NOT EXISTS idx_bids_partner_task ON bids(partner_id, task_id);
 
 -- ---------- reviews ----------
 CREATE TABLE IF NOT EXISTS reviews (
@@ -156,6 +162,23 @@ CREATE TABLE IF NOT EXISTS payments (
   FOREIGN KEY (task_id) REFERENCES tasks(id),
   FOREIGN KEY (bid_id) REFERENCES bids(id)
 );
+-- partial-capture support (customer cancel fee): original gross kept for audit
+ALTER TABLE payments ADD COLUMN original_amount_cents INTEGER;
+
+-- coverage: the state/district a task's pin resolved to at post time. Recorded
+-- so admin reporting does not have to re-resolve, and so a later change to the
+-- district centroids cannot rewrite history.
+-- account closure (PDPA: people must be able to leave).
+--   deactivated_at  reversible self-deactivation (NOT the admin \`suspended\`
+--                   flag: a deactivated user must still be able to sign in to
+--                   turn their account back on; a suspended one must not)
+--   deleted_at      irreversible; identity anonymised, money trail retained
+ALTER TABLE users ADD COLUMN deactivated_at INTEGER;
+ALTER TABLE users ADD COLUMN deleted_at INTEGER;
+
+ALTER TABLE tasks ADD COLUMN state TEXT;
+ALTER TABLE tasks ADD COLUMN district TEXT;
+
 CREATE INDEX IF NOT EXISTS idx_payments_task ON payments(task_id);
 CREATE INDEX IF NOT EXISTS idx_payments_pspref ON payments(psp_ref);
 CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
@@ -255,6 +278,37 @@ CREATE TABLE IF NOT EXISTS cancellations (
 );
 CREATE INDEX IF NOT EXISTS idx_cancel_user ON cancellations(user_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_cancel_task ON cancellations(task_id);
+
+-- ---------- messages (in-app chat) ----------
+-- A thread is (task_id, partner_id): one open task can have several bidding
+-- partners, so the customer gets one thread per partner and each partner only
+-- ever sees their own. Keeping the conversation here (rather than pushing people
+-- to swap phone numbers) is what keeps the job, the escrow and the dispute
+-- evidence on the platform.
+CREATE TABLE IF NOT EXISTS messages (
+  id         TEXT PRIMARY KEY,       -- msg_xxx
+  task_id    TEXT NOT NULL,
+  partner_id TEXT NOT NULL,          -- the partner side of this thread
+  sender_id  TEXT NOT NULL,          -- customer_id or partner_id
+  body       TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  read_at    INTEGER,                -- when the OTHER party read it
+  FOREIGN KEY (task_id) REFERENCES tasks(id)
+);
+-- thread read + poll ("give me anything after X")
+CREATE INDEX IF NOT EXISTS idx_msg_thread ON messages(task_id, partner_id, created_at);
+-- unread badge without scanning the table
+CREATE INDEX IF NOT EXISTS idx_msg_unread ON messages(partner_id, read_at);
+
+-- ---------- coverage (which states/districts are open for business) ----------
+-- Stores ONLY exceptions. A district with no row here is ACTIVE. Resolution is
+-- "most specific wins": district row > state row > default active. See
+-- src/lib/coverage.js and src/lib/geo.js.
+CREATE TABLE IF NOT EXISTS coverage (
+  scope      TEXT PRIMARY KEY,   -- "state:Johor" | "district:Johor|Johor Bahru"
+  active     INTEGER NOT NULL,   -- 1 open, 0 closed
+  updated_at INTEGER NOT NULL
+);
 
 -- ---------- settings (tunable platform parameters incl. feed algorithm) ----------
 CREATE TABLE IF NOT EXISTS settings (

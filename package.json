@@ -6,7 +6,8 @@
   "main": "src/index.js",
   "scripts": {
     "deploy": "wrangler deploy",
-    "test": "node test/run-all.mjs"
+    "test": "node test/run-all.mjs",
+    "gen:schema": "node test/gen-schema.mjs"
   },
   "devDependencies": {
     "wrangler": "^3.99.0"

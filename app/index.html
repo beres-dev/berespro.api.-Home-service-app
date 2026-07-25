@@ -62,14 +62,21 @@ window.BP_CLERK_APPEARANCE = {
 </style>
 <style id="appcss">
 :root{
-  --bg:#0B1526; --content:#EEF3FA; --sur:#FFFFFF; --sur2:#EFF4FB; --sur3:#E3EAF6;
-  --line:#E4EAF4; --line2:#CBD7E9;
+  --bg:#0B1526; --content:#E8EDF7; --sur:#F4F7FD; --sur2:#E7EDF8; --sur3:#DCE4F2;
+  --line:#DCE4F2; --line2:#C4D1E6;
+  /* claymorph: soft puffy shape = a light top-left highlight + a dark
+     bottom-right shadow, both OUTSIDE, plus a gentle inner rim. Tuned soft
+     so text stays crisp. */
+  --clay: 6px 6px 16px rgba(120,140,180,.30), -6px -6px 14px rgba(255,255,255,.92), inset 1px 1px 1px rgba(255,255,255,.55), inset -2px -2px 4px rgba(120,140,180,.10);
+  --clay-sm: 4px 4px 10px rgba(120,140,180,.26), -4px -4px 9px rgba(255,255,255,.90), inset 1px 1px 1px rgba(255,255,255,.5);
+  --clay-in: inset 3px 3px 7px rgba(120,140,180,.30), inset -3px -3px 7px rgba(255,255,255,.85);
+  --clay-blu: 5px 5px 14px rgba(0,58,170,.34), -4px -4px 10px rgba(120,170,255,.45), inset 1px 1px 2px rgba(255,255,255,.35);
   --tx:#101F3A; --mut:#5C6E8E; --dim:#8B9AB6; --ctx:#F3F7FF; --cmut:#9FB0CF;
   --blu:#0051E9; --blu-d:#0041BC; --blu-t:#E7EEFF; --teal:#1ADA9E;
   --grn:#0EB57D; --grn-t:#E3F8F0;
   --amb:#F59F0A; --amb-t:#FFF4DE;
   --red:#EF4D41; --red-t:#FDEAE8;
-  --r:16px; --rs:12px;
+  --r:22px; --rs:16px;
   --disp:'Unbounded',sans-serif;
   --body:'Hanken Grotesk',sans-serif;
 }
@@ -109,11 +116,11 @@ h2{font-size:17px;font-weight:800;letter-spacing:-.01em}
 .logoMark{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,#1ADA9E 0%,#0051E9 100%);display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:800;font-size:24px;color:#fff}
 
 /* ---------- cards ---------- */
-.card{background:var(--sur);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:12px;color:var(--tx);box-shadow:0 1px 2px rgba(16,31,58,.05)}
+.card{background:var(--sur);border:0;border-radius:var(--r);padding:17px;margin-bottom:14px;color:var(--tx);box-shadow:var(--clay)}
 .card.tap{cursor:pointer}
 .rowbet{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .rowg{display:flex;align-items:center;gap:10px}
-.chip{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-size:12.5px;font-weight:700;letter-spacing:.01em;padding:5.5px 12px;border-radius:99px;background:var(--sur2);color:var(--mut);border:0}
+.chip{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-size:12.5px;font-weight:700;letter-spacing:.01em;padding:6px 13px;border-radius:99px;background:var(--sur);color:var(--mut);border:0;box-shadow:var(--clay-sm)}
 .chip .dt{width:6px;height:6px;border-radius:99px;background:currentColor;display:inline-block}
 .chip.blu{background:var(--blu-t);color:var(--blu)}
 .chip.grn{background:var(--grn-t);color:#0B9163}
@@ -123,59 +130,62 @@ h2{font-size:17px;font-weight:800;letter-spacing:-.01em}
 .price small{font-size:11.5px;font-weight:600;color:var(--mut);display:block;letter-spacing:0}
 
 /* ---------- buttons ---------- */
-.btn{display:flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:14px;padding:15px 18px;font-family:var(--body);font-weight:700;font-size:15.5px;cursor:pointer;width:100%;color:var(--tx);transition:filter .15s}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:18px;padding:16px 18px;font-family:var(--body);font-weight:700;font-size:15.5px;cursor:pointer;width:100%;color:var(--tx);box-shadow:var(--clay-sm);transition:transform .12s,box-shadow .12s}
+.btn:active{transform:translateY(1px) scale(.995);box-shadow:var(--clay-in)}
 .btn:active{filter:brightness(1.15)}
-.btn.pri{background:var(--blu);color:#fff}
+.btn.pri{background:linear-gradient(145deg,#1f6bff,#0041BC);color:#fff;box-shadow:var(--clay-blu)}
+.btn.pri:active{box-shadow:inset 3px 3px 7px rgba(0,40,120,.5),inset -2px -2px 5px rgba(120,170,255,.3)}
 .btn.wht{background:#fff;color:#0B1424}
-.btn.dark{background:#E9EFF9;border:1px solid #D9E2F0;color:var(--tx)}
+.btn.dark{background:var(--sur);color:var(--tx);box-shadow:var(--clay-sm)}
 .btn.grn{background:var(--grn);color:#fff}
-.btn.ghost{background:transparent;border:1.5px solid var(--line2)}
+.btn.ghost{background:var(--sur2);box-shadow:var(--clay-in);color:var(--mut)}
 .btn.sm{padding:10px 14px;font-size:13.5px;border-radius:11px;width:auto}
-.btn.danger{background:var(--red-t);color:#D03A2F}
+.btn.danger{background:var(--red-t);color:#D03A2F;box-shadow:4px 4px 10px rgba(180,60,50,.2),-4px -4px 9px rgba(255,255,255,.85)}
 .btn:disabled{opacity:.4}
 
 /* ---------- forms ---------- */
 label.f{display:block;font-size:13px;font-weight:700;color:var(--mut);margin:16px 0 7px}
-input.f,select.f,textarea.f{width:100%;background:var(--sur);border:1.5px solid #D8E1F0;border-radius:13px;padding:14px 15px;font-family:var(--body);font-size:15.5px;color:var(--tx)}
-input.f:focus,select.f:focus,textarea.f:focus{outline:none;border-color:var(--blu)}
+input.f,select.f,textarea.f{width:100%;background:var(--sur2);border:0;border-radius:15px;padding:15px 16px;font-family:var(--body);font-size:15.5px;color:var(--tx);box-shadow:var(--clay-in)}
+input.f:focus,select.f:focus,textarea.f:focus{outline:none;box-shadow:var(--clay-in),0 0 0 2px rgba(0,81,233,.35)}
 input.f,select.f,textarea.f{font-size:16px}
 select.f{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238CA0BF' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 15px center}
 textarea.f{min-height:88px;resize:vertical}
 .otp{display:flex;gap:12px;justify-content:center;margin:26px 0}
-.otp input{width:58px;height:64px;text-align:center;font-size:24px;font-weight:800;background:var(--sur);border:1.5px solid #D8E1F0;border-radius:14px;color:var(--tx)}
-.otp input:focus{outline:none;border-color:var(--blu)}
+.otp input{width:58px;height:64px;text-align:center;font-size:24px;font-weight:800;background:var(--sur2);border:0;border-radius:16px;color:var(--tx);box-shadow:var(--clay-in)}
+.otp input:focus{outline:none;box-shadow:var(--clay-in),0 0 0 2px rgba(0,81,233,.4)}
 
 /* ---------- bottom nav ---------- */
 .nav{position:absolute;bottom:0;left:0;right:0;background:rgba(9,17,32,.97);backdrop-filter:blur(12px);border-top:1px solid rgba(255,255,255,.06);display:flex;padding:8px 6px calc(12px + env(safe-area-inset-bottom));z-index:20}
 .nav button{flex:1;background:none;border:0;color:#7E90B2;font-family:var(--body);font-size:11px;letter-spacing:.02em;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:4px 0;position:relative}
 .nav button.on{color:#5E8BFF}
-.nav .post{width:52px;height:52px;border-radius:18px;background:var(--blu);display:flex;align-items:center;justify-content:center;color:#fff;margin-top:-22px;box-shadow:0 8px 20px rgba(61,123,255,.4)}
+.nav .post{width:56px;height:56px;border-radius:20px;background:linear-gradient(145deg,#1f6bff,#0041BC);display:flex;align-items:center;justify-content:center;color:#fff;margin-top:-24px;box-shadow:var(--clay-blu),0 10px 22px rgba(0,65,188,.35)}
 .nav .nbadge{position:absolute;top:0;right:calc(50% - 18px);width:8px;height:8px;border-radius:99px;background:var(--red)}
 
 /* ---------- categories ---------- */
 .catgrid{display:flex;flex-wrap:wrap;gap:10px}
-.cat{width:calc(25% - 8px);background:var(--sur);border:1px solid var(--line);border-radius:14px;padding:13px 6px 11px;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer}
+.cat{width:calc(25% - 8px);background:var(--sur);border:0;border-radius:18px;padding:14px 6px 12px;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;box-shadow:var(--clay-sm);transition:transform .12s,box-shadow .12s}
+.cat:active{transform:scale(.97);box-shadow:var(--clay-in)}
 .cat .ci{width:42px;height:42px;border-radius:99px;background:#EFF3FA;display:flex;align-items:center;justify-content:center;color:#22304B}
 .cat span{font-size:11.5px;font-weight:700;color:#3E4F70;text-align:center;line-height:1.2}
 .catrow{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:2px}
 .catrow::-webkit-scrollbar{display:none}
-.fchip{flex-shrink:0;font-size:13.5px;font-weight:700;padding:9px 16px;border-radius:99px;background:var(--sur);border:1px solid #D8E1F0;color:var(--mut);cursor:pointer;white-space:nowrap}
-.fchip.on{background:var(--blu);border-color:var(--blu);color:#fff}
+.fchip{flex-shrink:0;font-size:13.5px;font-weight:700;padding:9px 17px;border-radius:99px;background:var(--sur);border:0;color:var(--mut);cursor:pointer;white-space:nowrap;box-shadow:var(--clay-sm);transition:box-shadow .12s}
+.fchip.on{background:linear-gradient(145deg,#1f6bff,#0041BC);color:#fff;box-shadow:var(--clay-blu)}
 
 /* ---------- avatar ---------- */
-.av{border-radius:99px;background:var(--sur3);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:0}
+.av{border-radius:99px;background:var(--sur3);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:0;box-shadow:var(--clay-sm)}
 .av.a40{width:40px;height:40px;font-size:14px}
 .av.a48{width:48px;height:48px;font-size:16px}
 .av.a72{width:72px;height:72px;font-size:24px}
 .stars{display:inline-flex;align-items:center;gap:3px;color:var(--amb);font-weight:800;font-size:13.5px}
 
 /* ---------- search ---------- */
-.search{display:flex;align-items:center;gap:10px;background:var(--sur);border:0;border-radius:14px;padding:14px 15px;color:var(--dim);margin:2px 0 18px;box-shadow:0 1px 3px rgba(16,31,58,.08)}
+.search{display:flex;align-items:center;gap:10px;background:var(--sur2);border:0;border-radius:16px;padding:15px 16px;color:var(--dim);margin:2px 0 18px;box-shadow:var(--clay-in)}
 .search span{font-size:15px;font-weight:500}
 
 /* ---------- alert banner ---------- */
-.alertb{display:flex;align-items:center;gap:12px;background:var(--blu-t);border:1px solid #C9DAFF;border-radius:var(--r);padding:13px 14px;margin-bottom:16px;cursor:pointer}
-.alertb .ai{width:36px;height:36px;border-radius:11px;background:var(--blu);display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0}
+.alertb{display:flex;align-items:center;gap:12px;background:var(--blu-t);border:0;border-radius:var(--r);padding:14px 15px;margin-bottom:16px;cursor:pointer;box-shadow:5px 5px 13px rgba(70,110,190,.22),-5px -5px 12px rgba(255,255,255,.9)}
+.alertb .ai{width:38px;height:38px;border-radius:12px;background:linear-gradient(145deg,#1f6bff,#0041BC);display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0;box-shadow:var(--clay-blu)}
 .alertb b{font-size:14px;display:block}
 .alertb span{font-size:12.5px;color:var(--mut)}
 
@@ -194,7 +204,7 @@ textarea.f{min-height:88px;resize:vertical}
 
 /* ---------- settings ---------- */
 .srow{display:flex;align-items:center;gap:13px;padding:15px 2px;border-bottom:1px solid var(--line);cursor:pointer}
-.srow .si{width:38px;height:38px;border-radius:11px;background:var(--sur2);display:flex;align-items:center;justify-content:center;color:var(--mut);flex-shrink:0}
+.srow .si{width:40px;height:40px;border-radius:13px;background:var(--sur2);display:flex;align-items:center;justify-content:center;color:var(--mut);flex-shrink:0;box-shadow:var(--clay-in)}
 .srow b{font-size:15px;font-weight:600;display:block}
 .srow span{font-size:12.5px;color:var(--mut)}
 .tgl{width:46px;height:27px;border-radius:99px;background:#D9E2F1;border:1px solid #CBD7E9;position:relative;flex-shrink:0;cursor:pointer}
@@ -240,7 +250,7 @@ textarea.f{min-height:88px;resize:vertical}
 .sumrow{display:flex;justify-content:space-between;font-size:14px;padding:7px 0;color:var(--mut)}
 .sumrow b{color:var(--tx)}
 .sumrow.tot{border-top:1px solid var(--line);margin-top:6px;padding-top:13px;font-size:15.5px;color:var(--tx);font-weight:800}
-.escrow{display:flex;gap:10px;background:var(--grn-t);border:1px solid #BFE9D6;border-radius:13px;padding:12px 13px;font-size:13px;color:#0E7A52;line-height:1.5;margin:14px 0}
+.escrow{display:flex;gap:10px;background:var(--grn-t);border:0;border-radius:16px;padding:13px 14px;font-size:13px;color:#0E7A52;line-height:1.5;margin:14px 0;box-shadow:5px 5px 12px rgba(30,150,110,.18),-5px -5px 11px rgba(255,255,255,.85)}
 .escrow svg{flex-shrink:0;color:var(--grn);margin-top:1px}
 
 /* ---------- toast ---------- */
@@ -314,6 +324,7 @@ aircon:"#1F9CEF",plumbing:"#2F6BFF",electrical:"#F59F0A",gardening:"#41B929",
 painting:"#E5484D",assembly:"#8E62FF",autocare:"#0FA3A3",pest:"#D6486E",
 tutoring:"#FF8A3C",photo:"#5B76F7",events:"#E360A8",it:"#00A6A6"};
 const catChip = id => `<span class="chip">${catById(id).n}</span>`;
+const unreadTotal = () => (state.threads||[]).reduce((n,t)=>n+(t.unread||0),0);
 
 const PARTNERS = {};
 
@@ -331,6 +342,8 @@ const state = {
   partnerHistory:[],
   myReviews:[],
   notifs:[],
+  threads:[],
+  chat:{ msgs:[], taskId:null, partnerId:null, title:"", withName:"", lastAt:0 },
   live:{}
 };
 
@@ -669,7 +682,7 @@ ${header("Task details","",'ctasks')}
         <div class="bmsg">${esc(b.msg)}</div>
         <div class="rowg">
           <button class="btn pri sm" style="flex:1" onclick="openPay(${t.id},${i})">Accept bid</button>
-          <button class="btn dark sm" onclick="toast('Message thread opened')">${IC.msg(15)}</button>
+          <button class="btn dark sm" onclick="openChat('${esc(t.srv||"")}','${esc((PARTNERS[b.p]&&PARTNERS[b.p].srvId)||"")}')">${IC.msg(15)}</button>
           <button class="btn dark sm" onclick="toast('Bid declined')">${IC.x(15)}</button>
         </div>
       </div>`}).join("")}
@@ -684,7 +697,7 @@ ${header("Task details","",'ctasks')}
         <div style="flex:1"><b style="font-size:15.5px">${esc(PARTNERS[acc.p].name)}</b>
           <div class="stars" style="margin-top:2px">${IC.star(12)} ${PARTNERS[acc.p].rating.toFixed(1)} <span style="color:var(--dim);font-weight:600">· ${PARTNERS[acc.p].jobs} jobs</span></div>
         </div>
-        <button class="btn dark sm" onclick="toast('Message thread opened')">${IC.msg(15)} Chat</button>
+        <button class="btn dark sm" onclick="openChat('${esc(t.srv||"")}','${esc((PARTNERS[acc.p]&&PARTNERS[acc.p].srvId)||"")}')">${IC.msg(15)} Chat</button>
       </div>
       <div class="divider"></div>
       <div class="rowbet"><span class="sub" style="font-size:13.5px">Agreed price</span><div class="price num">${rm(acc.amount,2)}</div></div>
@@ -751,6 +764,7 @@ ${header("Profile","")}
   <div class="sec">Account</div>
   <div class="card" style="padding:2px 16px">
     <div class="srow" onclick="go('paymethods')"><div class="si">${IC.card(18)}</div><div style="flex:1"><b>Payment methods</b><span>${state.payMethods.length?state.payMethods.length+" saved":"None added yet"}</span></div>${IC.chevR(17)}</div>
+    <div class="srow" onclick="go('threads')"><div class="si">${IC.msg(18)}</div><div style="flex:1"><b>Messages</b><span>Chat with your partners</span></div>${unreadTotal()?`<span class="badge" style="position:static;border:0">${unreadTotal()}</span>`:IC.chevR(17)}</div>
     <div class="srow" onclick="go('chistory')"><div class="si">${IC.history(18)}</div><div style="flex:1"><b>Task history</b><span>6 completed tasks</span></div>${IC.chevR(17)}</div>
     <div class="srow" onclick="go('settings')"><div class="si">${IC.gear(18)}</div><div style="flex:1"><b>Settings &amp; preferences</b><span>Notifications, location, language</span></div>${IC.chevR(17)}</div>
     <div class="srow" style="border-bottom:0" onclick="toast('Help centre opened')"><div class="si">${IC.help(18)}</div><div style="flex:1"><b>Help centre</b><span>FAQs and support</span></div>${IC.chevR(17)}</div>
@@ -797,20 +811,28 @@ ${nav('cprofile')}`;
 
 /* ---------- NOTIFICATIONS ---------- */
 T.notifs = () => {
-  const style = {bid:["var(--blu-t)","var(--blu)","bell"],job:["var(--amb-t)","var(--amb)","brief"],pay:["var(--grn-t)","var(--grn)","wallet"],star:["var(--amb-t)","var(--amb)","starO"]};
+  const style = {bid:["var(--blu-t)","var(--blu)","bell"],job:["var(--amb-t)","var(--amb)","brief"],pay:["var(--grn-t)","var(--grn)","wallet"],star:["var(--amb-t)","var(--amb)","starO"],msg:["var(--blu-t)","var(--blu)","msg"]};
+  const stFor = t => style[t] || style.job;
   return `
 ${header("Activity","Notifications & alerts",null,false)}
 <div class="content">
+  <div class="card tap" onclick="go('threads')" style="margin-bottom:4px">
+    <div class="rowg" style="gap:12px">
+      <div class="si" style="width:40px;height:40px;border-radius:12px;background:var(--blu-t);color:var(--blu);display:flex;align-items:center;justify-content:center">${IC.msg(19)}</div>
+      <div style="flex:1"><b style="font-size:14.5px">Messages</b><div class="sub" style="font-size:12.5px">Your conversations</div></div>
+      ${unreadTotal()?`<span class="badge" style="position:static;border:0">${unreadTotal()}</span>`:IC.chevR(17)}
+    </div>
+  </div>
   <div class="rowbet" style="margin-bottom:4px">
     <div class="sec" style="margin:8px 0">Today</div>
     <span style="font-size:13px;font-weight:700;color:var(--blu);cursor:pointer" onclick="markAllRead()">Mark all read</span>
   </div>
-  ${state.notifs.slice(0,3).map(n=>{const [bg,fg,ic]=style[n.type];return `
+  ${state.notifs.slice(0,3).map(n=>{const [bg,fg,ic]=stFor(n.type);return `
   <div class="notif"><div class="ni" style="background:${bg};color:${fg}">${IC[ic](18)}</div>
     <div style="flex:1"><b>${esc(n.title)}</b><span>${esc(n.sub)}</span></div>${n.unread?'<div class="dotun"></div>':""}
   </div>`}).join("")}
   <div class="sec">Earlier</div>
-  ${state.notifs.slice(3).map(n=>{const [bg,fg,ic]=style[n.type];return `
+  ${state.notifs.slice(3).map(n=>{const [bg,fg,ic]=stFor(n.type);return `
   <div class="notif"><div class="ni" style="background:${bg};color:${fg}">${IC[ic](18)}</div>
     <div style="flex:1"><b>${esc(n.title)}</b><span>${esc(n.sub)}</span></div>${n.unread?'<div class="dotun"></div>':""}
   </div>`}).join("")}
@@ -846,6 +868,15 @@ ${header("Settings","Preferences & account",state.mode==='customer'?'cprofile':'
     ${state.liveUid?`<div class="srow" onclick="copyMyId()"><div class="si">${IC.user(18)}</div><div style="flex:1"><b>My user ID</b><span>${state.liveUid}</span></div><span style="font-size:12px;font-weight:800;color:var(--blu)">COPY</span></div>`:``}
     ${state.liveUid?`<div class="srow" style="border-bottom:0" onclick="copyAdminToken()"><div class="si">${IC.shield(18)}</div><div style="flex:1"><b>Admin token</b><span>For the control panel. Paste once, it renews itself.</span></div><span style="font-size:12px;font-weight:800;color:var(--blu)">COPY</span></div>`:``}
   </div>
+  <div class="sec">Account</div>
+  <div class="card" style="padding:2px 16px">
+    <div class="srow" style="border-bottom:0" onclick="go('closeaccount')">
+      <div class="si" style="background:var(--red-t);color:#D03A2F">${IC.logout(18)}</div>
+      <div style="flex:1"><b>Deactivate or delete account</b><span>Take a break, or erase your data for good</span></div>
+      ${IC.chevR(17)}
+    </div>
+  </div>
+
   <div class="card" style="margin-top:16px">
     <div style="font-size:10.5px;font-weight:800;letter-spacing:.1em;color:var(--dim);text-transform:uppercase;margin-bottom:8px">Operated by</div>
     <div style="font-weight:800;font-size:14px">Astaka Mega Sdn Bhd</div>
@@ -926,7 +957,7 @@ ${header("Job details","",'pjobs')}
       <div style="flex:1"><b style="font-size:15px">${esc(j.customer)}</b>
         <div class="stars" style="margin-top:2px">${IC.star(12)} ${j.custRating.toFixed(1)} <span style="color:var(--dim);font-weight:600">customer rating</span></div>
       </div>
-      <button class="btn dark sm" onclick="toast('Question sent to customer')">${IC.msg(15)} Ask</button>
+      <button class="btn dark sm" onclick="askCustomer(${j.id})">${IC.msg(15)} Ask</button>
     </div>
     <div class="divider"></div>
     <div class="rowbet"><span class="sub" style="font-size:13.5px">Customer budget</span><div class="price num">${rm(j.budget)}</div></div>
@@ -1104,6 +1135,7 @@ ${header("Partner Profile","How customers see you")}
   </div>
   <div class="sec">Account</div>
   <div class="card" style="padding:2px 16px">
+    <div class="srow" onclick="go('threads')"><div class="si">${IC.msg(18)}</div><div style="flex:1"><b>Messages</b><span>Chat with your customers</span></div>${unreadTotal()?`<span class="badge" style="position:static;border:0">${unreadTotal()}</span>`:IC.chevR(17)}</div>
     <div class="srow" onclick="go('phistory')"><div class="si">${IC.history(18)}</div><div style="flex:1"><b>Job history</b><span>${(state.live&&state.live.earn?state.live.earn.jobs_paid:0)} completed jobs</span></div>${IC.chevR(17)}</div>
     <div class="srow" onclick="go('settings')"><div class="si">${IC.gear(18)}</div><div style="flex:1"><b>Settings &amp; preferences</b><span>Alerts, radius, categories</span></div>${IC.chevR(17)}</div>
     <div class="srow" style="border-bottom:0" onclick="switchMode()"><div class="si" style="background:var(--blu-t);color:var(--blu)">${IC.user(18)}</div><div style="flex:1"><b>Switch to Customer mode</b><span>Post tasks and hire partners</span></div>${IC.chevR(17)}</div>
@@ -1151,6 +1183,127 @@ ${header("Verify your identity","Required before you can bid",'pprofile')}
   `:""}
 </div>
 ${nav('pprofile')}`;
+};
+
+/* ---------- ACCOUNT CLOSURE ---------- */
+T.closeaccount = () => {
+  const bl = (state.live && state.live.closure) || null;
+  const blocked = bl && bl.can_close === false;
+  return `
+${header("Close account","Deactivate or delete", "settings")}
+<div class="content">
+  ${blocked ? `<div class="card" style="border-color:#F3DFB4;background:var(--amb-t)">
+      <div class="rowg" style="gap:11px;align-items:flex-start">
+        <span style="color:#B87508;flex-shrink:0">${IC.clock(20)}</span>
+        <div>
+          <b style="color:#B87508">You can't close your account yet</b>
+          ${bl.blockers.map(b=>`<div class="sub" style="font-size:12.5px;color:#8A6210;margin-top:4px">${esc(b.message)}</div>`).join("")}
+        </div>
+      </div>
+    </div>` : ``}
+
+  <div class="card">
+    <h2 style="font-size:15.5px">Deactivate</h2>
+    <div class="sub" style="font-size:13px;margin:6px 0 12px;line-height:1.55">
+      Your profile is hidden and you can't post, bid or message. Your open tasks are
+      withdrawn and anyone bidding on them is told. <b style="color:var(--tx)">Nothing is deleted</b> —
+      sign in any time to switch it back on.
+    </div>
+    <button class="btn dark" ${blocked?"disabled":""} onclick="doDeactivate()">Deactivate my account</button>
+  </div>
+
+  <div class="card" style="border-color:#F5C6C1">
+    <h2 style="font-size:15.5px;color:#D03A2F">Delete permanently</h2>
+    <div class="sub" style="font-size:13px;margin:6px 0 12px;line-height:1.55">
+      Your name, phone, email and location are erased, and <b style="color:var(--tx)">your IC photos are
+      destroyed</b>. This cannot be undone.
+      <br><br>
+      Records of payments already made are kept — the law requires it — but they will
+      no longer be linked to you. Reviews you wrote stay, without your name.
+    </div>
+    <button class="btn danger" ${blocked?"disabled":""} onclick="doDelete()">Delete my account forever</button>
+  </div>
+
+  <div class="sub" style="font-size:11.5px;text-align:center;margin-top:6px;line-height:1.5">
+    Operated by Astaka Mega Sdn Bhd. Questions about your data? Contact support before deleting.
+  </div>
+</div>`;
+};
+
+T.deactivated = () => `
+<div class="content noNav" style="display:flex;flex-direction:column;justify-content:center;min-height:100%">
+  <div style="text-align:center">
+    <div style="width:56px;height:56px;border-radius:16px;background:#15233C;border:1px solid #24365A;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;color:#FFC24D">${IC.moon(26)}</div>
+    <h1 style="font-size:21px">Your account is deactivated</h1>
+    <div class="sub" style="margin:10px 0 24px;line-height:1.6">
+      Nothing has been deleted. Turn it back on and everything is where you left it.
+    </div>
+  </div>
+  <button class="btn pri" onclick="doReactivate()">Reactivate my account</button>
+  <div style="height:10px"></div>
+  <button class="btn dark" onclick="appLogout()">Log out</button>
+</div>`;
+
+/* ---------- CHAT ---------- */
+T.threads = () => {
+  const list = state.threads;
+  return `
+${header("Messages","Your conversations", state.mode==="customer"?"chome":"pjobs")}
+<div class="content">
+  ${list.length ? list.map(t=>`
+  <div class="card tap" onclick="openChat('${esc(t.task_id)}','${esc(t.partner_id)}')">
+    <div class="rowg" style="gap:11px">
+      ${avat(t.with.name,"a48")}
+      <div style="flex:1;min-width:0">
+        <div class="rowbet">
+          <b style="font-size:14.5px">${esc(t.with.name)}</b>
+          <span style="font-size:11.5px;color:var(--dim)">${ago(t.last_at)}</span>
+        </div>
+        <div style="font-size:12px;color:var(--blu);font-weight:700;margin:1px 0 2px">${esc(t.title)}</div>
+        <div class="rowbet">
+          <span style="font-size:13px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:210px">${esc(t.last_body)}</span>
+          ${t.unread?`<span class="badge" style="position:static;border:0">${t.unread}</span>`:""}
+        </div>
+      </div>
+    </div>
+  </div>`).join("") : `<div class="card" style="text-align:center;padding:30px">
+    <div class="sub">No conversations yet. Message a partner from a bid, or a customer from a job you bid on.</div>
+  </div>`}
+</div>
+${nav("notifs")}`;
+};
+
+T.chat = () => {
+  const c = state.chat;
+  return `
+<div class="hd">
+  <div class="hleft">
+    <div class="hback" onclick="go('threads')">${IC.chevL(20)}</div>
+    <div style="min-width:0">
+      <div class="htitle" style="font-size:16px">${esc(c.withName||"Chat")}</div>
+      <div class="hsub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px">${esc(c.title||"")}</div>
+    </div>
+  </div>
+</div>
+<div class="content" id="chat-scroll" style="padding-bottom:86px">
+  ${c.msgs.length ? c.msgs.map(m=>`
+    <div style="display:flex;justify-content:${m.mine?"flex-end":"flex-start"};margin-bottom:8px">
+      <div style="max-width:78%;background:${m.mine?"var(--blu)":"var(--sur)"};color:${m.mine?"#fff":"var(--tx)"};
+                  border:${m.mine?"0":"1px solid var(--line)"};border-radius:${m.mine?"14px 14px 4px 14px":"14px 14px 14px 4px"};
+                  padding:10px 13px">
+        <div style="font-size:14px;line-height:1.45;word-break:break-word">${esc(m.body)}</div>
+        <div style="font-size:10.5px;opacity:.65;margin-top:4px;text-align:right">${ago(m.created_at)}</div>
+      </div>
+    </div>`).join("") : `<div class="sub" style="text-align:center;padding:30px 0">
+      No messages yet. Ask anything about the job \u2014 access, parking, what to bring.
+    </div>`}
+</div>
+<div style="position:absolute;bottom:0;left:0;right:0;background:var(--sur);border-top:1px solid var(--line);
+            padding:10px 12px calc(10px + env(safe-area-inset-bottom));display:flex;gap:8px;align-items:flex-end">
+  <textarea id="chat-input" class="f" placeholder="Type a message\u2026" rows="1"
+    style="min-height:44px;max-height:110px;padding:11px 13px;border-radius:12px;flex:1"></textarea>
+  <button class="btn pri" style="width:auto;padding:12px 16px;border-radius:12px" onclick="sendChat()">Send</button>
+</div>`;
 };
 
 /* ---------- SHEETS (overlays) ---------- */
@@ -1217,7 +1370,7 @@ T.sheetFilter = () => `<div class="ovl" onclick="if(event.target===this)closeShe
 </div></div>`;
 
 /* master render-to-string */
-const PUBLIC_SCREENS = ["welcome","phone","mode","phonegate"];
+const PUBLIC_SCREENS = ["welcome","phone","mode","phonegate","deactivated"];
 function screenHTML(){
   let s = state.screen;
   // Guard: app screens need a signed-in user. If none, show welcome.
@@ -1556,6 +1709,7 @@ function partnerKey(p){
   const k = "lp_"+lid("u:"+p.id);
   PARTNERS[k] = PARTNERS[k] || { name:p.name, rating:p.rating||5.0, jobs:p.jobs_completed||0, elite:!!p.id_verified };
   if (p.name) PARTNERS[k].name = p.name;
+  PARTNERS[k].srvId = p.id;   // real server id — chat threads are keyed on it
   return k;
 }
 function ago(ts){
@@ -1665,8 +1819,12 @@ async function syncKyc(){
   state.live = state.live||{}; state.live.kyc = k; render();
 }
 function liveSync(screen){
+  chatPollControl(screen);
   if (!LIVE() || !TOK.a) return;
   const run = (fn)=>fn().catch(e=>{ if(e.status!==401) toast(e.message); });
+  if (screen==="threads") run(liveThreads);
+  if (screen==="closeaccount") run(async()=>{ state.live=state.live||{}; state.live.closure = await liveClosureCheck(); render(); });
+  if (screen==="notifs"||screen==="cprofile"||screen==="pprofile") run(liveThreads);
   if (screen==="chome"||screen==="ctasks") run(syncMyTasks);
   if (screen==="chome") run(syncNotifs);
   if (screen==="ctask"||screen==="pjob") run(async()=>syncTask(state.param));
@@ -1758,6 +1916,24 @@ async function liveWithdrawBid(localTaskId){
   if (!t.myBid || !t.myBid.srv) throw new Error("Bid not found. Pull to refresh and try again");
   return api("/bids/"+t.myBid.srv,"DELETE");
 }
+/* ---- chat ---- */
+async function liveThreads(){
+  const { threads } = await api("/me/threads");
+  state.threads = threads;
+  return threads;
+}
+async function liveChat(taskSrv, partnerId, after){
+  const q = `/tasks/${taskSrv}/messages?partner_id=${encodeURIComponent(partnerId)}` +
+            (after ? `&after=${after}` : "");
+  return api(q);
+}
+async function liveSend(taskSrv, partnerId, body){
+  return api(`/tasks/${taskSrv}/messages`,"POST",{ body, partner_id: partnerId });
+}
+async function liveMarkRead(taskSrv, partnerId){
+  return api(`/tasks/${taskSrv}/messages/read`,"POST",{ partner_id: partnerId });
+}
+
 async function liveDispute(localTaskId, reason){
   const t = state.tasks.find(x=>x.id===localTaskId);
   await api("/jobs/"+t.srv+"/dispute","POST",{ reason });
@@ -1772,6 +1948,31 @@ async function liveConnectPayout(){
   return j;
 }
 async function liveKycSubmit(d){ return api("/kyc/submit","POST",d); }
+/* ---- account closure (PDPA) ---- */
+async function liveClosureCheck(){ return api("/account/closure-check"); }
+async function liveDeactivate(reason){ return api("/account/deactivate","POST",{ reason }); }
+async function liveReactivate(){ return api("/account/reactivate","POST",{}); }
+async function liveDeleteAccount(){ return api("/account","DELETE",{ confirm:"DELETE" }); }
+// Documents go up as RAW BYTES: the client sends the file, the server decides
+// where it lands and what it is called. The client never names a key or a URL.
+async function liveKycUpload(file, kind, _retry){
+  const res = await fetch(CFG.base+"/kyc/upload?kind="+kind, {
+    method:"POST",
+    headers:{ "content-type": file.type || "application/octet-stream",
+              ...(TOK.a?{authorization:"Bearer "+TOK.a}:{}) },
+    body: file,
+  });
+  if (res.status===401 && TOK.r && !_retry){
+    const ok = await refreshTok();
+    if (ok) return liveKycUpload(file, kind, true);
+  }
+  const j = await res.json().catch(()=>({}));
+  if (!res.ok){
+    const e = new Error((j.error&&j.error.message)||("upload failed ("+res.status+")"));
+    e.code = j.error&&j.error.code; e.status = res.status; throw e;
+  }
+  return j.key;
+}
 async function liveSetMode(m){ await api("/me","PATCH",{ mode:m }); }
 async function liveSetCity(c){
   const ll = CITIES[c]||[3.139,101.687];
@@ -2010,10 +2211,103 @@ async function _clerkBootstrapInner(){
     const user = await liveClerkSession(token);
     state.user = { name: user.name, email: user.email, phone: user.phone,
                    city: user.city || "Kuala Lumpur", memberSince: "2026" };
-    if (user.needs_phone) { go("phonegate"); }
+    if (user.deactivated_at) { go("deactivated"); }
+    else if (user.needs_phone) { go("phonegate"); }
     else { state.mode = user.mode || "customer"; go(user.mode==="partner"?"pjobs":"chome"); }
   } catch(e){ toast("Auth exchange failed: "+(e&&e.message||e)); }
 }
+/* ---- chat handlers ---- */
+let _chatPoll = null;
+function openChat(taskSrv, partnerId){
+  if (!LIVE()){ toast("Connect your server to use messages"); return; }
+  const th = state.threads.find(t=>t.task_id===taskSrv && t.partner_id===partnerId);
+  const t  = state.tasks.find(x=>x.srv===taskSrv);
+  state.chat = { msgs:[], taskId:taskSrv, partnerId,
+                 title:(th&&th.title)||(t&&t.title)||"", withName:(th&&th.with.name)||"", lastAt:0 };
+  go("chat");
+  refreshChat(true);
+}
+async function refreshChat(scroll){
+  const c = state.chat;
+  if (!c.taskId) return;
+  try {
+    const j = await liveChat(c.taskId, c.partnerId, c.lastAt || 0);
+    if (j.messages && j.messages.length){
+      // Poll is inclusive of the boundary second, so de-dupe on id — the server
+      // deliberately re-sends that second rather than risk dropping a message.
+      const seen = new Set(c.msgs.map(m=>m.id));
+      for (const m of j.messages) if (!seen.has(m.id)) c.msgs.push(m);
+      c.msgs.sort((a,b)=>a.created_at-b.created_at);
+      c.lastAt = c.msgs.length ? c.msgs[c.msgs.length-1].created_at : 0;
+    }
+    if (j.task && !c.title) c.title = j.task.title;
+    render();
+    if (scroll) setTimeout(()=>{ const el=document.getElementById("chat-scroll"); if(el) el.scrollTop=el.scrollHeight; },40);
+    liveMarkRead(c.taskId, c.partnerId).catch(()=>{});
+  } catch(e){ if (e.status!==401) toast(e.message); }
+}
+async function sendChat(){
+  const el = document.getElementById("chat-input");
+  const body = (el && el.value || "").trim();
+  if (!body) return;
+  const c = state.chat;
+  el.value = "";
+  try {
+    await liveSend(c.taskId, c.partnerId, body);
+    await refreshChat(true);
+  } catch(e){
+    if (e.code==="bid_required") toast("Place a bid first, then you can message");
+    else { toast(e.message); if (el) el.value = body; }  // give the text back, never lose it
+  }
+}
+// Poll only while the chat screen is open. No WebSocket: for a two-person
+// thread this costs one small read every few seconds and needs no extra
+// infrastructure. Stops the moment you leave the screen.
+function chatPollControl(screen){
+  if (_chatPoll){ clearInterval(_chatPoll); _chatPoll = null; }
+  if (screen === "chat" && LIVE()) _chatPoll = setInterval(()=>refreshChat(false), 4000);
+}
+
+function askCustomer(localTaskId){
+  const t = state.tasks.find(x=>x.id===localTaskId);
+  if (!t || !t.srv){ toast("Refresh and try again"); return; }
+  if (!t.myBid){ toast("Place a bid first, then you can message"); return; }
+  // Partner's thread is keyed on their own id; the server infers the customer.
+  openChat(t.srv, state.liveUid);
+}
+
+/* ---- account closure ---- */
+async function doDeactivate(){
+  if (!confirm("Deactivate your account?\n\nYour open tasks will be withdrawn and bidders told. " +
+               "Nothing is deleted — you can turn it back on any time.")) return;
+  const reason = prompt("Why are you leaving? (optional — it helps us improve)") || "";
+  try {
+    const r = await liveDeactivate(reason);
+    toast(r.tasks_cancelled ? `Deactivated. ${r.tasks_cancelled} open task(s) withdrawn` : "Account deactivated");
+    go("deactivated");
+  } catch(e){ toast(e.message); }
+}
+async function doReactivate(){
+  try { await liveReactivate(); toast("Welcome back"); await syncSession(); go(state.mode==="partner"?"pjobs":"chome"); }
+  catch(e){ toast(e.message); }
+}
+async function doDelete(){
+  // Deliberate friction on an irreversible act: two confirmations, and the
+  // second one makes them type the word.
+  if (!confirm("Delete your account permanently?\n\nYour name, phone, email and IC photos will be " +
+               "destroyed. This CANNOT be undone.")) return;
+  const typed = prompt('This is permanent. Type DELETE to confirm:');
+  if (typed !== "DELETE"){ toast("Not deleted — you must type DELETE exactly"); return; }
+  try {
+    await liveDeleteAccount();
+    alert("Your account has been deleted. Your documents have been destroyed.\n\nRecords of payments already made are kept as the law requires, but are no longer linked to you.");
+    appLogout();
+  } catch(e){
+    if (e.code==="money_in_escrow" || e.code==="open_dispute") alert(e.message);
+    else toast(e.message);
+  }
+}
+
 function connectPayout(){
   liveConnectPayout().then(j=>{
     render();
@@ -2098,17 +2392,35 @@ function reportProblem(taskId){
     toast("Dispute opened. Payment frozen until support resolves it");
   }).catch(e=>toast(e.message));
 }
-function kycSubmit(){
+async function kycSubmit(){
   const g=id=>document.getElementById(id);
   const name=g("kyc-name").value.trim(), last4=g("kyc-ic").value.trim();
   const f=g("kyc-front").files[0], sf=g("kyc-selfie").files[0], bk=g("kyc-back").files[0];
   if(!name||!/^\d{4}$/.test(last4)||!f||!sf){ toast("Name, last 4 IC digits, IC front and selfie are required"); return; }
-  const ref=x=>"upload://"+Date.now()+"-"+x.name.replace(/[^a-zA-Z0-9.]/g,"_");
-  if (!LIVE()){ toast("Documents submitted for review (demo)"); go("pprofile"); return; }
-  liveKycSubmit({ full_name:name, ic_last4:last4, doc_front_url:ref(f),
-                  doc_back_url:bk?ref(bk):null, selfie_url:ref(sf) })
-  .then(()=>{ toast("Submitted. Verification usually takes under 24 hours"); syncKyc(); })
-  .catch(e=>{ if(e.code==="kyc_pending") toast("Your documents are already under review"); else toast(e.message); });
+  if (!LIVE()){ toast("Connect your server to submit documents"); return; }
+
+  const btn = document.querySelector('button[onclick="kycSubmit()"]');
+  if (btn){ btn.disabled = true; }
+  try {
+    // Upload each file first, then submit the references we got back. If an
+    // upload fails we stop here — better a clear error than a half-submission.
+    toast("Uploading documents\u2026");
+    const front = await liveKycUpload(f, "front");
+    const selfie = await liveKycUpload(sf, "selfie");
+    const back = bk ? await liveKycUpload(bk, "back") : null;
+    await liveKycSubmit({ full_name:name, ic_last4:last4,
+                          doc_front_key:front, doc_back_key:back, selfie_key:selfie });
+    toast("Submitted. Verification usually takes under 24 hours");
+    syncKyc();
+  } catch(e){
+    if (e.code==="kyc_pending") toast("Your documents are already under review");
+    else if (e.code==="storage_unavailable") toast("Verification is temporarily unavailable. Try again later");
+    else if (e.code==="not_an_image") toast("That file is not a photo. Use JPEG or PNG");
+    else if (e.code==="too_large") toast("Photo is too large (max 6MB). Try a smaller one");
+    else toast(e.message);
+  } finally {
+    if (btn){ btn.disabled = false; }
+  }
 }
 // The control panel signs in with the same session token the app uses.
 // Access tokens live 1 hour, so this needs re-copying if the panel 401s.

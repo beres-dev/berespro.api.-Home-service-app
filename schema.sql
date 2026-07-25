@@ -166,6 +166,14 @@ ALTER TABLE payments ADD COLUMN original_amount_cents INTEGER;
 -- coverage: the state/district a task's pin resolved to at post time. Recorded
 -- so admin reporting does not have to re-resolve, and so a later change to the
 -- district centroids cannot rewrite history.
+-- account closure (PDPA: people must be able to leave).
+--   deactivated_at  reversible self-deactivation (NOT the admin `suspended`
+--                   flag: a deactivated user must still be able to sign in to
+--                   turn their account back on; a suspended one must not)
+--   deleted_at      irreversible; identity anonymised, money trail retained
+ALTER TABLE users ADD COLUMN deactivated_at INTEGER;
+ALTER TABLE users ADD COLUMN deleted_at INTEGER;
+
 ALTER TABLE tasks ADD COLUMN state TEXT;
 ALTER TABLE tasks ADD COLUMN district TEXT;
 
@@ -268,6 +276,27 @@ CREATE TABLE IF NOT EXISTS cancellations (
 );
 CREATE INDEX IF NOT EXISTS idx_cancel_user ON cancellations(user_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_cancel_task ON cancellations(task_id);
+
+-- ---------- messages (in-app chat) ----------
+-- A thread is (task_id, partner_id): one open task can have several bidding
+-- partners, so the customer gets one thread per partner and each partner only
+-- ever sees their own. Keeping the conversation here (rather than pushing people
+-- to swap phone numbers) is what keeps the job, the escrow and the dispute
+-- evidence on the platform.
+CREATE TABLE IF NOT EXISTS messages (
+  id         TEXT PRIMARY KEY,       -- msg_xxx
+  task_id    TEXT NOT NULL,
+  partner_id TEXT NOT NULL,          -- the partner side of this thread
+  sender_id  TEXT NOT NULL,          -- customer_id or partner_id
+  body       TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  read_at    INTEGER,                -- when the OTHER party read it
+  FOREIGN KEY (task_id) REFERENCES tasks(id)
+);
+-- thread read + poll ("give me anything after X")
+CREATE INDEX IF NOT EXISTS idx_msg_thread ON messages(task_id, partner_id, created_at);
+-- unread badge without scanning the table
+CREATE INDEX IF NOT EXISTS idx_msg_unread ON messages(partner_id, read_at);
 
 -- ---------- coverage (which states/districts are open for business) ----------
 -- Stores ONLY exceptions. A district with no row here is ACTIVE. Resolution is

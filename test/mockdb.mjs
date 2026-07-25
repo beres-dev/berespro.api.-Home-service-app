@@ -7,7 +7,7 @@ class Stmt {
   async all(){ return this.db._exec(this.sql,this.args); }
 }
 export class MockDB {
-  constructor(){ this.t={users:[],sessions:[],tasks:[],bids:[],reviews:[],partner_merchants:[],payments:[],kyc_submissions:[],disputes:[],audit_log:[],rate_limits:[],vouchers:[],voucher_redemptions:[],settings:[],coverage:[],devices:[],notifications:[],cancellations:[]}; this.cols={}; }
+  constructor(){ this.t={users:[],sessions:[],tasks:[],bids:[],reviews:[],partner_merchants:[],payments:[],kyc_submissions:[],disputes:[],audit_log:[],rate_limits:[],vouchers:[],voucher_redemptions:[],settings:[],coverage:[],messages:[],devices:[],notifications:[],cancellations:[]}; this.cols={}; }
   prepare(sql){ return new Stmt(this,sql); }
   async batch(stmts){ const out=[]; for(const s of stmts) out.push(this._exec(s.sql,s.args)); return out; }
   _table(sql){ const m=sql.match(/(?:FROM|INTO|UPDATE)\s+(\w+)/i); return m&&this.t[m[1]]?m[1]:null; }

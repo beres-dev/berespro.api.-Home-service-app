@@ -10,6 +10,15 @@ binding = "DB"
 database_name = "berespro-db"
 database_id = "9595441c-9638-4b61-ad6a-0e15c0be23af"
 
+# KYC document storage (PRIVATE R2 bucket). Create it in the dashboard
+# (R2 Object Storage > Create bucket, name: berespro-kyc), then uncomment.
+# NEVER enable public access on this bucket — it holds IC photos and selfies.
+# Until this is bound, /kyc/upload and /kyc/submit refuse with 503 rather than
+# pretending a document was received.
+# [[r2_buckets]]
+# binding = "KYC_DOCS"
+# bucket_name = "berespro-kyc"
+
 # Rate-limit store (high-traffic). Create a KV namespace in the dashboard
 # (Storage & Databases > KV > Create), then uncomment and paste its id.
 # Until this is bound, rate limiting falls back to D1 automatically.

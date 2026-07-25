@@ -4,8 +4,18 @@ import worker from '../src/index.js';
 import { signJWT, now, id as mkid } from '../src/lib/util.js';
 import fs from 'fs';
 
+// Minimal R2 stand-in: /kyc/upload and /kyc/submit now refuse when storage is
+// absent (a partner must never be "verified" having uploaded nothing), so the
+// integration env needs a bucket like production does.
+class FakeR2 {
+  constructor(){ this.o = new Map(); }
+  async put(k, b, o){ this.o.set(k, { body:b, httpMetadata:o&&o.httpMetadata }); return {}; }
+  async get(k){ const v=this.o.get(k); return v ? { body:v.body, httpMetadata:v.httpMetadata } : null; }
+  async delete(k){ this.o.delete(k); }
+}
 const env = {
   DB: new MockDB(), JWT_SECRET: 'x'.repeat(40), FIREBASE_PROJECT_ID: 'x',
+  KYC_DOCS: new FakeR2(),
   COMMISSION_BPS: '2000', PUBLIC_URL: 'https://api.test', PSP_SECRET: 'ps',
   ADMIN_IDS: 'admin1', REQUIRE_KYC_TO_BID: '1', DEV_LOGIN: '1',
 };
@@ -58,7 +68,16 @@ try { await livePlaceBid(feedTask.id, 170, '2 hours incl cleanup'); }
 catch(e){ kycBlocked = e.code==='kyc_required'; }
 ok('bid blocked by KYC gate', kycBlocked);
 
-await liveKycSubmit({ full_name:'Hafiz Roslan', ic_last4:'4421', doc_front_url:'upload://f.jpg', selfie_url:'upload://s.jpg' });
+// Real flow: bytes up first, then submit the keys we got back.
+const JPEG = new Uint8Array([0xFF,0xD8,0xFF,0xE0,0,0x10,0x4A,0x46,0x49,0x46,0,1,...new Array(64).fill(0x41)]);
+const upKey = async (kind) => {
+  const r = await fetch('https://api.test/kyc/upload?kind='+kind, {
+    method:'POST', headers:{ authorization:'Bearer '+TOK.a, 'content-type':'image/jpeg' }, body:JPEG });
+  return (await r.json()).key;
+};
+const kFront = await upKey('front'), kSelfie = await upKey('selfie');
+ok('kyc upload returns a server-chosen key', typeof kFront==='string' && kFront.startsWith('kyc/'), kFront);
+await liveKycSubmit({ full_name:'Hafiz Roslan', ic_last4:'4421', doc_front_key:kFront, selfie_key:kSelfie });
 await syncKyc();
 ok('syncKyc → pending', state.live.kyc.status==='pending', state.live.kyc);
 // admin approves
