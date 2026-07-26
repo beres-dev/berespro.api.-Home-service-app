@@ -1,8 +1,8 @@
-const CACHE = "berespro-v44";
+const CACHE = "berespro-v49";
 const ASSETS = ["./","index.html","manifest.webmanifest",
-  "fonts/Unbounded-700.ttf","fonts/Unbounded-800.ttf",
-  "fonts/HankenGrotesk-400.ttf","fonts/HankenGrotesk-500.ttf","fonts/HankenGrotesk-600.ttf",
-  "fonts/HankenGrotesk-700.ttf","fonts/HankenGrotesk-800.ttf",
+  "fonts/Unbounded-800.ttf",
+  "fonts/Manrope-400.woff2","fonts/Manrope-500.woff2","fonts/Manrope-600.woff2",
+  "fonts/Manrope-700.woff2","fonts/Manrope-800.woff2",
   "icons/icon-192.png","icons/icon-512.png","icons/icon-maskable-512.png",
   "icons/apple-touch-180.png"];
 self.addEventListener("install", e => {

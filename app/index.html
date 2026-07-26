@@ -30,7 +30,7 @@ window.BP_CLERK_APPEARANCE = {
     colorNeutral: "#EAF1FF",
     colorShimmer: "rgba(47,107,255,0.1)",
     borderRadius: "12px",
-    fontFamily: "'Hanken Grotesk', system-ui, sans-serif"
+    fontFamily: "'Manrope', system-ui, sans-serif"
   },
   elements: {
     card: { backgroundColor: "#0F1B30", boxShadow: "0 20px 60px rgba(0,0,0,.5)", border: "1px solid #24365A" },
@@ -52,13 +52,17 @@ window.BP_CLERK_APPEARANCE = {
 };
 </script>
 <style>
-@font-face{font-family:'Unbounded';src:url('fonts/Unbounded-700.ttf');font-weight:500 700;font-display:swap}
-@font-face{font-family:'Unbounded';src:url('fonts/Unbounded-800.ttf');font-weight:800;font-display:swap}
-@font-face{font-family:'Hanken Grotesk';src:url('fonts/HankenGrotesk-400.ttf');font-weight:400;font-display:swap}
-@font-face{font-family:'Hanken Grotesk';src:url('fonts/HankenGrotesk-500.ttf');font-weight:500;font-display:swap}
-@font-face{font-family:'Hanken Grotesk';src:url('fonts/HankenGrotesk-600.ttf');font-weight:600;font-display:swap}
-@font-face{font-family:'Hanken Grotesk';src:url('fonts/HankenGrotesk-700.ttf');font-weight:700;font-display:swap}
-@font-face{font-family:'Hanken Grotesk';src:url('fonts/HankenGrotesk-800.ttf');font-weight:800;font-display:swap}
+/* Unbounded is now used ONLY by the wordmark and app icon, both at weight 800,
+   so the 700 file (423KB) was dead payload and is gone. */
+@font-face{font-family:'Unbounded';src:url('fonts/Unbounded-800.ttf');font-weight:500 800;font-display:swap}
+/* Manrope (SIL Open Font Licence — free to ship commercially), chosen by Zaini
+   over Inter and Plus Jakarta Sans. woff2 rather than ttf: same glyphs, 14KB a
+   weight instead of 68KB. */
+@font-face{font-family:'Manrope';src:url('fonts/Manrope-400.woff2') format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'Manrope';src:url('fonts/Manrope-500.woff2') format('woff2');font-weight:500;font-display:swap}
+@font-face{font-family:'Manrope';src:url('fonts/Manrope-600.woff2') format('woff2');font-weight:600;font-display:swap}
+@font-face{font-family:'Manrope';src:url('fonts/Manrope-700.woff2') format('woff2');font-weight:700;font-display:swap}
+@font-face{font-family:'Manrope';src:url('fonts/Manrope-800.woff2') format('woff2');font-weight:800;font-display:swap}
 </style>
 <style id="appcss">
 :root{
@@ -78,6 +82,7 @@ window.BP_CLERK_APPEARANCE = {
   --red:#EF4D41; --red-t:#FDEAE8;
   --r:22px; --rs:16px;
   --disp:'Unbounded',sans-serif;
+  --body:'Manrope',sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
@@ -93,7 +98,7 @@ svg{display:block}
 .num{font-variant-numeric:tabular-nums}
 
 /* ---------- type ---------- */
-h1{font-family:var(--disp);font-size:22px;font-weight:700;letter-spacing:-.01em}
+h1{font-family:var(--body);font-size:22px;font-weight:800;letter-spacing:-.02em}
 h2{font-size:17px;font-weight:800;letter-spacing:-.01em}
 .sec{font-size:12px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:#66799B;margin:24px 0 11px}
 .sub{font-size:14px;color:var(--mut);line-height:1.55}
@@ -220,7 +225,7 @@ textarea.f{min-height:88px;resize:vertical}
 /* ---------- stats / earnings ---------- */
 .balcard{background:linear-gradient(135deg,#17347A 0%,#0C1C42 75%);border:0;border-radius:20px;padding:20px;margin-bottom:14px;color:#fff;box-shadow:0 10px 26px rgba(15,36,92,.30)}
 .balcard .k{font-size:12.5px;font-weight:700;color:#9FB6DE;letter-spacing:.06em;text-transform:uppercase}
-.balcard .v{font-family:var(--disp);font-size:30px;font-weight:700;margin:6px 0 2px}
+.balcard .v{font-family:var(--body);font-size:30px;font-weight:800;letter-spacing:-.01em;margin:6px 0 2px}
 .statg{display:flex;gap:10px;margin-bottom:12px}
 .stat{flex:1;background:var(--sur);border:1px solid var(--line);border-radius:14px;padding:13px}
 .stat .k{font-size:11.5px;font-weight:700;color:var(--dim);letter-spacing:.04em;text-transform:uppercase}
@@ -274,7 +279,7 @@ textarea.f{min-height:88px;resize:vertical}
 .mmtop{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--bg);color:#fff;flex-shrink:0}
 .mmtop b{font-size:16.5px}
 .mmback{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
-#mm-map{flex:1;min-height:180px}
+#mm-map{}
 .mmsheet{flex-shrink:0;background:var(--sur);border-radius:22px 22px 0 0;padding:16px 18px 18px;box-shadow:0 -8px 30px rgba(16,31,58,.16)}
 .mmlbl{display:flex;gap:8px;margin:10px 0 4px;flex-wrap:wrap}
 .mmlbl .chip{cursor:pointer}
@@ -341,142 +346,198 @@ function feeRate(){ return (state.live && state.live.commission_bps != null) ? s
 function feePct(){ return (feeRate()*100).toFixed(feeRate()*100 % 1 ? 1 : 0); }
 
 const CITIES = {
-  "Kuala Lumpur":[3.139,101.687],"Petaling Jaya":[3.107,101.606],
-  "Subang Jaya":[3.056,101.585],"Shah Alam":[3.073,101.518],
-  "Kajang":[2.993,101.787],"Putrajaya":[2.926,101.696],
-  "Johor Bahru":[1.492,103.741],"Penang":[5.414,100.329],
-  "Melaka":[2.196,102.240],"Seremban":[2.726,101.938]
+  // One "Klang Valley" entry covers PJ, Shah Alam, Subang, Kajang and
+  // Putrajaya — people there say "Klang Valley", not their suburb, and one
+  // entry beats five near-duplicates. KL stays its own anchor.
+  "Kuala Lumpur":[3.139,101.687], "Klang Valley":[3.078,101.585],
+  "Johor Bahru":[1.492,103.741],  "Penang":[5.414,100.329],
+  "Ipoh":[4.597,101.090],         "Seremban":[2.726,101.938],
+  "Melaka":[2.196,102.240],       "Kuantan":[3.808,103.326],
+  "Kota Bharu":[6.133,102.238],   "Alor Setar":[6.121,100.360],
+  "Kuching":[1.553,110.359],      "Kota Kinabalu":[5.980,116.073]
 };
 
 /* ---------- STATE SKYLINE THEMES ----------
-   Each place gets its own horizon. Only landmarks with a genuinely distinctive
-   SILHOUETTE are drawn — a shape nobody can place is worse than an honest
-   generic skyline, so anywhere without one falls back to `generic`. */
+   Rules learned the hard way:
+   - NO religious buildings of any faith. Berespro serves every Malaysian;
+     the skyline is a welcome mat, not a statement. Landmarks are towers,
+     bridges, nature and culture only.
+   - CHEERFUL. Bright skies, a warm sun, soft indigo silhouettes — never
+     near-black. The header should feel like a good morning, not a storm.
+   - Only genuinely recognisable silhouettes get drawn; anywhere else falls
+     back to friendly hills honestly. */
 const SKY_BY_CITY = {
-  "Kuala Lumpur":"klcc", "Petaling Jaya":"klcc", "Subang Jaya":"klcc",
-  "Shah Alam":"shahalam", "Kajang":"klcc", "Putrajaya":"putrajaya",
-  "Johor Bahru":"johor", "Penang":"penang", "Melaka":"melaka",
+  "Kuala Lumpur":"klcc", "Klang Valley":"klcc",
+  "Johor Bahru":"johor", "Penang":"penang", "Ipoh":"ipoh",
+  "Melaka":"melaka", "Kuantan":"kuantan", "Kota Bharu":"kotabharu",
+  "Alor Setar":"alorsetar", "Kuching":"kuching", "Kota Kinabalu":"kk",
   "Seremban":"generic",
 };
 const SKYLINES = {
-  // Petronas Towers: twin tapered shafts, stepped setbacks, spires, skybridge
-  // at the 41st/42nd — plus KL Tower's shaft-and-bulb to the right.
+  // KL / Klang Valley: Petronas twins (setbacks + skybridge) and KL Tower.
   klcc: `
-    <g opacity=".30">
-      <path d="M18 128 L30 96 L42 128 Z M44 128 L58 88 L72 128 Z"/>
-      <rect x="86" y="104" width="16" height="24"/><rect x="300" y="110" width="14" height="18"/>
+    <g opacity=".26"><rect x="16" y="100" width="18" height="28" rx="2"/><rect x="40" y="108" width="14" height="20" rx="2"/><rect x="300" y="106" width="16" height="22" rx="2"/></g>
+    <g opacity=".5">
+      <rect x="196" y="72" width="7" height="56" rx="2"/><circle cx="199.5" cy="67" r="7"/><rect x="197.5" y="46" width="4" height="20"/>
+      <rect x="330" y="98" width="20" height="30" rx="2"/><rect x="356" y="90" width="16" height="38" rx="2"/>
+      <rect x="90" y="94" width="18" height="34" rx="2"/>
     </g>
-    <g opacity=".55">
-      <rect x="196" y="70" width="7" height="58"/>
-      <circle cx="199.5" cy="66" r="7"/>
-      <rect x="197.5" y="44" width="4" height="20"/>
-      <rect x="330" y="98" width="20" height="30"/><rect x="356" y="88" width="16" height="40"/>
-      <rect x="112" y="96" width="18" height="32"/>
-    </g>
-    <g opacity=".92">
-      <rect x="132" y="60" width="20" height="68"/><rect x="135" y="48" width="14" height="14"/>
-      <rect x="138" y="34" width="8" height="15"/><rect x="141" y="20" width="2.4" height="15"/>
-      <rect x="166" y="60" width="20" height="68"/><rect x="169" y="48" width="14" height="14"/>
-      <rect x="172" y="34" width="8" height="15"/><rect x="175" y="20" width="2.4" height="15"/>
-      <rect x="152" y="70" width="14" height="3.4"/><rect x="152" y="76" width="14" height="3.4"/>
-      <rect x="158" y="73" width="2" height="4"/>
+    <g opacity=".88">
+      <rect x="132" y="62" width="20" height="66" rx="2"/><rect x="135" y="50" width="14" height="14" rx="2"/>
+      <rect x="138" y="36" width="8" height="15"/><rect x="141" y="22" width="2.4" height="15"/>
+      <rect x="166" y="62" width="20" height="66" rx="2"/><rect x="169" y="50" width="14" height="14" rx="2"/>
+      <rect x="172" y="36" width="8" height="15"/><rect x="175" y="22" width="2.4" height="15"/>
+      <rect x="152" y="72" width="14" height="3.4"/><rect x="152" y="78" width="14" height="3.4"/>
     </g>`,
-  // Putrajaya: the domed Putra Mosque and the arched Seri Wawasan bridge.
-  putrajaya: `
-    <g opacity=".30"><path d="M0 128 L40 104 L80 128 Z"/><rect x="300" y="112" width="18" height="16"/></g>
-    <g opacity=".92">
-      <path d="M150 128 V88 a26 26 0 0 1 52 0 v40 Z"/>
-      <path d="M176 62 a20 20 0 0 1 20 26 h-40 a20 20 0 0 1 20 -26 Z"/>
-      <rect x="175" y="50" width="2.4" height="13"/>
-      <rect x="128" y="96" width="7" height="32"/><rect x="217" y="96" width="7" height="32"/>
-      <rect x="129.6" y="86" width="4" height="11"/><rect x="218.6" y="86" width="4" height="11"/>
-    </g>
-    <g opacity=".55"><path d="M250 128 V108 L300 74 L300 128 Z" fill="none" stroke="currentColor" stroke-width="2.4"/>
-      <path d="M262 108 L300 82 M276 108 L300 92 M290 108 L300 100"/></g>`,
-  // Penang: the cable-stayed bridge, with George Town low-rise behind.
-  penang: `
-    <g opacity=".30"><path d="M0 128 L46 100 L92 128 Z"/></g>
-    <g opacity=".55">
-      <rect x="20" y="112" width="14" height="16"/><rect x="38" y="106" width="12" height="22"/>
-      <rect x="54" y="114" width="16" height="14"/>
-    </g>
-    <g opacity=".92">
-      <path d="M96 128 V112 M196 128 V112" stroke="currentColor" stroke-width="3"/>
-      <rect x="140" y="52" width="6" height="60"/><rect x="246" y="52" width="6" height="60"/>
-      <path d="M96 112 H360" stroke="currentColor" stroke-width="4" fill="none"/>
-      <path d="M143 56 L104 110 M143 56 L184 110 M143 62 L120 110 M143 62 L168 110" stroke="currentColor" stroke-width="1.6" fill="none"/>
-      <path d="M249 56 L210 110 M249 56 L290 110 M249 62 L226 110 M249 62 L274 110" stroke="currentColor" stroke-width="1.6" fill="none"/>
-    </g>`,
-  // Johor Bahru: Sultan Abu Bakar mosque — four corner minarets, wide body.
+  // Johor Bahru: Bangunan Sultan Ibrahim — the stepped clock tower on the hill.
   johor: `
-    <g opacity=".30"><rect x="20" y="108" width="16" height="20"/><rect x="330" y="104" width="18" height="24"/></g>
-    <g opacity=".92">
-      <rect x="140" y="86" width="80" height="42"/>
-      <path d="M140 86 h80 l-8 -12 h-64 Z"/>
-      <rect x="124" y="70" width="9" height="58"/><rect x="227" y="70" width="9" height="58"/>
-      <rect x="152" y="74" width="7" height="14"/><rect x="201" y="74" width="7" height="14"/>
-      <path d="M124 70 l4.5 -12 l4.5 12 Z M227 70 l4.5 -12 l4.5 12 Z"/>
-      <rect x="176" y="60" width="8" height="26"/><circle cx="180" cy="56" r="6"/>
+    <g opacity=".26"><path d="M0 128 L44 106 L88 128 Z"/><rect x="310" y="108" width="18" height="20" rx="2"/></g>
+    <g opacity=".5"><rect x="70" y="110" width="16" height="18" rx="2"/><rect x="256" y="102" width="20" height="26" rx="2"/></g>
+    <g opacity=".88">
+      <rect x="130" y="96" width="100" height="32" rx="2"/>
+      <rect x="140" y="88" width="80" height="10" rx="2"/>
+      <rect x="168" y="46" width="24" height="82" rx="2"/>
+      <rect x="172" y="38" width="16" height="10" rx="2"/>
+      <rect x="176" y="56" width="8" height="8" rx="1"/>
+      <rect x="150" y="102" width="8" height="12" rx="1"/><rect x="202" y="102" width="8" height="12" rx="1"/>
     </g>`,
-  // Melaka: the Christ Church gable and the Menara Taming Sari tower.
+  // Penang: the cable-stayed bridge over the strait, George Town behind.
+  penang: `
+    <g opacity=".26"><path d="M0 128 L46 102 L92 128 Z"/></g>
+    <g opacity=".5"><rect x="22" y="110" width="14" height="18" rx="2"/><rect x="40" y="104" width="12" height="24" rx="2"/><rect x="56" y="112" width="16" height="16" rx="2"/></g>
+    <g opacity=".88">
+      <rect x="140" y="52" width="6" height="60" rx="2"/><rect x="246" y="52" width="6" height="60" rx="2"/>
+      <path d="M96 112 H370" stroke="currentColor" stroke-width="4" fill="none"/>
+      <path d="M143 56 L106 110 M143 56 L182 110 M143 62 L122 110 M143 62 L166 110" stroke="currentColor" stroke-width="1.6" fill="none"/>
+      <path d="M249 56 L212 110 M249 56 L288 110 M249 62 L228 110 M249 62 L272 110" stroke="currentColor" stroke-width="1.6" fill="none"/>
+    </g>`,
+  // Ipoh: limestone karst hills wrapping the old town.
+  ipoh: `
+    <g opacity=".35"><path d="M0 128 C20 96 42 92 66 108 C84 120 96 118 108 128 Z"/><path d="M250 128 C270 88 300 84 322 102 C342 116 358 114 376 128 Z"/></g>
+    <g opacity=".6"><path d="M84 128 C104 84 140 78 168 100 C186 114 198 112 212 128 Z"/></g>
+    <g opacity=".88">
+      <rect x="220" y="102" width="22" height="26" rx="2"/><rect x="248" y="110" width="16" height="18" rx="2"/>
+      <rect x="150" y="106" width="18" height="22" rx="2"/><rect x="128" y="112" width="16" height="16" rx="2"/>
+      <rect x="156" y="98" width="6" height="10"/>
+    </g>`,
+  // Melaka: the Stadthuys clock tower and Menara Taming Sari.
   melaka: `
-    <g opacity=".30"><path d="M0 128 L36 108 L72 128 Z"/></g>
-    <g opacity=".92">
-      <rect x="128" y="92" width="66" height="36"/>
-      <path d="M124 92 L161 68 L198 92 Z"/>
-      <rect x="156" y="52" width="4" height="16"/><rect x="150" y="58" width="16" height="3"/>
-      <rect x="256" y="64" width="8" height="64"/>
-      <rect x="246" y="60" width="28" height="8" rx="4"/>
-      <rect x="258.8" y="46" width="2.4" height="15"/>
+    <g opacity=".26"><path d="M0 128 L36 110 L72 128 Z"/></g>
+    <g opacity=".5"><rect x="96" y="106" width="18" height="22" rx="2"/><rect x="300" y="110" width="20" height="18" rx="2"/></g>
+    <g opacity=".88">
+      <rect x="150" y="98" width="56" height="30" rx="2"/>
+      <rect x="168" y="60" width="20" height="40" rx="2"/>
+      <path d="M166 60 L178 48 L190 60 Z"/>
+      <rect x="174" y="70" width="8" height="8" rx="1"/>
+      <rect x="256" y="66" width="8" height="62" rx="2"/>
+      <rect x="245" y="60" width="30" height="9" rx="4.5"/>
+      <rect x="258.8" y="48" width="2.4" height="14"/>
+    </g>`,
+  // Kuantan: the East Coast shoreline — headland, waves, a beach umbrella.
+  kuantan: `
+    <g opacity=".3"><path d="M250 128 C274 100 316 96 348 112 C362 119 374 120 390 124 L390 128 Z"/></g>
+    <g opacity=".88">
+      <path d="M0 122 Q24 116 48 122 T96 122 T144 122 T192 122 T240 122 T288 122 T336 122 T384 122 L390 128 L0 128 Z"/>
+      <rect x="118" y="84" width="3" height="34" rx="1.5"/>
+      <path d="M96 88 A24 24 0 0 1 143 88 Z"/>
     </g>
-    <g opacity=".55"><rect x="210" y="106" width="18" height="22"/><rect x="300" y="112" width="20" height="16"/></g>`,
-  // Shah Alam: the Blue Mosque — one very large dome, four tall minarets.
-  shahalam: `
-    <g opacity=".30"><path d="M300 128 L340 106 L380 128 Z"/></g>
-    <g opacity=".92">
-      <path d="M146 128 V92 a34 30 0 0 1 68 0 v36 Z"/>
-      <rect x="118" y="56" width="8" height="72"/><rect x="234" y="56" width="8" height="72"/>
-      <path d="M118 56 l4 -14 l4 14 Z M234 56 l4 -14 l4 14 Z"/>
-      <rect x="176" y="52" width="8" height="14"/><circle cx="180" cy="48" r="5"/>
+    <g opacity=".5"><path d="M20 112 Q34 106 48 112 M60 108 Q72 103 84 108" stroke="currentColor" stroke-width="2.4" fill="none"/></g>`,
+  // Kota Bharu: wau bulan — the moon-kite, Kelantan's icon — flying high.
+  kotabharu: `
+    <g opacity=".26"><path d="M0 128 L48 108 L96 128 Z M280 128 L330 106 L380 128 Z"/></g>
+    <g opacity=".5"><rect x="150" y="104" width="20" height="24" rx="2"/><rect x="200" y="110" width="16" height="18" rx="2"/></g>
+    <g opacity=".88">
+      <path d="M262 34 L294 62 L262 84 L230 62 Z"/>
+      <path d="M262 76 C246 92 246 98 262 96 C278 98 278 92 262 76 Z"/>
+      <path d="M262 84 C258 100 260 112 252 122 M262 84 C266 100 264 112 272 122" stroke="currentColor" stroke-width="1.8" fill="none"/>
+    </g>`,
+  // Alor Setar: the telecom tower — shaft, twin decks, spire.
+  alorsetar: `
+    <g opacity=".26"><path d="M0 128 L50 110 L100 128 Z"/></g>
+    <g opacity=".5"><rect x="120" y="108" width="18" height="20" rx="2"/><rect x="260" y="104" width="20" height="24" rx="2"/></g>
+    <g opacity=".88">
+      <path d="M186 128 L192 58 L200 58 L206 128 Z"/>
+      <rect x="178" y="62" width="36" height="9" rx="4.5"/>
+      <rect x="182" y="76" width="28" height="7" rx="3.5"/>
+      <rect x="194.8" y="38" width="2.4" height="21"/>
+      <circle cx="196" cy="58" r="3.4"/>
+    </g>`,
+  // Kuching: the Sarawak DUN's payung roof across the river, boats below.
+  kuching: `
+    <g opacity=".26"><path d="M0 128 L54 106 L108 128 Z"/></g>
+    <g opacity=".88">
+      <path d="M150 84 Q196 44 242 84 L232 84 Q196 56 160 84 Z"/>
+      <path d="M160 84 Q196 60 232 84 L224 92 L168 92 Z"/>
+      <rect x="172" y="92" width="48" height="10" rx="2"/>
+      <rect x="178" y="102" width="6" height="16"/><rect x="208" y="102" width="6" height="16"/>
     </g>
-    <g opacity=".55"><rect x="60" y="104" width="16" height="24"/><rect x="82" y="112" width="14" height="16"/></g>`,
-  // Anywhere we cannot draw honestly: hills and an unremarkable town.
+    <g opacity=".5">
+      <path d="M60 120 Q90 114 120 120 M270 120 Q300 114 330 120" stroke="currentColor" stroke-width="2.4" fill="none"/>
+      <path d="M120 114 q10 -8 20 0 l-4 6 h-12 Z"/>
+    </g>`,
+  // Kota Kinabalu: Gunung Kinabalu's jagged crown above the city.
+  kk: `
+    <g opacity=".35"><path d="M0 128 L60 100 L120 128 Z M240 128 L300 104 L360 128 Z"/></g>
+    <g opacity=".7"><path d="M60 128 L120 74 L146 92 L176 56 L204 84 L236 66 L290 128 Z"/></g>
+    <g opacity=".88">
+      <rect x="90" y="108" width="18" height="20" rx="2"/><rect x="114" y="102" width="14" height="26" rx="2"/>
+      <rect x="288" y="106" width="20" height="22" rx="2"/><rect x="314" y="112" width="14" height="16" rx="2"/>
+    </g>`,
+  // Anywhere else: friendly hills and a small town — honest, not fake.
   generic: `
-    <g opacity=".30"><path d="M0 128 L54 92 L108 128 Z M78 128 L128 98 L178 128 Z"/></g>
-    <g opacity=".55"><rect x="196" y="102" width="20" height="26"/><rect x="222" y="94" width="16" height="34"/>
-      <rect x="244" y="108" width="22" height="20"/></g>
-    <g opacity=".92"><rect x="278" y="86" width="18" height="42"/><rect x="302" y="96" width="22" height="32"/>
-      <rect x="330" y="104" width="16" height="24"/><rect x="282" y="74" width="3" height="13"/></g>`,
+    <g opacity=".3"><path d="M0 128 C30 100 70 98 108 116 C126 124 140 124 156 128 Z"/><path d="M200 128 C230 104 268 102 300 118 C318 126 332 126 348 128 Z"/></g>
+    <g opacity=".55"><rect x="120" y="104" width="20" height="24" rx="2"/><rect x="146" y="96" width="16" height="32" rx="2"/><rect x="168" y="110" width="20" height="18" rx="2"/></g>
+    <g opacity=".88"><rect x="270" y="90" width="18" height="38" rx="2"/><rect x="294" y="100" width="20" height="28" rx="2"/><rect x="274" y="78" width="3" height="13"/></g>`,
 };
-/* Sky palette follows the clock, so the art matches the greeting above it. */
+/* Sky follows the clock — but every hour of it is FRIENDLY. Day is bright
+   blue with a warm sun; dusk is golden; night is a soft indigo with stars,
+   never black. [top, mid, bottom, celestial, silhouette] */
 function skyPalette(){
   const h = new Date().getHours();
-  if (h < 6)  return ["#0B1526","#16305C","#25436F"];   // before dawn
-  if (h < 11) return ["#1B3A6B","#3E6FA8","#8FB6D9"];   // morning
-  if (h < 16) return ["#1E4C86","#3F7CBE","#A9CBE8"];   // midday
-  if (h < 19) return ["#2A2E63","#8B5A8C","#E9A177"];   // dusk
-  return ["#0B1526","#1B2C50","#33507E"];               // night
+  if (h < 7)  return ["#8FA8D8","#C9B8D8","#F6CFA8","sun-low","#4A5E8F"];   // dawn glow
+  if (h < 11) return ["#6FC0F2","#A5D8F8","#E6F5FF","sun","#3D5C96"];       // bright morning
+  if (h < 16) return ["#54B4F0","#93D0F6","#DFF2FF","sun","#3A5A94"];       // clear midday
+  if (h < 19) return ["#F9A868","#FBC98E","#FFEAC8","sun-low","#5A5488"];   // golden dusk
+  return ["#31497E","#4A66A4","#7A93C4","moon","#243A66"];                  // soft indigo night
 }
 function skylineFor(city){
   const key = SKY_BY_CITY[city] || "generic";
-  const [a, b, c] = skyPalette();
+  const [a, b, c, cel, sil] = skyPalette();
+  const celestial = cel === "moon"
+    ? `<circle cx="318" cy="38" r="14" fill="#FFF6D8" opacity=".9"/>
+       <circle cx="313" cy="34" r="12" fill="${a}"/>
+       <g fill="#fff" opacity=".8"><circle cx="70" cy="26" r="1.4"/><circle cx="120" cy="44" r="1.1"/><circle cx="230" cy="20" r="1.3"/><circle cx="356" cy="60" r="1.1"/><circle cx="30" cy="56" r="1.1"/></g>`
+    : `<circle cx="318" cy="${cel==="sun-low"?52:36}" r="16" fill="#FFD66B"/>
+       <circle cx="318" cy="${cel==="sun-low"?52:36}" r="24" fill="#FFD66B" opacity=".28"/>`;
   return `
   <svg class="skyline" viewBox="0 0 390 128" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
     <defs>
       <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="${a}"/><stop offset="0.62" stop-color="${b}"/><stop offset="1" stop-color="${c}"/>
+        <stop offset="0" stop-color="${a}"/><stop offset="0.55" stop-color="${b}"/><stop offset="1" stop-color="${c}"/>
+      </linearGradient>
+      <linearGradient id="hdshade" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="rgba(12,24,48,.42)"/><stop offset="1" stop-color="rgba(12,24,48,0)"/>
       </linearGradient>
     </defs>
     <rect width="390" height="128" fill="url(#sky)"/>
-    <circle cx="322" cy="40" r="17" fill="#fff" opacity=".16"/>
-    <g fill="#fff" opacity=".10">
-      <ellipse cx="70" cy="34" rx="26" ry="8"/><ellipse cx="92" cy="30" rx="18" ry="7"/>
-      <ellipse cx="268" cy="22" rx="20" ry="6"/>
+    ${celestial}
+    <g fill="#fff" opacity=".5">
+      <ellipse cx="76" cy="34" rx="28" ry="9"/><ellipse cx="100" cy="29" rx="19" ry="7"/>
+      <ellipse cx="252" cy="22" rx="22" ry="7"/><ellipse cx="272" cy="18" rx="14" ry="5"/>
     </g>
-    <g fill="#0B1526" color="#0B1526">${SKYLINES[key] || SKYLINES.generic}</g>
+    <g fill="${sil}" color="${sil}">${SKYLINES[key] || SKYLINES.generic}</g>
+    <rect width="390" height="56" fill="url(#hdshade)"/>
   </svg>`;
 }
 
+/* Per-category tint: [soft circle background, icon colour]. Bright enough to
+   feel alive, muted enough to stay adult. */
+const CAT_TINT = {
+  cleaning:["#E1F7F0","#0EA97C"], handyman:["#FFF1DC","#DF8A00"],
+  moving:["#E6EEFF","#2458E6"],   delivery:["#F1EAFF","#7A44E0"],
+  aircon:["#E2F4FD","#0E93C8"],   plumbing:["#E4F0FF","#1F6BD8"],
+  electrical:["#FFF6D9","#D9A400"], gardening:["#E8F6E3","#3C9A3F"],
+};
 const CATS = [
   {id:"cleaning",n:"Cleaning",i:"broom"},
   {id:"handyman",n:"Handyman",i:"wrench"},
@@ -520,6 +581,7 @@ const state = {
   myReviews:[],
   notifs:[],
   addresses:[],
+  lang:"en",
   threads:[],
   chat:{ msgs:[], taskId:null, partnerId:null, title:"", withName:"", lastAt:0 },
   live:{}
@@ -579,6 +641,8 @@ const IC = {
   leaf:d=>I('<path d="M12 21v-7.6"/><path d="M12 13.4c0-3.6 2.7-6.2 6.7-6.2 0 3.8-2.8 6.2-6.7 6.2Z"/><path d="M12 15.4c0-2.9-2.2-5-5.4-5 0 3.1 2.3 5 5.4 5Z"/>',d),
   roller:d=>I('<rect x="4.4" y="4.4" width="13.2" height="4.8" rx="1.7"/><path d="M17.6 6.8h2.2v4.5H12v2.5"/><rect x="10.7" y="13.8" width="2.6" height="6.2" rx="1.15"/>',d),
   hex:d=>I('<path d="M12 3.6 19.3 7.8v8.4L12 20.4 4.7 16.2V7.8L12 3.6Z"/><circle cx="12" cy="12" r="2.9"/>',d),
+  map:d=>I('<path d="M3.6 6.6 9 4.4v13L3.6 19.6Z"/><path d="M9 4.4 15 6.6v13L9 17.4Z"/><path d="M15 6.6 20.4 4.4v13L15 19.6Z"/>',d),
+  target:d=>I('<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.4"/><path d="M12 2.6v3.2M12 18.2v3.2M2.6 12h3.2M18.2 12h3.2"/>',d),
   motor:d=>I('<circle cx="5.5" cy="16.4" r="3.1"/><circle cx="18.5" cy="16.4" r="3.1"/><path d="M8.6 16.4h4.1l3.1-5.2h-4.4"/><path d="M12.7 11.2 10.9 8h-2"/><path d="M15.4 8h3.3l1.1 2.9"/><path d="M18.5 13.3 17 10"/>',d),
   car:d=>I('<path d="M4.6 12.4 6 8.6A2.2 2.2 0 0 1 8.1 7.1h7.8A2.2 2.2 0 0 1 18 8.6l1.4 3.8"/><path d="M4.6 12.4h14.8a1.3 1.3 0 0 1 1.3 1.3v3.2h-2.2M4.6 12.4a1.3 1.3 0 0 0-1.3 1.3v3.2h2.2"/><circle cx="7.6" cy="17.1" r="1.7"/><circle cx="16.4" cy="17.1" r="1.7"/><path d="M9.3 16.9h5.4"/>',d),
   shieldbug:d=>I('<circle cx="12" cy="13.2" r="4.6"/><path d="M9.9 9.1 8.7 6.9M14.1 9.1l1.2-2.2"/><path d="M7.4 12.1l-2.3-.5M16.6 12.1l2.3-.5M7.8 15.4 6 16.8M16.2 15.4 18 16.8"/><path d="M12 8.6v9.2"/>',d),
@@ -733,6 +797,7 @@ ${skylineFor(state.user.city)}
   </div>
   <div class="rowg">
     <div class="locChip" onclick="openSheet('city')">${IC.pin(14)} ${esc(state.user.city)}</div>
+    <div class="locChip" onclick="locateCity()" title="Detect my city" style="padding:9px 11px">${IC.target?IC.target(15):IC.pin(15)}</div>
     <div class="hicon" onclick="go('notifs')">${IC.bell(19)}${state.notifs.filter(n=>n.unread).length?`<div class="badge">${state.notifs.filter(n=>n.unread).length}</div>`:""}</div>
   </div>
 </div>
@@ -745,7 +810,7 @@ ${skylineFor(state.user.city)}
   </div>`:""}
   <div class="rowbet"><div class="sec" style="margin:8px 0 10px">Browse categories</div><span style="font-size:13px;font-weight:700;color:var(--blu);cursor:pointer">See all</span></div>
   <div class="catgrid">
-    ${CATS.slice(0,8).map(c=>`<div class="cat" onclick="go('cpost')"><div class="ci">${IC[c.i](20)}</div><span>${c.n}</span></div>`).join("")}
+    ${CATS.slice(0,8).map(c=>`<div class="cat" onclick="go('cpost','${c.id}')"><div class="ci" style="background:${CAT_TINT[c.id]?CAT_TINT[c.id][0]:'var(--sur2)'};color:${CAT_TINT[c.id]?CAT_TINT[c.id][1]:'var(--tx)'}">${IC[c.i](20)}</div><span>${c.n}</span></div>`).join("")}
   </div>
   <div class="sec">Your active tasks</div>
   ${active.length?active.map(t=>`
@@ -815,7 +880,7 @@ ${header("Post a Task","Describe it once, pros come to you",'chome')}
     </div>
   </div>
   <div style="display:flex;gap:10px">
-    <div style="flex:1"><label class="f">Date needed</label><input class="f" id="pt-date" type="date" value="2026-07-15"></div>
+    <div style="flex:1"><label class="f">Date needed</label><input class="f" id="pt-date" type="date" value="${todayISO()}" min="${todayISO()}"></div>
     <div style="flex:1"><label class="f">Time</label><select class="f" id="pt-time"><option>Flexible</option><option>Morning</option><option>Afternoon</option><option>Evening</option></select></div>
   </div>
   <div id="pt-stops-wrap" style="display:none">
@@ -832,7 +897,9 @@ ${header("Post a Task","Describe it once, pros come to you",'chome')}
         <div class="vsub">Boxes, groceries, bulky items</div>
       </div>
     </div>
-    <label class="f" style="margin-top:14px">Delivery stops</label>
+    <button class="btn pri" style="margin-top:6px" onclick="openRoutePlanner()">${IC.pin(16)} Plan route on map</button>
+    <div class="sub" style="font-size:11.5px;margin:7px 0 2px;text-align:center">Pickup, drop-offs and fare — all on one map, like you'd expect.</div>
+    <label class="f" style="margin-top:12px">Delivery stops</label>
     <div class="sub" style="font-size:12px;margin:-2px 0 8px">Where should it go after pickup? Add up to 5 stops.</div>
     <div id="pt-stops"></div>
     <button class="btn dark sm" style="width:auto;padding:10px 16px" onclick="addStop()">${IC.plus(15)} Add stop</button>
@@ -1158,7 +1225,7 @@ ${header("Settings","Preferences & account",state.mode==='customer'?'cprofile':'
   </div>
   <div class="sec">App</div>
   <div class="card" style="padding:2px 16px">
-    <div class="srow"><div class="si">${IC.lang(18)}</div><div style="flex:1"><b>Language</b><span>English</span></div>${IC.chevR(17)}</div>
+    <div class="srow" onclick="toggleLang()"><div class="si">${IC.lang(18)}</div><div style="flex:1"><b>Language</b><span>${state.lang==="bm"?"Bahasa Melayu":"English"}</span></div>${IC.chevR(17)}</div>
     <div class="srow"><div class="si">${IC.shield(18)}</div><div style="flex:1"><b>Privacy &amp; security</b><span>2FA, sessions, data</span></div>${IC.chevR(17)}</div>
     <div class="srow" onclick="resetDemo()"><div class="si">${IC.history(18)}</div><div style="flex:1"><b>Reset app data</b><span>Clear local data and restart</span></div>${IC.chevR(17)}</div>
     ${window.BP_IS_DEV_BUILD?`<div class="srow" onclick="setApiBase()"><div class="si">${IC.gear(18)}</div><div style="flex:1"><b>Developer</b><span>${state.liveUid?"Live: connected":"API base URL, connect to backend"}</span></div>${IC.chevR(17)}</div>`:``}
@@ -1204,6 +1271,7 @@ T.pjobs = () => {
 <div class="hd">
   <div class="hleft"><div><div class="hsub">Jobs near</div><div class="locChip" onclick="openSheet('city')" style="margin-top:3px">${IC.pin(14)} ${esc(state.user.city)} · ${state.radius} km${state.myPos?"":" · approx"}</div></div></div>
   <div class="rowg">
+    <div class="hicon" onclick="openJobsMap()" title="Map view" style="color:var(--blu)">${IC.map?IC.map(18):IC.pin(18)}</div>
     <div class="hicon" onclick="useMyPosition()" title="Use my location" style="${state.myPos?"color:var(--teal)":""}">${IC.pin(18)}</div>
     <div class="hicon" onclick="openSheet('filter')">${IC.sliders(18)}</div>
     <div class="hicon" onclick="go('notifs')">${IC.bell(19)}${state.notifs.filter(n=>n.unread).length?`<div class="badge">${state.notifs.filter(n=>n.unread).length}</div>`:""}</div>
@@ -1708,7 +1776,7 @@ const APP_VER = "1.1.0";  // bumped: invalidates any stale cached demo/seed stat
    outside #app so a render can never strand or duplicate it. */
 function showBusy(msg){
   const h = document.getElementById("busy-host");
-  if (h) h.innerHTML = `<div class="busy"><div class="spinner"></div><div>${esc(msg)}</div></div>`;
+  if (h) h.innerHTML = `<div class="busy"><div class="spinner"></div><div>${esc(t(msg))}</div></div>`;
 }
 function hideBusy(){
   const h = document.getElementById("busy-host");
@@ -1748,13 +1816,17 @@ async function openMapModal(opts){
   const host = document.getElementById("modal-host");
   if (!host) return;
   const start = [opts.lat ?? 3.139, opts.lng ?? 101.687];
-  host.innerHTML = `
+  paint(host, `
   <div class="mmodal">
     <div class="mmtop">
       <div class="mmback" onclick="closeMapModal()">${IC.chevL(20)}</div>
       <b>Set location</b>
     </div>
-    <div id="mm-map"></div>
+    <div style="flex:1;position:relative;min-height:180px">
+      <div id="mm-map" style="position:absolute;inset:0"></div>
+      <button onclick="mmLocate()" id="mm-locate" title="Use my location"
+        style="position:absolute;right:14px;bottom:14px;z-index:1000;width:46px;height:46px;border-radius:50%;border:0;background:#fff;box-shadow:0 6px 18px rgba(16,31,58,.28);display:flex;align-items:center;justify-content:center;color:var(--blu);cursor:pointer">${IC.pin(19)}</button>
+    </div>
     <div class="mmsheet">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div class="sub" style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase">Pin location</div>
@@ -1773,7 +1845,7 @@ async function openMapModal(opts){
       </label>` : `<div style="height:12px"></div>`}
       <button class="btn pri" onclick="mmConfirm()">Use this location</button>
     </div>
-  </div>`;
+  </div>`);
   _mm.edited = !!(opts.addr && opts.addr.trim());
   _mm.onDone = opts.onDone;
   _mm.label = opts.label || "";
@@ -1798,6 +1870,18 @@ async function openMapModal(opts){
         _mm.map.setView([la,ln],17); _mm.marker.setLatLng([la,ln]); mmSetCoords(la,ln); },
       ()=>{}, {enableHighAccuracy:true, timeout:8000});
   }
+}
+function mmLocate(){
+  const blocked = geoBlockedReason();
+  if (blocked){ toast(blocked); return; }
+  toast("Finding your location\u2026");
+  navigator.geolocation.getCurrentPosition(
+    (pos)=>{ const {latitude:la,longitude:ln}=pos.coords;
+      if(!_mm.map) return;
+      _mm.map.setView([la,ln],17); _mm.marker.setLatLng([la,ln]); mmSetCoords(la,ln);
+      toast("Location found. Drag the pin to fine-tune."); },
+    (err)=>{ toast(geoErrText(err)); },
+    {enableHighAccuracy:true, timeout:9000});
 }
 function mmPickLabel(el){
   document.querySelectorAll("#mm-lblrow .chip").forEach(c=>c.classList.remove("on"));
@@ -1828,6 +1912,658 @@ function closeMapModal(){
   _mm = { map:null, marker:null, edited:false, geoT:null };
   const host = document.getElementById("modal-host");
   if (host) host.innerHTML = "";
+}
+
+/* ================= BAHASA MELAYU =================
+   Retrofitting i18n into ~390 strings baked inside template literals would mean
+   touching every one of them — a huge diff and a real risk of breaking the
+   interpolation that renders the app. Instead this translates the DOM after
+   each render: text nodes and a short allowlist of attributes, matched EXACTLY
+   against a hand-written dictionary.
+
+   Why this is the right trade here:
+   - Anything not in the dictionary stays readable English. A missed string is
+     never a blank or a raw key like "home.title" — the worst case is mixed
+     language, not a broken screen.
+   - Malay is written by hand, in Malaysian usage, not machine-translated.
+     "Bida" for bid, "tawaran" for the offer itself, "Partner" kept because it
+     is Berespro's own term for its workers.
+   - Interpolated text ("3 jobs · 20 km") can't match a fixed key, so a small
+     set of pattern rules handles the shapes that carry numbers.
+
+   Cost: one text-node walk per render — microseconds on a screen's worth of
+   nodes, and it only runs when Malay is on. */
+const BM = {
+  // ---- navigasi & umum ----
+  "My Tasks":"Tugas Saya", "Activity":"Aktiviti", "Profile":"Profil",
+  "My Jobs":"Kerja Saya", "Earnings":"Pendapatan", "Messages":"Mesej", "Settings":"Tetapan",
+  "Back":"Kembali", "Close":"Tutup", "Send":"Hantar", "Remove":"Buang", "Save":"Simpan",
+  "Cancel":"Batal", "Continue":"Teruskan", "See all":"Lihat semua", "All":"Semua",
+  "Today":"Hari ini", "Earlier":"Sebelum ini", "Pending":"Menunggu", "Completed":"Selesai",
+  "Cancelled":"Dibatalkan", "In progress":"Sedang berjalan", "Open for bids":"Terbuka untuk bida",
+  "Active":"Aktif", "Verified":"Disahkan", "Won":"Menang", "Not selected":"Tidak dipilih",
+  "Awaiting reply":"Menunggu jawapan", "Under review":"Dalam semakan",
+  "Morning":"Pagi", "Afternoon":"Petang", "Evening":"Malam", "Flexible":"Fleksibel",
+  "Good morning":"Selamat pagi", "Good afternoon":"Selamat petang", "Good evening":"Selamat malam",
+  "Malaysia":"Malaysia", "English":"English", "Language":"Bahasa",
+
+  // ---- welcome / onboarding ----
+  "CONSIDER IT DONE":"ANGGAP DAH SIAP",
+  "Post any task. Get bids from rated local pros.":"Hantar apa-apa tugas. Terima bida dari pakar tempatan bertaraf.",
+  "Consider it done.":"Anggap dah siap.",
+  "Continue with Google":"Teruskan dengan Google",
+  "Already signed in with Google? Tap to continue":"Sudah log masuk dengan Google? Tekan untuk teruskan",
+  "Sign-in stuck? Reset it":"Log masuk tersekat? Set semula",
+  "By continuing you agree to Berespro's Terms of Service":"Dengan meneruskan, anda bersetuju dengan Terma Perkhidmatan Berespro",
+  "and Privacy Policy.":"dan Dasar Privasi.",
+  "How will you use":"Bagaimana anda akan guna",
+  "Berespro today?":"Berespro hari ini?",
+  "I need tasks done":"Saya perlukan kerja disiapkan",
+  "Post a task, compare bids, and hire trusted local partners.":"Hantar tugas, banding bida, dan upah partner tempatan yang dipercayai.",
+  "I want to earn":"Saya nak cari pendapatan",
+  "Find jobs near you, place bids, and keep 80% of every job.":"Cari kerja berdekatan, buat bida, dan simpan 80% setiap kerja.",
+  "Find jobs near you and start earning.":"Cari kerja berdekatan dan mula dapat pendapatan.",
+  "You can switch between modes anytime from your profile.":"Anda boleh tukar mod bila-bila masa dari profil anda.",
+  "Add your phone number":"Masukkan nombor telefon anda",
+  "Phone number":"Nombor telefon",
+  "Save and continue":"Simpan dan teruskan",
+
+  // ---- home pelanggan ----
+  "What do you need done?":"Apa yang anda perlukan?",
+  "Browse categories":"Lihat kategori",
+  "Your active tasks":"Tugas aktif anda",
+  "No active tasks. Post one and receive bids within minutes.":"Tiada tugas aktif. Hantar satu dan terima bida dalam beberapa minit.",
+  "Cleaning":"Pembersihan", "Handyman":"Tukang", "Moving":"Pindah", "Delivery":"Penghantaran",
+  "Aircon":"Penghawa Dingin", "Plumbing":"Paip", "Electrical":"Elektrik", "Gardening":"Berkebun",
+  "Assembly":"Pemasangan", "Painting":"Cat",
+
+  // ---- borang hantar tugas ----
+  "Post a Task":"Hantar Tugas",
+  "Describe it once, pros come to you":"Terangkan sekali, pakar datang pada anda",
+  "Task title":"Tajuk tugas",
+  "Category":"Kategori", "Location":"Lokasi",
+  "Full address — unit, street, area":"Alamat penuh — unit, jalan, kawasan",
+  "Exact location":"Lokasi tepat",
+  "Set on map":"Set atas peta", "Change":"Tukar",
+  "Date needed":"Tarikh diperlukan", "Time":"Masa",
+  "Your budget (RM)":"Bajet anda (RM)",
+  "Partners can bid at, below, or slightly above your budget.":"Partner boleh bida pada, bawah, atau sedikit atas bajet anda.",
+  "Details":"Butiran",
+  "Describe the scope, access, tools or materials provided…":"Terangkan skop kerja, akses, alatan atau bahan yang disediakan…",
+  "Photos (optional, up to 4)":"Gambar (pilihan, sehingga 4)",
+  "Post task & receive bids":"Hantar tugas & terima bida",
+  "Vehicle":"Kenderaan", "Motorbike":"Motosikal", "Car":"Kereta",
+  "Documents, food, small parcels":"Dokumen, makanan, bungkusan kecil",
+  "Boxes, groceries, bulky items":"Kotak, barang runcit, barang besar",
+  "Delivery stops":"Destinasi penghantaran",
+  "Where should it go after pickup? Add up to 5 stops.":"Ke mana selepas diambil? Tambah sehingga 5 destinasi.",
+  "Add stop":"Tambah destinasi", "Add drop-off":"Tambah destinasi",
+  "Use suggested":"Guna cadangan",
+  "Plan route on map":"Rancang laluan atas peta",
+  "Pickup, drop-offs and fare — all on one map, like you'd expect.":"Pengambilan, destinasi dan tambang — semua dalam satu peta.",
+
+  // ---- peta ----
+  "Set location":"Set lokasi", "Pin location":"Lokasi pin",
+  "Use this location":"Guna lokasi ini", "Use my location":"Guna lokasi saya",
+  "Save this address for next time":"Simpan alamat ini untuk lain kali",
+  "Label (e.g. Mak's house)":"Label (cth. Rumah Mak)",
+  "Office":"Pejabat", "Other…":"Lain…",
+  "Plan your delivery":"Rancang penghantaran anda",
+  "Use this route":"Guna laluan ini",
+  "Jobs near you":"Kerja berdekatan anda",
+  "Delivery route":"Laluan penghantaran",
+
+  // ---- tugas & bida ----
+  "Task details":"Butiran tugas", "Your budget":"Bajet anda", "Customer budget":"Bajet pelanggan",
+  "Bids":"Bida", "Bids so far":"Bida setakat ini", "Accept bid":"Terima bida",
+  "Review and accept an offer to get started":"Semak dan terima tawaran untuk bermula",
+  "Place your bid":"Buat bida anda", "Your price (RM)":"Harga anda (RM)",
+  "Message to customer":"Mesej kepada pelanggan",
+  "Introduce yourself, your experience, and what your price includes…":"Perkenalkan diri, pengalaman anda, dan apa yang termasuk dalam harga…",
+  "Submit bid":"Hantar bida", "Bid now":"Bida sekarang", "Withdraw my bid":"Tarik balik bida saya",
+  "View & place bid":"Lihat & buat bida", "Enter your bid price":"Masukkan harga bida anda",
+  "Agreed price":"Harga dipersetujui", "Photos":"Gambar",
+  "Jobs near":"Kerja berhampiran", "All jobs":"Semua kerja",
+  "Nearest first":"Terdekat dahulu", "Highest budget":"Bajet tertinggi",
+  "Filter jobs":"Tapis kerja", "Sort by":"Susun ikut", "Search radius":"Radius carian",
+  "All categories":"Semua kategori", "Apply filters":"Guna tapisan",
+  "No open jobs in this range. Try widening your radius.":"Tiada kerja terbuka dalam jarak ini. Cuba luaskan radius anda.",
+  "Cancel this task":"Batalkan tugas ini", "Cancel this job":"Batalkan kerja ini",
+  "Report a problem with this job":"Laporkan masalah dengan kerja ini",
+  "Task posted!":"Tugas dihantar!", "View my task":"Lihat tugas saya", "Back to home":"Kembali ke utama",
+
+  // ---- bayaran ----
+  "Payment":"Bayaran", "Total to pay":"Jumlah untuk dibayar", "Pay with":"Bayar dengan",
+  "Confirm & pay":"Sahkan & bayar", "Payment methods":"Kaedah pembayaran",
+  "Escrow protected.":"Dilindungi escrow.",
+  "Berespro service & protection":"Perkhidmatan & perlindungan Berespro",
+  "Voucher code (optional)":"Kod baucar (pilihan)",
+  "Total spent":"Jumlah dibelanja", "Weekly earnings":"Pendapatan mingguan",
+  "Recent payouts":"Bayaran terkini", "Payout account":"Akaun bayaran",
+  "Pending in escrow:":"Menunggu dalam escrow:",
+  "Add a tip":"Tambah tip", "Send tip":"Hantar tip", "No thanks":"Tak apa",
+  "Other amount (RM)":"Jumlah lain (RM)",
+
+  // ---- profil & tetapan ----
+  "Settings & preferences":"Tetapan & keutamaan",
+  "Notifications":"Pemberitahuan", "Job preferences":"Keutamaan kerja",
+  "Default location":"Lokasi lalai", "Job alert radius":"Radius makluman kerja",
+  "Preferred categories":"Kategori pilihan", "Saved addresses":"Alamat tersimpan",
+  "No saved addresses yet":"Belum ada alamat tersimpan",
+  "Save Home or Office when you post a task":"Simpan Rumah atau Pejabat semasa hantar tugas",
+  "Privacy & security":"Privasi & keselamatan", "Help centre":"Pusat bantuan",
+  "FAQs and support":"Soalan lazim dan sokongan", "Log out":"Log keluar",
+  "Your skills":"Kemahiran anda", "Skills":"Kemahiran", "No skills added yet":"Belum ada kemahiran",
+  "Save skills":"Simpan kemahiran", "Jobs done":"Kerja siap", "Win rate":"Kadar menang",
+  "Your rating":"Penilaian anda", "Avg rating":"Purata penilaian",
+  "Task history":"Sejarah tugas", "Job history":"Sejarah kerja",
+  "View full history":"Lihat sejarah penuh", "Book again":"Tempah lagi",
+  "Switch to Customer mode":"Tukar ke mod Pelanggan", "Switch to Partner mode":"Tukar ke mod Partner",
+  "Account":"Akaun", "Deactivate or delete account":"Nyahaktif atau padam akaun",
+  "Take a break, or erase your data for good":"Berehat, atau padam data anda selamanya",
+  "Your conversations":"Perbualan anda",
+  "Chat with your partners":"Berbual dengan partner anda",
+  "Chat with your customers":"Berbual dengan pelanggan anda",
+  "Type a message…":"Taip mesej…",
+
+  // ---- KYC ----
+  "Identity verification":"Pengesahan identiti",
+  "Full name (as on IC)":"Nama penuh (seperti dalam IC)",
+  "IC front photo":"Gambar IC depan", "IC back photo (optional)":"Gambar IC belakang (pilihan)",
+  "Selfie holding your IC":"Swafoto memegang IC anda",
+  "Opens your camera — take the photo live, not from your gallery.":"Buka kamera anda — ambil gambar terus, bukan dari galeri.",
+  "Why we verify partners":"Kenapa kami sahkan partner",
+  "You're verified":"Anda telah disahkan",
+  "We're checking your documents. Usually done within 24 hours.":"Kami sedang semak dokumen anda. Biasanya siap dalam 24 jam.",
+  "Driving licence needed":"Lesen memandu diperlukan",
+  "Upload licence":"Muat naik lesen",
+
+  // ---- toast ----
+  "Signing you in…":"Sedang log masuk anda…",
+  "Posting your task…":"Menghantar tugas anda…",
+  "Sending your bid…":"Menghantar bida anda…",
+  "Finding your location…":"Mencari lokasi anda…",
+  "Detecting your city…":"Mengesan bandar anda…",
+  "Location set":"Lokasi ditetapkan",
+  "Jobs updated":"Kerja dikemas kini",
+  "Phone saved":"Nombor telefon disimpan",
+  "Skills updated":"Kemahiran dikemas kini",
+  "Licence uploaded":"Lesen dimuat naik",
+  "Profile photo updated":"Gambar profil dikemas kini",
+  "Address removed":"Alamat dibuang",
+  "Bid placed":"Bida dihantar",
+  "Bid withdrawn":"Bida ditarik balik",
+  "Bid submitted, customer notified":"Bida dihantar, pelanggan dimaklumkan",
+  "Task cancelled":"Tugas dibatalkan",
+  "Payment secured in escrow":"Bayaran dilindungi dalam escrow",
+  "Payment released to your partner":"Bayaran dilepaskan kepada partner anda",
+  "Budget set from route distance":"Bajet ditetapkan dari jarak laluan",
+  "Route set — fare suggestion updated":"Laluan ditetapkan — cadangan tambang dikemas kini",
+  "Pickup set to your location":"Pengambilan ditetapkan ke lokasi anda",
+  "Maximum 5 drop-offs":"Maksimum 5 destinasi",
+  "Maximum 5 stops":"Maksimum 5 destinasi",
+  "Add at least one drop-off":"Tambah sekurang-kurangnya satu destinasi",
+  "Enter a valid phone number":"Masukkan nombor telefon yang sah",
+  "Invalid phone number":"Nombor telefon tidak sah",
+  "That number is already registered":"Nombor itu sudah didaftarkan",
+  "Add a title and budget to continue":"Tambah tajuk dan bajet untuk teruskan",
+  "Verify your identity first to start bidding":"Sahkan identiti anda dahulu sebelum membida",
+  "Photos are still uploading — a moment":"Gambar masih dimuat naik — sekejap",
+  "Sign in first":"Log masuk dahulu",
+};
+
+/* Same word, different meaning by position. A flat dictionary can't express
+   this — the second entry would silently overwrite the first. */
+const BM_CONTEXT = {
+  "Home": [
+    [".nav", "Utama"],          // bottom navigation tab
+    [null,   "Rumah"],          // saved-address label everywhere else
+  ],
+};
+
+/* Shapes that carry numbers can't be exact-matched, so they get patterns. */
+const BM_PATTERNS = [
+  [/^(\d+) open jobs within (\d+) km$/, (m)=>`${m[1]} kerja terbuka dalam ${m[2]} km`],
+  [/^(\d+) jobs? · (\d+) km$/,          (m)=>`${m[1]} kerja · ${m[2]} km`],
+  [/^(\d+) bids? received$/,             (m)=>`${m[1]} bida diterima`],
+  [/^Bids \((\d+)\)$/,                  (m)=>`Bida (${m[1]})`],
+  [/^Photos \(optional, up to (\d+)\)$/, (m)=>`Gambar (pilihan, sehingga ${m[1]})`],
+  [/^Route ≈ (.+) km by (.+) · suggested RM (\d+)$/,
+    (m)=>`Laluan ≈ ${m[1]} km guna ${m[2]==="Car"?"Kereta":"Motosikal"} · cadangan RM ${m[3]}`],
+  [/^≈ (.+) km · (\d+) drop-offs?$/,     (m)=>`≈ ${m[1]} km · ${m[2]} destinasi`],
+  [/^(.+) km away$/,                     (m)=>`${m[1]} km dari sini`],
+  [/^Pin set \((.+)\)$/,                 (m)=>`Pin ditetapkan (${m[1]})`],
+  [/^Using (.+)$/,                       (m)=>`Guna ${m[1]}`],
+  [/^You're in (.+)$/,                   (m)=>`Anda di ${m[1]}`],
+];
+
+/* Imperative HTML writes bypass render(), so each one translates its own
+   subtree. One helper keeps that from being forgotten at a new call site. */
+function paint(el, html){
+  if (!el) return el;
+  el.innerHTML = html;
+  translateDOM(el);
+  return el;
+}
+/* Modals, sheets and map cards are written imperatively from a dozen places.
+   Rather than remembering to translate at every one, watch the two hosts for
+   ADDED NODES. Observing childList only (never characterData) is what makes
+   this loop-free: translation edits existing text nodes, which this observer
+   does not react to. */
+function watchHostsForTranslation(){
+  if (typeof MutationObserver === "undefined") return;
+  const obs = new MutationObserver((records)=>{
+    if (!isBM()) return;
+    for (const r of records){
+      for (const node of r.addedNodes){
+        if (node.nodeType === 1) translateDOM(node);
+        else if (node.nodeType === 3){
+          const out = t(node.nodeValue, node);
+          if (out !== node.nodeValue) node.nodeValue = out;
+        }
+      }
+    }
+  });
+  for (const id of ["modal-host","busy-host","toast-host"]){
+    const el = document.getElementById(id);
+    if (el) obs.observe(el, { childList:true, subtree:true });
+  }
+}
+
+function isBM(){ return state.lang === "bm"; }
+function t(s, node){
+  if (!isBM() || !s) return s;
+  const k = s.trim();
+  const ctx = BM_CONTEXT[k];
+  if (ctx){
+    const el = node && (node.nodeType === 3 ? node.parentElement : node);
+    for (const [sel, val] of ctx){
+      if (sel === null) return s.replace(k, val);
+      if (el && el.closest && el.closest(sel)) return s.replace(k, val);
+    }
+  }
+  if (BM[k]) return s.replace(k, BM[k]);
+  for (const [re, fn] of BM_PATTERNS){ const m = k.match(re); if (m) return s.replace(k, fn(m)); }
+  return s;
+}
+/* Walk text nodes only — never innerHTML — so no markup or interpolation can
+   be corrupted by translation. Attributes are an explicit short allowlist. */
+function translateDOM(root){
+  if (!isBM() || !root) return;
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+  const jobs = [];
+  let n;
+  while ((n = w.nextNode())){
+    const raw = n.nodeValue;
+    if (!raw || !raw.trim() || raw.trim().length < 2) continue;
+    const out = t(raw, n);
+    if (out !== raw) jobs.push([n, out]);
+  }
+  for (const [node, val] of jobs) node.nodeValue = val;
+  for (const el of root.querySelectorAll("[placeholder]")){
+    const v = el.getAttribute("placeholder"); const o = t(v);
+    if (o !== v) el.setAttribute("placeholder", o);
+  }
+  for (const el of root.querySelectorAll("[title]")){
+    const v = el.getAttribute("title"); const o = t(v);
+    if (o !== v) el.setAttribute("title", o);
+  }
+}
+function setLang(l){
+  state.lang = l === "bm" ? "bm" : "en";
+  persist();
+  render();
+  toast(state.lang === "bm" ? "Bahasa Melayu dipilih" : "English selected");
+}
+function toggleLang(){ setLang(isBM() ? "en" : "bm"); }
+
+/* ---- LIVE JOBS MAP (partner) ----
+   A full-screen map of open jobs the partner can bid on. It lives in
+   #modal-host, outside #app, for the same reason every other map does: render()
+   replaces #app wholesale and would tear the map down mid-pan.
+
+   The radius the partner picks is a REQUEST, not a promise: the server caps it
+   at 50km (feedTasks: Math.min(radius, 50)), so the UI offers exactly the
+   values the server will honour rather than letting someone type 500 and
+   silently receive 50.
+
+   "Live" here means a 30s poll plus a manual refresh — not a socket. The feed
+   changes on the order of minutes, and a poll costs one request; a socket
+   would cost a persistent connection per partner for no visible gain. */
+const JOBS_MAP_RADII = [5, 10, 20, 50];   // last value == the server's hard cap
+let _jm = { map:null, layer:null, circle:null, me:null, poll:null, sel:null };
+
+function jmCategoryColor(cat){
+  return (CAT_TINT[cat] && CAT_TINT[cat][1]) || "#0051E9";
+}
+function jmMarkerIcon(L, job){
+  const c = jmCategoryColor(job.cat);
+  const mine = job.myBid;
+  return L.divIcon({ className:"", iconSize:[54,30], iconAnchor:[27,30], html:`
+    <div style="position:relative;display:flex;flex-direction:column;align-items:center">
+      <div style="background:${mine?"#8A93A6":c};color:#fff;font-weight:800;font-size:11.5px;padding:4px 8px;border-radius:9px;white-space:nowrap;box-shadow:0 3px 10px rgba(10,20,40,.32);border:1.5px solid #fff">
+        RM${job.budget}${mine?" \u2713":""}
+      </div>
+      <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid ${mine?"#8A93A6":c};margin-top:-1px"></div>
+    </div>` });
+}
+function jmJobs(){
+  let jobs = state.tasks.filter(t=>!t.mine && t.status==="open" && Array.isArray(t.ll));
+  if (state.filterCat!=="all") jobs = jobs.filter(j=>j.cat===state.filterCat);
+  return jobs.filter(j=>dist(j.ll) <= state.radius);
+}
+async function openJobsMap(){
+  const host = document.getElementById("modal-host");
+  if (!host) return;
+  host.innerHTML = `
+  <div class="mmodal">
+    <div class="mmtop">
+      <div class="mmback" onclick="closeJobsMap()">${IC.chevL(20)}</div>
+      <b style="flex:1">Jobs near you</b>
+      <div class="mmback" onclick="jmRefresh(true)" title="Refresh">${IC.target(17)}</div>
+    </div>
+    <div style="background:var(--bg);padding:0 12px 10px">
+      <div class="catrow" style="margin:0 0 8px">
+        <div class="fchip ${state.filterCat==='all'?'on':''}" onclick="jmSetCat('all')">All</div>
+        ${CATS.slice(0,9).map(c=>`<div class="fchip ${state.filterCat===c.id?'on':''}" onclick="jmSetCat('${c.id}')">${c.n}</div>`).join("")}
+      </div>
+      <div class="rowg" style="gap:7px">
+        ${JOBS_MAP_RADII.map(r=>`<span class="fchip ${state.radius==r?'on':''}" onclick="jmSetRadius(${r})">${r} km${r===50?" \u00b7 max":""}</span>`).join("")}
+      </div>
+    </div>
+    <div style="flex:1;position:relative;min-height:200px">
+      <div id="jm-map" style="position:absolute;inset:0"></div>
+      <button onclick="jmLocate()" title="Use my location"
+        style="position:absolute;right:14px;top:14px;z-index:1000;width:44px;height:44px;border-radius:50%;border:0;background:#fff;box-shadow:0 6px 18px rgba(16,31,58,.28);display:flex;align-items:center;justify-content:center;color:${state.myPos?"var(--teal)":"var(--blu)"};cursor:pointer">${IC.pin(19)}</button>
+      <div id="jm-count" style="position:absolute;left:14px;top:14px;z-index:1000;background:#fff;border-radius:99px;padding:7px 13px;font-size:12.5px;font-weight:800;color:var(--tx);box-shadow:0 4px 14px rgba(16,31,58,.22)"></div>
+    </div>
+    <div id="jm-card" class="mmsheet" style="display:none"></div>
+  </div>`;
+  let L;
+  try { L = await ensureLeaflet(); }
+  catch(e){ toast("Map unavailable \u2014 the list view still works."); closeJobsMap(); return; }
+  const ll = state.myPos || CITIES[state.user.city] || [3.139,101.687];
+  _jm.map = L.map(document.getElementById("jm-map"), { attributionControl:false }).setView(ll, 12);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(_jm.map);
+  _jm.layer = L.layerGroup().addTo(_jm.map);
+  jmDrawMe();
+  jmDraw();
+  setTimeout(()=>{ try{ _jm.map.invalidateSize(); jmFit(); }catch(e){} }, 260);
+  // live: poll while the map is open, stop the moment it closes
+  clearInterval(_jm.poll);
+  _jm.poll = setInterval(()=>{ jmRefresh(false); }, 30000);
+  jmRefresh(false);
+}
+function jmDrawMe(){
+  const L = window.L;
+  if (!_jm.map) return;
+  const ll = state.myPos || CITIES[state.user.city] || [3.139,101.687];
+  if (_jm.me) _jm.map.removeLayer(_jm.me);
+  if (_jm.circle) _jm.map.removeLayer(_jm.circle);
+  _jm.me = L.marker(ll, { icon: L.divIcon({ className:"", iconSize:[18,18], iconAnchor:[9,9],
+    html:`<div style="width:18px;height:18px;border-radius:50%;background:#0051E9;border:3px solid #fff;box-shadow:0 2px 8px rgba(10,20,40,.4)"></div>` }) }).addTo(_jm.map);
+  _jm.circle = L.circle(ll, { radius: state.radius*1000, color:"#0051E9", weight:1.4,
+    opacity:.5, fillColor:"#0051E9", fillOpacity:.06 }).addTo(_jm.map);
+}
+function jmDraw(){
+  if (!_jm.layer) return;
+  const L = window.L;
+  _jm.layer.clearLayers();
+  const jobs = jmJobs();
+  for (const j of jobs){
+    const m = L.marker(j.ll, { icon: jmMarkerIcon(L, j) }).addTo(_jm.layer);
+    m.on("click", ()=>jmSelect(j.id));
+  }
+  const c = document.getElementById("jm-count");
+  if (c) c.textContent = `${jobs.length} job${jobs.length===1?"":"s"} \u00b7 ${state.radius} km`;
+  if (_jm.sel && !jobs.some(j=>String(j.id)===String(_jm.sel))) jmCloseCard();
+}
+function jmFit(){
+  try {
+    const jobs = jmJobs();
+    if (!jobs.length){ return; }
+    const pts = jobs.map(j=>j.ll);
+    pts.push(state.myPos || CITIES[state.user.city] || [3.139,101.687]);
+    _jm.map.fitBounds(window.L.latLngBounds(pts).pad(0.2));
+  } catch(e){}
+}
+function jmSelect(id){
+  const j = state.tasks.find(t=>String(t.id)===String(id));
+  const card = document.getElementById("jm-card");
+  if (!j || !card) return;
+  _jm.sel = id;
+  const d = dist(j.ll);
+  card.style.display = "block";
+  card.innerHTML = `
+    <div class="rowbet" style="margin-bottom:8px">
+      ${catChip(j.cat)}
+      <span onclick="jmCloseCard()" style="font-size:12px;font-weight:800;color:var(--dim);padding:4px 6px;cursor:pointer">Close</span>
+    </div>
+    <h2 style="font-size:16px;margin-bottom:6px">${esc(j.title)}</h2>
+    <div class="sub" style="font-size:12.5px;margin-bottom:10px">${esc(j.addr||j.city)} \u00b7 ${d.toFixed(1)} km away</div>
+    <div class="rowbet" style="margin-bottom:12px">
+      <div>
+        <div class="sub" style="font-size:11.5px">Customer budget</div>
+        <div class="price num" style="font-size:19px">${rm(j.budget)}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="sub" style="font-size:11.5px">Bids so far</div>
+        <b style="font-size:15px">${j.bids?j.bids.length:0}</b>
+      </div>
+    </div>
+    ${j.myBid ? `<button class="btn dark" onclick="closeJobsMap();go('pjob','${j.id}')">You've bid \u2014 view job</button>`
+              : `<button class="btn pri" onclick="closeJobsMap();go('pjob','${j.id}')">View & place bid</button>`}`;
+}
+function jmCloseCard(){
+  _jm.sel = null;
+  const card = document.getElementById("jm-card");
+  if (card){ card.style.display = "none"; card.innerHTML = ""; }
+}
+function jmSetCat(cat){
+  state.filterCat = cat; persist();
+  document.querySelectorAll("#modal-host .catrow .fchip").forEach(el=>el.classList.remove("on"));
+  const idx = cat==="all" ? 0 : CATS.slice(0,9).findIndex(c=>c.id===cat)+1;
+  const chips = document.querySelectorAll("#modal-host .catrow .fchip");
+  if (chips[idx]) chips[idx].classList.add("on");
+  jmDraw(); jmRefresh(false);
+}
+function jmSetRadius(r){
+  state.radius = r; persist();
+  document.querySelectorAll("#modal-host .rowg .fchip").forEach(el=>el.classList.remove("on"));
+  const i = JOBS_MAP_RADII.indexOf(r);
+  const chips = document.querySelectorAll("#modal-host .rowg .fchip");
+  if (chips[i]) chips[i].classList.add("on");
+  jmDrawMe(); jmDraw(); jmFit(); jmRefresh(false);
+}
+function jmLocate(){
+  const blocked = geoBlockedReason();
+  if (blocked){ toast(blocked); return; }
+  toast("Finding your location\u2026");
+  navigator.geolocation.getCurrentPosition((pos)=>{
+    state.myPos = [pos.coords.latitude, pos.coords.longitude];
+    persist(); jmDrawMe(); jmDraw(); jmFit(); jmRefresh(true);
+  }, (err)=>toast(geoErrText(err)), {enableHighAccuracy:true, timeout:9000});
+}
+async function jmRefresh(loud){
+  if (!LIVE() || !TOK.a){ if (loud) toast("Connect a server to see live jobs"); return; }
+  try {
+    await syncFeed();
+    jmDraw();
+    if (_jm.sel) jmSelect(_jm.sel);      // keep the open card in step
+    if (loud) toast("Jobs updated");
+  } catch(e){ if (loud) toast(e.message); }
+}
+function closeJobsMap(){
+  clearInterval(_jm.poll);
+  if (_jm.map){ try{ _jm.map.remove(); }catch(e){} }
+  _jm = { map:null, layer:null, circle:null, me:null, poll:null, sel:null };
+  const h = document.getElementById("modal-host"); if (h) h.innerHTML="";
+}
+
+/* ---- Grab-style route planner ----
+   One full-screen map that IS the order: a green pickup pin, numbered drop-off
+   pins, a route line between them, and a fare card that recalculates live as
+   anything moves. Confirming writes back into the normal form (pin, stops,
+   vehicle, address) so the rest of the flow — and the server's own fare
+   arithmetic — stays exactly the same.
+
+   The polyline is straight point-to-point, not road routing: real routing
+   needs a directions service we don't run. The fare already prices on the
+   same straight-line km SERVER-side, so what you see here is what the
+   suggestion will be — honest, just not road-shaped. */
+let _rp = { map:null, A:null, stops:[], line:null, vehicle:"motor" };
+function rpIcon(L, label, color){
+  return L.divIcon({ className:"", iconSize:[30,30], iconAnchor:[15,15],
+    html:`<div style="width:30px;height:30px;border-radius:50%;background:${color};color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(10,20,40,.35);border:2.5px solid #fff">${label}</div>` });
+}
+async function openRoutePlanner(){
+  const host = document.getElementById("modal-host");
+  if (!host) return;
+  _rp.vehicle = _ptVehicle || "motor";
+  const city = (document.getElementById("pt-city")||{}).value || (state.user&&state.user.city);
+  const startA = state.pin || state.myPos || CITIES[city] || [3.139,101.687];
+  host.innerHTML = `
+  <div class="mmodal">
+    <div class="mmtop"><div class="mmback" onclick="closeRoutePlanner()">${IC.chevL(20)}</div><b>Plan your delivery</b></div>
+    <div style="flex:1;position:relative;min-height:200px">
+      <div id="rp-map" style="position:absolute;inset:0"></div>
+      <button onclick="rpLocate()" title="Use my location"
+        style="position:absolute;right:14px;top:14px;z-index:1000;width:44px;height:44px;border-radius:50%;border:0;background:#fff;box-shadow:0 6px 18px rgba(16,31,58,.28);display:flex;align-items:center;justify-content:center;color:var(--blu);cursor:pointer">${IC.target(18)}</button>
+    </div>
+    <div class="mmsheet">
+      <div class="rowg" style="gap:8px;margin-bottom:10px">
+        <span class="fchip ${_rp.vehicle==="motor"?"on":""}" id="rp-v-motor" onclick="rpVehicle('motor')">${IC.motor(14)} Motor</span>
+        <span class="fchip ${_rp.vehicle==="car"?"on":""}" id="rp-v-car" onclick="rpVehicle('car')">${IC.car(14)} Car</span>
+      </div>
+      <div id="rp-list" style="max-height:120px;overflow-y:auto"></div>
+      <button class="btn dark sm" style="width:auto;padding:9px 14px;margin-top:6px" onclick="rpAddStop()">${IC.plus(14)} Add drop-off</button>
+      <div class="rowbet" style="margin:12px 0 10px">
+        <div class="sub" style="font-size:12px" id="rp-km"></div>
+        <b style="font-size:18px;color:var(--blu)" id="rp-fare"></b>
+      </div>
+      <button class="btn pri" onclick="rpConfirm()">Use this route</button>
+    </div>
+  </div>`;
+  let L;
+  try { L = await ensureLeaflet(); }
+  catch(e){ toast("Map unavailable \u2014 use the fields below instead."); closeRoutePlanner(); return; }
+  _rp.map = L.map(document.getElementById("rp-map"), { attributionControl:false }).setView(startA, 14);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(_rp.map);
+  _rp.A = L.marker(startA, { draggable:true, icon: rpIcon(L,"A","#0EB57D") }).addTo(_rp.map);
+  _rp.A.on("dragend", rpRedraw);
+  _rp.stops = [];
+  // seed from stops already added on the form, so the two views agree
+  for (const s of _ptStops){
+    const m = L.marker([s.lat,s.lng], { draggable:true, icon: rpIcon(L, String(_rp.stops.length+1), "#0051E9") }).addTo(_rp.map);
+    m._addr = s.addr || ""; m.on("dragend", rpRedraw);
+    _rp.stops.push(m);
+  }
+  if (!_rp.stops.length) rpAddStop(true);
+  rpRedraw();
+  setTimeout(()=>{ try{ _rp.map.invalidateSize(); rpFit(); }catch(e){} }, 260);
+}
+function rpVehicle(v){
+  _rp.vehicle = v;
+  const m=document.getElementById("rp-v-motor"), c=document.getElementById("rp-v-car");
+  if (m) m.classList.toggle("on", v==="motor");
+  if (c) c.classList.toggle("on", v==="car");
+  rpRedraw();
+}
+function rpAddStop(silent){
+  if (!_rp.map) return;
+  if (_rp.stops.length >= 5){ toast("Maximum 5 drop-offs"); return; }
+  const L = window.L;
+  const from = _rp.stops.length ? _rp.stops[_rp.stops.length-1].getLatLng() : _rp.A.getLatLng();
+  const pos = [from.lat + 0.006, from.lng + 0.006];
+  const m = L.marker(pos, { draggable:true, icon: rpIcon(L, String(_rp.stops.length+1), "#0051E9") }).addTo(_rp.map);
+  m._addr = ""; m.on("dragend", rpRedraw);
+  _rp.stops.push(m);
+  if (!silent) toast("Drag pin " + _rp.stops.length + " to the drop-off spot");
+  rpRedraw();
+}
+function rpRemoveStop(i){
+  const m = _rp.stops.splice(i,1)[0];
+  if (m && _rp.map) _rp.map.removeLayer(m);
+  _rp.stops.forEach((s,idx)=>{ s.setIcon(rpIcon(window.L, String(idx+1), "#0051E9")); });
+  rpRedraw();
+}
+function rpKm(){
+  const pts = [_rp.A.getLatLng(), ..._rp.stops.map(s=>s.getLatLng())];
+  const hav=(a,b,c,d)=>{const R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,
+    h=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
+    return 2*R*Math.asin(Math.sqrt(h));};
+  let km=0;
+  for (let i=1;i<pts.length;i++) km += hav(pts[i-1].lat,pts[i-1].lng,pts[i].lat,pts[i].lng);
+  return Math.round(km*10)/10;
+}
+function rpRedraw(){
+  if (!_rp.map) return;
+  const L = window.L;
+  const pts = [_rp.A.getLatLng(), ..._rp.stops.map(s=>s.getLatLng())];
+  if (_rp.line) _rp.map.removeLayer(_rp.line);
+  _rp.line = L.polyline(pts, { color:"#0051E9", weight:4, opacity:.85, dashArray:"1 8", lineCap:"round" }).addTo(_rp.map);
+  const km = _rp.stops.length ? rpKm() : 0;
+  const pr = vehiclePricing(_rp.vehicle);
+  const fare = Math.ceil((pr.base_cents + pr.per_km_cents * km) / 100);
+  const kmEl = document.getElementById("rp-km"), fEl = document.getElementById("rp-fare");
+  if (kmEl) kmEl.textContent = _rp.stops.length ? `\u2248 ${km} km \u00b7 ${_rp.stops.length} drop-off${_rp.stops.length>1?"s":""}` : "Add a drop-off to see the fare";
+  if (fEl) fEl.textContent = _rp.stops.length ? `RM ${fare}` : "";
+  const list = document.getElementById("rp-list");
+  if (list){
+    const row = (label,color,text,extra) => `
+      <div class="rowbet" style="padding:5px 0">
+        <div class="rowg" style="gap:8px;min-width:0">
+          <span style="width:20px;height:20px;border-radius:50%;background:${color};color:#fff;font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${label}</span>
+          <span style="font-size:12.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${text}</span>
+        </div>${extra||""}
+      </div>`;
+    const a = _rp.A.getLatLng();
+    list.innerHTML = row("A","#0EB57D",`Pickup \u00b7 ${a.lat.toFixed(4)}, ${a.lng.toFixed(4)}`) +
+      _rp.stops.map((s,i)=>{ const ll=s.getLatLng();
+        return row(String(i+1),"#0051E9",`Drop-off \u00b7 ${ll.lat.toFixed(4)}, ${ll.lng.toFixed(4)}`,
+          `<span onclick="rpRemoveStop(${i})" style="color:var(--red);font-size:11.5px;font-weight:800;padding:4px;cursor:pointer;flex-shrink:0">Remove</span>`); }).join("");
+  }
+}
+function rpFit(){
+  try {
+    const pts = [_rp.A.getLatLng(), ..._rp.stops.map(s=>s.getLatLng())];
+    _rp.map.fitBounds(window.L.latLngBounds(pts).pad(0.28));
+  } catch(e){}
+}
+function rpLocate(){
+  const blocked = geoBlockedReason();
+  if (blocked){ toast(blocked); return; }
+  navigator.geolocation.getCurrentPosition((pos)=>{
+    const ll=[pos.coords.latitude,pos.coords.longitude];
+    _rp.A.setLatLng(ll); state.myPos=ll; _rp.map.setView(ll,16); rpRedraw();
+    toast("Pickup set to your location");
+  }, (err)=>toast(geoErrText(err)), {enableHighAccuracy:true, timeout:9000});
+}
+async function rpConfirm(){
+  if (!_rp.stops.length){ toast("Add at least one drop-off"); return; }
+  const a = _rp.A.getLatLng();
+  const stops = _rp.stops.map(s=>{ const ll=s.getLatLng();
+    return { addr: s._addr || `${ll.lat.toFixed(4)}, ${ll.lng.toFixed(4)}`, lat: ll.lat, lng: ll.lng }; });
+  const veh = _rp.vehicle;
+  closeRoutePlanner();
+  setPin(a.lat, a.lng);
+  _ptStops = stops; _ptVehicle = veh;
+  drawStops(); drawVehicles(); drawRoute();
+  const f = document.getElementById("pt-addr");
+  if (f && !f.value.trim()){
+    // best-effort street name for the pickup; user can edit
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${a.lat}&lon=${a.lng}&zoom=18`,{headers:{"Accept":"application/json"}});
+      const j = await r.json();
+      if (j.display_name && !f.value.trim()) f.value = j.display_name;
+    } catch(e){}
+  }
+  toast("Route set \u2014 fare suggestion updated");
+}
+function closeRoutePlanner(){
+  if (_rp.map){ try{ _rp.map.remove(); }catch(e){} }
+  _rp = { map:null, A:null, stops:[], line:null, vehicle:_ptVehicle||"motor" };
+  const h = document.getElementById("modal-host"); if (h) h.innerHTML="";
 }
 
 /* ---- saved addresses sync ---- */
@@ -1867,7 +2603,12 @@ function resetDemo(){
   try{ localStorage.removeItem("berespro.v1"); }catch(e){}
   location.reload();
 }
-function render(){ document.getElementById("app").innerHTML = screenHTML(); persist(); }
+function render(){
+  const root = document.getElementById("app");
+  root.innerHTML = screenHTML();
+  translateDOM(root);          // after the markup exists, before the user sees it
+  persist();
+}
 function go(screen,param,fromPop){
   state.screen=screen; state.param=param; state.sheet=null;
   if(!fromPop){ try{ history.pushState({s:screen,p:param},""); }catch(e){} }
@@ -1883,7 +2624,7 @@ function toast(m){
   state.toast = m;
   const host = document.getElementById("toast-host");
   if (!host) return;                       // pre-boot: nothing to show it in yet
-  host.innerHTML = m ? `<div class="toast">${esc(m)}</div>` : "";
+  host.innerHTML = m ? `<div class="toast">${esc(t(m))}</div>` : "";
   clearTimeout(toastT);
   toastT = setTimeout(() => {
     state.toast = null;
@@ -2000,6 +2741,37 @@ function onCatChange(){
   if (w) w.style.display = isDeliveryCat() ? "block" : "none";
   drawVehicles();
   drawRoute();
+}
+function todayISO(){
+  // Local date, not UTC — toISOString() would show tomorrow after 8am MYT's
+  // mirror hour and yesterday before 8am, which is exactly the backdated-date
+  // bug this replaces.
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+/* City auto-detect: GPS -> nearest CITIES centroid. Honest about the https
+   block; saves to the server so the choice follows the account. */
+function locateCity(){
+  const blocked = geoBlockedReason();
+  if (blocked){ toast(blocked); return; }
+  toast("Detecting your city\u2026");
+  navigator.geolocation.getCurrentPosition((pos)=>{
+    const {latitude:la, longitude:ln} = pos.coords;
+    let best=null, bestKm=1e9;
+    const hav=(a,b,c,d)=>{const R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,
+      h=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
+      return 2*R*Math.asin(Math.sqrt(h));};
+    for (const [name,[clat,clng]] of Object.entries(CITIES)){
+      const km = hav(la,ln,clat,clng);
+      if (km < bestKm){ bestKm = km; best = name; }
+    }
+    if (!best){ toast("Couldn't match a city"); return; }
+    state.user.city = best;
+    state.myPos = [la, ln];
+    persist(); render();
+    toast(`You're in ${best}` + (bestKm>60 ? " (nearest city we cover)" : ""));
+    if (LIVE() && TOK.a) api("/me","PATCH",{ city: best }).catch(()=>{});
+  }, (err)=>toast(geoErrText(err)), {enableHighAccuracy:true, timeout:9000});
 }
 function greeting(){
   const h = new Date().getHours();
@@ -2329,6 +3101,16 @@ async function deleteAddr(aid){
     persist();
   }
   render(); toast("Address removed");
+}
+/* Less typing: when the form opens with no pin set and the person has saved
+   addresses, their Home (or first saved place) applies itself. One toast says
+   so; one tap on another chip changes it. */
+function autoApplyHome(){
+  if (state.pin) return;
+  const list = state.addresses || [];
+  if (!list.length) return;
+  const home = list.find(a=>a.label.toLowerCase()==="home") || list[0];
+  pickSavedAddr(home.id);
 }
 function pickSavedAddr(aid){
   const a = (state.addresses||[]).find(x=>String(x.id)===String(aid));
@@ -2694,13 +3476,26 @@ async function syncKyc(){
 }
 function liveSync(screen){
   chatPollControl(screen);
+  // ---- UI hooks: pure screen preparation, NO network needed. These sat below
+  // the token guard once, which silently disabled the category preselect and
+  // form redraws whenever a session wasn't ready. UI prep never waits on auth.
+  if (screen==="cpost") setTimeout(()=>{ try{
+    // Category tapped on the home grid arrives as the nav param — apply it
+    // BEFORE onCatChange so the delivery section shows for moving/delivery.
+    if (state.param && CATS.some(c=>c.id===state.param)){
+      const el = document.getElementById("pt-cat");
+      if (el) el.value = state.param;
+    }
+    onCatChange(); drawStops(); drawPhotos(); drawVehicles();
+    autoApplyHome();
+  }catch(e){} }, 0);
+  if (screen==="ctask" || screen==="pjob") setTimeout(()=>{ try{ hydrateTimgs(); }catch(e){} }, 0);
+  if (screen==="cprofile" || screen==="pprofile") setTimeout(()=>{ try{ hydrateMyAvatar(); }catch(e){} }, 0);
+  // ---- network hooks below this line only ----
   if (!LIVE() || !TOK.a) return;
   const run = (fn)=>fn().catch(e=>{ if(e.status!==401) toast(e.message); });
   if (screen==="threads") run(liveThreads);
   if (screen==="closeaccount") run(async()=>{ state.live=state.live||{}; state.live.closure = await liveClosureCheck(); render(); });
-  if (screen==="cpost") setTimeout(()=>{ try{ onCatChange(); drawStops(); drawPhotos(); drawVehicles(); }catch(e){} }, 0);
-  if (screen==="ctask" || screen==="pjob") setTimeout(()=>{ try{ hydrateTimgs(); }catch(e){} }, 0);
-  if (screen==="cprofile" || screen==="pprofile") setTimeout(()=>{ try{ hydrateMyAvatar(); }catch(e){} }, 0);
   if (screen==="notifs"||screen==="cprofile"||screen==="pprofile") run(liveThreads);
   if (screen==="chome"||screen==="ctasks") run(syncMyTasks);
   if (screen==="chome") run(syncNotifs);
@@ -3346,6 +4141,7 @@ try{
     delays.forEach(ms => setTimeout(()=>{ if(!state.user) clerkBootstrap(); }, ms));
   }
 }catch(e){}
+watchHostsForTranslation();
 render();
 if("serviceWorker" in navigator && location.protocol.startsWith("http")){
   navigator.serviceWorker.register("sw.js").catch(()=>{});

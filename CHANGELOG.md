@@ -1254,3 +1254,332 @@ memaparkannya (kerja 10 minit).
 seni, dark mode betul-betul tiada, harga bertukar ikut kenderaan, tip
 tiada pratetap). Paparan piksel gagal lagi dalam sesi — rupa akhir pada
 telefon Zaini.
+
+
+---
+
+# v45 — pembetulan kecemasan UI: font, langit ceria & sekular, tarikh live
+
+Semua dari maklum balas marah Zaini selepas deploy v44 — dan aduan
+terbesarnya berpunca dari BUG SAYA SENDIRI.
+
+## 1. PUNCA "Times New Roman": token font TERPADAM oleh saya
+
+Bila dark mode ditambah (v40), blok :root tertutup awal dan token
+--body:'Hanken Grotesk' terperangkap dalam blok dark theme. Bila dark
+theme DIBUANG (v44), token font terbuang sekali. font-family:var(--body)
+jadi kosong -> serif -> Times New Roman pada SEMUA teks. Inilah punca
+"UI nampak beza dan lebih buruk" dan "icon semakin buruk" — ikon tak
+berubah, tapi semua label di sekelilingnya bertukar serif.
+
+Fix: token dipulihkan, dan diff penuh terhadap :root v39 mengesahkan
+TIADA token lain hilang. Assert DOM kini semak font computed body.
+
+## 2. Langit negeri: SEKULAR dan CERIA
+
+TIADA bangunan agama mana-mana kepercayaan — skyline ialah welcome mat,
+bukan kenyataan. Masjid Putrajaya/Shah Alam/JB dan Christ Church Melaka
+DIBUANG. Ganti: menara, jambatan, alam dan budaya sahaja:
+  KL / Klang Valley   Petronas + KL Tower
+  Johor Bahru         Bangunan Sultan Ibrahim (menara jam sekular)
+  Penang              Jambatan Pulau Pinang
+  Ipoh                Bukit batu kapur
+  Melaka              Menara jam Stadthuys + Menara Taming Sari
+  Kuantan             Pantai timur (pantai, ombak, payung)
+  Kota Bharu          Wau bulan (budaya, bukan agama)
+  Alor Setar          Menara Alor Setar
+  Kuching             Bumbung payung DUN Sarawak + sungai
+  Kota Kinabalu       Gunung Kinabalu
+  lain-lain           Bukit mesra (fallback jujur)
+
+Palet dirombak ceria: siang biru terang bermatahari hangat, senja
+keemasan, malam indigo lembut berbintang — BUKAN gelap gothic. Silhouette
+indigo lembut, bukan hampir-hitam. Assert DOM semak luminance silhouette
+dan ketiadaan kata kunci bangunan agama. Shade kelabu ditambah di
+belakang teks header supaya nama terbaca atas langit cerah.
+
+## 3. Senarai bandar dirombak ikut arahan
+
+Klang Valley SATU entri (ganti PJ/Shah Alam/Subang/Kajang/Putrajaya).
+Ditambah: Ipoh, Kuantan, Kota Bharu, Alor Setar, Kuching, Kota Kinabalu.
+Kekal: KL, JB, Penang, Melaka, Seremban. Jumlah 12, termasuk Malaysia
+Timur buat pertama kali. Coverage gate tak terjejas (resolusi ikut pin,
+bukan nama bandar).
+
+## 4. Tarikh "Date needed" kini LIVE
+
+Dulu hardcoded value="2026-07-15" (backdated). Kini default HARI INI
+(tarikh tempatan, bukan UTC — toISOString akan silap sebelum 8 pagi MYT)
+dan min=hari ini: tarikh lepas tak boleh dipilih langsung.
+
+## 5. Butang lokasi semasa pada peta
+
+Butang bulat terapung di penjuru peta modal — tap untuk lompat ke lokasi
+sebenar. JUJUR: GPS masih DISEKAT browser selagi app.berespro.my atas
+HTTP. Butang ini akan beritahu sebab sebenar bila disekat, dan berfungsi
+serta-merta selepas Zaini hidupkan HTTPS di Netlify.
+
+## 6. Phonegate berulang — BUKAN bug, dan ini buktinya
+
+Laluan kod di-trace semula: phonegate hanya muncul bila SERVER kata akaun
+itu tiada nombor. Senario yang hampir pasti berlaku: nombor PALSU YANG
+SAMA dimasukkan pada dua akaun Google berbeza -> akaun kedua kena tolak
+phone_taken ("That number is already registered") -> nombor tak
+tersimpan -> akaun itu tersekat di phonegate setiap kali login. Semak di
+D1 console: SELECT email, phone FROM users; — baris yang phone-nya
+kosong ialah akaun yang tersekat.
+
+## Ikon kategori
+
+TIDAK diubah dalam v45. Rupa "semakin buruk" ialah kesan font serif di
+sekelilingnya. Tawaran kekal: eksport 8 PNG 3D dari sumber mockup ->
+app/icons/cat/ -> saya pasang.
+
+
+---
+
+# v46 — planner laluan gaya Grab, bug tile kategori, auto-locate bandar
+
+App sahaja (tiada perubahan backend — tiada /setup diperlukan).
+532 ujian server kekal hijau; 19 assert DOM baharu.
+
+## 1. BUG: semua tile kategori buka Cleaning
+
+Setiap tile home memanggil go('cpost') TANPA kategori — borang default ke
+pilihan pertama, iaitu Cleaning. Kini tile hantar kategorinya dan borang
+terbuka terus pada kategori yang ditekan (Moving/Delivery terus tunjuk
+seksyen penghantaran).
+
+Bug ketiga tersembunyi ditemui semasa menguji ini: hook penyediaan skrin
+duduk DI BAWAH guard token rangkaian dalam liveSync — penyediaan UI
+senyap tak jalan bila sesi belum sedia. Hook UI dipindah ke atas guard;
+penyediaan skrin tak patut menunggu auth.
+
+## 2. Planner laluan gaya Grab (Moving/Delivery)
+
+Butang "Plan route on map" membuka SATU peta skrin penuh yang menjadi
+keseluruhan order: pin pickup hijau (A), pin drop-off bernombor biru
+(sampai 5), garisan laluan antara semuanya, chip Motor/Car, dan kad
+tambang yang mengira SEMULA secara langsung setiap kali pin diseret,
+stop ditambah/dibuang, atau kenderaan ditukar. Confirm menulis semuanya
+balik ke borang biasa (pin, stops, kenderaan, alamat auto dari reverse
+geocode) — jadi matematik tambang server kekal satu-satunya kebenaran.
+
+JUJUR: garisan itu titik-ke-titik lurus, bukan routing jalan raya —
+routing sebenar perlukan servis arah yang kita tak jalankan. Tambang
+memang berharga atas km garis-lurus yang sama di SERVER, jadi apa yang
+dipaparkan ialah apa yang dicadangkan. Diuji hujung-ke-hujung dengan stub
+Leaflet (CDN disekat dalam sandbox): matematik tambang disahkan tepat
+sama dengan formula, penulisan balik disahkan.
+
+## 3. Auto-locate bandar di home
+
+Butang crosshair sebelah chip bandar: GPS -> bandar TERDEKAT dari
+senarai (haversine) -> tukar bandar + langit + simpan ke akaun. Jika
+lebih 60km dari semua bandar, dia jujur: "(nearest city we cover)".
+Masih perlukan HTTPS untuk GPS — mesej sebab sebenar dipaparkan.
+
+## 4. Geseran alamat dikurangkan
+
+Borang order terbuka dengan alamat Home TERISI SENDIRI (pin + teks) bila
+pengguna ada alamat tersimpan dan belum set pin — sifar taipan untuk
+kes paling biasa. Planner laluan mengurangkan lagi: satu skrin untuk
+pickup + semua drop-off + tambang.
+
+## 5. Tile kategori diberi warna ceria (tapi tegas)
+
+Bulatan ikon pastel + ikon warna tepu per kategori — hidup tanpa jadi
+kebudakan. Ikon garis kekal (kekangan 3D yang sama seperti dijelaskan
+dalam v44).
+
+## 6. Tukar gambar profil "tak dapat"
+
+Rantaian disahkan berfungsi (tap avatar -> kamera -> upload). Kegagalan
+sebenar ialah 503 storage_unbound: BUCKET R2 "berespro-kyc" MASIH BELUM
+DICIPTA. Ini blocker yang sama sejak v42 — satu langkah dua minit itu
+membuka gambar profil, KYC, lesen, dan foto task serentak.
+
+
+---
+
+# v47 — peta kerja LANGSUNG untuk partner
+
+Suite baru test/feed-radius.mjs: 13 ujian. Jumlah 545 lulus, 0 gagal.
+20 assert DOM baharu. App + satu suite ujian; TIADA perubahan schema,
+TIADA /setup diperlukan.
+
+## Backend sudah sedia — tiada route baharu
+
+GET /tasks?lat=&lng=&radius=&cat=&sort= sudah menapis task terbuka dalam
+radius, mengecualikan task partner sendiri, dan memulangkan lat/lng,
+distance_km, bid_count, my_bid. Peta menggunakannya terus. Satu-satunya
+kerja backend ialah MENGUNCI tingkah lakunya dengan ujian.
+
+## Had radius: dikuatkuasakan SERVER, bukan UI
+
+Zaini minta pastikan ada maksimum. Server sudah ada
+Math.min(radius, 50). Kini ada ujian yang membuktikannya: radius=500,
+radius=99999, radius=abc dan radius=-10 semuanya tidak boleh mengembalikan
+kerja 300km. UI menawarkan TEPAT nilai yang server akan hormati
+(5/10/20/50, yang terakhir berlabel "max") — lebih baik dari membenarkan
+seseorang taip 500 dan senyap-senyap terima 50.
+
+## Peta
+
+Skrin penuh dalam #modal-host (di luar #app — render() akan meruntuhkan
+peta di tengah pan). Titik biru = partner, bulatan = radius, penanda
+berlabel HARGA setiap kerja diwarnakan ikut kategori. Kerja yang partner
+SUDAH bida jadi kelabu bertanda — supaya dia tak buang masa membukanya.
+
+Tap penanda -> kad bawah: tajuk, alamat, jarak sebenar, bajet, bilangan
+bid, dan butang "View & place bid" yang membawa terus ke skrin bid.
+Kerja yang sudah dibida tunjuk "You've bid — view job" sebaliknya.
+
+Kawalan: chip radius (5/10/20/50 km), chip kategori, butang lokasi saya,
+butang refresh.
+
+## "Langsung" bermaksud poll 30 saat, bukan socket
+
+Jujur tentang pilihan: feed berubah dalam skala minit, dan poll berharga
+satu permintaan. Socket akan berharga satu sambungan berterusan setiap
+partner tanpa faedah yang boleh dilihat. Timer BERHENTI apabila peta
+ditutup — ada assert khusus untuk timer hantu.
+
+## Pengesahan
+
+13 ujian server (had radius, muatan peta, tapisan) + 20 assert DOM
+menggunakan stub Leaflet (CDN disekat dalam sandbox): bulatan radius
+sepadan dengan state.radius*1000, kerja 90km dikecualikan pada setiap
+tetapan radius, tapisan kategori tepat, kad bid betul untuk kedua-dua
+keadaan, poll berhenti bersih.
+
+
+---
+
+# v48 — Bahasa Melayu
+
+App sahaja. 545 ujian server kekal hijau; 23 assert DOM baharu.
+TIADA perubahan schema, TIADA /setup.
+
+## Pendekatan: terjemah DOM selepas render, bukan bungkus 390 rentetan
+
+Membungkus setiap rentetan dalam t("...") bermakna menyentuh ~390 tempat
+di dalam template literal — diff besar dengan risiko sebenar merosakkan
+interpolasi yang merender app. Sebaliknya: selepas setiap render, jalan
+melalui NOD TEKS sahaja dan padankan TEPAT dengan kamus.
+
+Kenapa ini pilihan yang betul di sini:
+- Rentetan yang tiada dalam kamus kekal Inggeris yang boleh dibaca.
+  Terjemahan tertinggal tidak pernah jadi kosong atau kunci mentah macam
+  "home.title" — kes terburuk ialah bahasa bercampur, bukan skrin rosak.
+- Nod teks sahaja bermakna markup dan ${...} tak boleh dirosakkan.
+  Atribut dihadkan kepada senarai pendek: placeholder dan title.
+- Kamus DITULIS TANGAN dalam bahasa Malaysia, bukan terjemahan mesin.
+  "Bida" untuk bid, "tawaran" untuk offer, dan "Partner" DIKEKALKAN sebab
+  itu istilah Berespro sendiri untuk pekerjanya.
+
+## Perkataan sama, makna berbeza
+
+"Home" ialah tab nav bawah DAN label alamat tersimpan. Kamus rata akan
+senyap-senyap tulis ganti satu dengan yang lain — pertembungan ini
+dikesan oleh semakan kunci pendua sebelum ia sempat jadi bug. Kini
+BM_CONTEXT memilih ikut kedudukan: dalam .nav ia "Utama", di tempat lain
+"Rumah". Ada assert khusus yang menyemak kedua-duanya betul serentak.
+
+## Teks bernombor
+
+Rentetan berinterpolasi tak boleh dipadan tepat, jadi ada corak:
+"12.4 km away" -> "12.4 km dari sini", "3 jobs · 20 km" -> "3 kerja · 20 km",
+"Bids (4)" -> "Bida (4)", baris tambang laluan, dan lain-lain.
+
+## Modal, toast, overlay
+
+Semuanya ditulis secara imperatif di luar #app. Diliputi oleh
+MutationObserver pada #modal-host / #busy-host / #toast-host yang
+memerhati NOD DITAMBAH sahaja — bukan perubahan teks. Itulah yang
+menjadikannya bebas gelung: terjemahan mengubah nod teks sedia ada, yang
+observer ini tidak bertindak balas kepadanya.
+
+## Tukar bahasa
+
+Settings > Language. Pilihan disimpan. Tukar balik ke Inggeris disahkan
+bersih — tiada sisa Melayu tertinggal.
+
+## Nota kejujuran
+
+Liputan kamus 157 kunci + 11 corak, memberi tumpuan kepada skrin yang
+pengguna betul-betul lihat: welcome, home, borang tugas, butiran tugas,
+kerja partner, bida, bayaran, profil, tetapan, KYC, peta, toast utama.
+Skrin lebih dalam (audit, sebahagian admin, beberapa mesej ralat jarang)
+masih Inggeris dan akan kekal boleh dibaca sehingga ditambah. Menambah
+lebih banyak hanya perlu tambah baris dalam BM — tiada markup disentuh.
+
+## Bug ujian saya sendiri (2)
+
+Dua assert gagal pada mulanya dan kedua-duanya salah SAYA, bukan kod:
+skrin cpost memang tiada nav bawah, dan perbandingan innerHTML gagal
+kerana pelayar mengekod semula & sebagai &amp; — butang itu sebenarnya
+sudah diterjemah. Ujian dibetulkan untuk membandingkan teks terender.
+
+
+---
+
+# v49 — Manrope
+
+Zaini memilih Manrope selepas melihat perbandingan langsung (Inter ditolak:
+"macam ada AI slop element"). App sahaja; 545 ujian server kekal hijau,
+10 assert DOM baharu.
+
+## Apa yang bertukar
+
+--body: Hanken Grotesk -> Manrope. Ini meliputi hampir semua teks: badan,
+butang, input, nav, tajuk skrin.
+
+h1 dan nombor kad baki dipindah dari --disp ke --body juga, sebab
+perbandingan yang Zaini luluskan memaparkan tajuk besar dan angka dalam
+Manrope. Berat dinaikkan ke 800 dan letter-spacing dirapatkan sedikit
+supaya tajuk kekal tegas pada Manrope yang lebih geometri.
+
+## Apa yang TIDAK bertukar
+
+Wordmark "berespro" dan ikon app kekal Unbounded. Itu logo — ia tiada
+dalam perbandingan, jadi menukarnya bukan keputusan untuk saya buat bagi
+pihak Zaini. Kalau dia mahu, satu baris sahaja.
+
+## Muatan font: 1.19 MB -> 496 KB
+
+- Manrope dihantar sebagai woff2, bukan ttf: 14KB satu berat berbanding
+  68KB. Lima berat = 70KB (dulu 340KB).
+- Unbounded-700.ttf (423KB) DIBUANG. Selepas h1 berpindah, satu-satunya
+  pengguna Unbounded ialah wordmark dan ikon, kedua-duanya berat 800 —
+  fail 700 itu muatan mati yang dimuat turun setiap pelawat.
+
+## Rujukan tertinggal yang hampir jadi bug
+
+Empat tempat masih merujuk font lama, dan satu daripadanya SERIUS:
+senarai aset service worker. c.addAll() menolak keseluruhan janji jika
+SATU fail 404, jadi memasang SW akan GAGAL sepenuhnya dan app hilang
+keupayaan luar talian — senyap. Dibetulkan bersama tema widget Clerk dan
+palet control panel.
+
+## Lesen
+
+Manrope di bawah SIL Open Font Licence — bebas dibundel dalam produk
+komersial. Font DoorDash asal (TT Norms Pro) berlesen komersial dan tidak
+pernah menjadi pilihan.
+
+## Susulan: control panel masih memuat font lama
+
+Semasa menyatukan v45-v49 untuk upload, semakan menemui satu lagi rujukan
+tertinggal yang saya terlepas: pautan Google Fonts dalam control panel
+masih memuat turun Hanken Grotesk dan Unbounded 700, walaupun CSS-nya
+sudah meminta Manrope. Kesannya senyap — panel jatuh ke font sistem.
+Dibetulkan: pautan kini memuat Manrope.
+
+## Pengesahan
+
+Ujian menghidangkan fail font SEBENAR pada laluan sebenar yang app minta,
+jadi 404 akan ditangkap: tiada. Manrope disahkan benar-benar dimuat
+(bukan fallback senyap), tiada sisa Hanken, wordmark masih Unbounded, dan
+tiada teks terkeluar kotak pada mana-mana skrin — termasuk dalam Bahasa
+Melayu, yang perkataannya lebih panjang.
