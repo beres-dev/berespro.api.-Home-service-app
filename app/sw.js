@@ -1,4 +1,4 @@
-const CACHE = "berespro-v57";
+const CACHE = "berespro-v61";
 const ASSETS = ["./","index.html","manifest.webmanifest",
   "fonts/Unbounded-800.ttf",
   "fonts/Manrope-400.woff2","fonts/Manrope-500.woff2","fonts/Manrope-600.woff2",

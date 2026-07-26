@@ -24,11 +24,29 @@
 // path, so the app still runs end-to-end before the account is switched on.
 //
 // KNOWN GAP: cards support a real authorize-then-capture hold. FPX (online
-// banking) debits immediately and cannot be held the same way. Until that is
-// confirmed with Xendit for this account, CARDS is the only escrow channel.
+// banking) debits immediately and cannot be held the same way — Stripe's own
+// docs state plainly that FPX has no manual-capture support, and the
+// underlying rail (an interbank transfer) has no hold mechanism to speak of,
+// so this is very unlikely to be Xendit-specific. Until confirmed for THIS
+// account, CARDS is the only escrow channel — see SUPPORTED_CHANNELS below.
+//
+// SPLIT PAYMENTS ARE NOT SELF-SERVE FOR MALAYSIA. Xendit's own docs: this
+// feature is automatic for Indonesia and the Philippines, but for Thailand,
+// Malaysia and Vietnam you must contact Xendit to have it activated on your
+// account before a split rule can be created at all. Skipping this step and
+// going live anyway does not fail loudly — a partner with a live xenPlatform
+// sub-account would simply receive the FULL amount with the platform
+// commission never collected, which is a silent revenue leak, not a bounced
+// transaction. requireSplitRule() below exists specifically to turn that
+// silent leak into a loud, immediate refusal instead.
 
 const API = "https://api.xendit.co";
 const API_VERSION = "2024-11-11";
+
+// The only channel this codebase has verified supports authorize-then-capture.
+// Adding a channel here is a decision, not a typo — it should only happen
+// after checking with Xendit that MANUAL capture is honoured for it.
+const SUPPORTED_CHANNELS = ["CARDS"];
 
 // Xendit amounts are in major units (MYR); our ledger is in cents. Convert in one place.
 const toMajor = (cents) => Number((cents / 100).toFixed(2));
@@ -89,6 +107,25 @@ export async function authorizePayment(env, { paymentId, amountCents, feeCents, 
       pspRef: "sim_" + paymentId,
       paymentUrl: (env.PUBLIC_URL || "") + "/dev/simulate-pay?ref=sim_" + paymentId,
     };
+  }
+
+  if (!SUPPORTED_CHANNELS.includes("CARDS")) {
+    // Unreachable today (the list has exactly one entry), but if someone adds
+    // a channel below without adding it here first, fail loudly rather than
+    // silently authorizing on an unverified rail.
+    throw Object.assign(new Error("channel not verified for manual capture"), { code: "unsupported_channel" });
+  }
+  // Money is about to be routed to a specific partner's own Xendit sub-account.
+  // If the platform's split rule is missing, Xendit has nowhere to send OUR
+  // commission — the partner would simply keep all of it. Refuse rather than
+  // let that happen silently. (Partners without a sub-account yet route to
+  // Berespro's own master account instead, which is the opposite problem —
+  // funds parked pending manual payout — and is a separate, tracked gap.)
+  if (partnerMerchantId && !env.XENDIT_SPLIT_RULE_ID) {
+    throw Object.assign(
+      new Error("XENDIT_SPLIT_RULE_ID is not set — Split Payments must be activated by Xendit for Malaysia accounts before this can go live"),
+      { code: "split_rule_missing" }
+    );
   }
 
   const pr = await xendit(env, "POST", "/v3/payment_requests", {

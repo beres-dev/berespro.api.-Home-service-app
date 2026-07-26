@@ -14,6 +14,7 @@ import * as ADDR from "./routes/addresses.js";
 import * as TIMG from "./routes/taskimg.js";
 import * as MED from "./routes/media.js";
 import * as TIP from "./routes/tips.js";
+import * as PR from "./routes/payreturn.js";
 import * as D from "./routes/disputes.js";
 import * as ADM from "./routes/admin.js";
 import * as MSG from "./routes/messages.js";
@@ -76,6 +77,7 @@ const ROUTES = [
   ["PATCH","/admin/coverage", ADM.patchAdminCoverage],
   ["GET",  "/admin/audit", ADM.listAudit],
 
+  ["GET",  "/pay/return", PR.payReturn],
   ["GET",  "/jobs/:taskId/tip", TIP.getTip],
   ["POST", "/jobs/:taskId/tip", TIP.createTip],
   ["POST", "/me/licence", MED.uploadLicence],

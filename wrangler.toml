@@ -48,18 +48,28 @@ REQUIRE_KYC_TO_BID = "1"       # partners must pass KYC before bidding
 #   several admins. Without it the control panel returns 403 for everyone.
 #
 # PUBLIC_URL = "https://app.berespro.my"
-#   Where the APP lives (not this worker). Only used to build the payment
-#   success/failure return URLs handed to Xendit. Harmless while payments are
-#   in simulation mode; set it before switching Xendit live, or customers get
-#   sent to a broken address after paying.
-#   NOTE: /pay/return is currently handled by NEITHER the worker nor the app —
-#   the app polls for payment status instead of relying on the redirect. Wire
-#   that route up (or drop the return URLs) when Xendit goes live.
+#   Where the APP lives (not this worker). Used to build the payment
+#   success/failure return URLs handed to Xendit — /pay/return IS wired up
+#   (v59) as a graceful landing page; it does not depend on PUBLIC_URL to
+#   work, but Xendit needs a real HTTPS URL here to redirect the customer to.
+#   REQUIRES app.berespro.my's HTTPS certificate to be issued first (Netlify
+#   Domain management > HTTPS) — that has been a standing blocker; check it's
+#   done before filling this in, or customers get redirected to a URL their
+#   browser refuses to load after paying real money.
 #
 # XENDIT_SPLIT_RULE_ID = "splitru_xxx"
 #   xenPlatform split rule id. Plaintext, so it belongs here — NOT only in the
 #   dashboard. (XENDIT_SECRET_KEY and XENDIT_CALLBACK_TOKEN are Secrets and are
 #   safe to keep dashboard-only.)
+#   BLOCKS ON XENDIT SUPPORT FIRST: Xendit's Split Payments feature is
+#   automatic for Indonesia/Philippines but NOT self-service for Malaysia,
+#   Thailand or Vietnam — you must contact Xendit to have it activated on
+#   this account before a split rule can even be created. Skipping this and
+#   going live anyway does not fail loudly: a partner with a live xenPlatform
+#   sub-account would simply receive the FULL payment with Berespro's
+#   commission never collected. The code now refuses (error split_rule_missing)
+#   rather than let that happen silently, but the fix is asking Xendit, not
+#   retrying the request.
 #
 # DEV_LOGIN — deliberately ABSENT. Adding it with "1" re-opens /auth/dev-login
 #   and /dev/simulate-pay. Never set it on this production worker.

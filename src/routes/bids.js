@@ -84,10 +84,20 @@ export async function acceptBid(req, env, params) {
 
   const customer = await env.DB.prepare("SELECT name,email,phone FROM users WHERE id=?").bind(user.id).first();
   const paymentId = id("pay");
-  const auth = await authorizePayment(env, {
-    paymentId, amountCents: customerPays, feeCents: fee - discount, netCents: net,
-    customer, partnerMerchantId: merch.psp_merchant_id, taskTitle: task.title,
-  });
+  let auth;
+  try {
+    auth = await authorizePayment(env, {
+      paymentId, amountCents: customerPays, feeCents: fee - discount, netCents: net,
+      customer, partnerMerchantId: merch.psp_merchant_id, taskTitle: task.title,
+    });
+  } catch (e) {
+    // A misconfigured PSP must not look like a generic crash to whoever is
+    // debugging it — least of all "split_rule_missing", which needs a human
+    // to go activate Split Payments with Xendit, not a code fix.
+    if (e.code === "split_rule_missing" || e.code === "unsupported_channel")
+      return err("Payments are not fully configured yet — contact support", 503, e.code);
+    throw e;
+  }
 
   await env.DB.prepare(
     "INSERT INTO payments (id,task_id,bid_id,customer_id,partner_id,amount_cents,fee_cents,net_cents,discount_cents,voucher_code,psp_ref,status,created_at,updated_at) " +

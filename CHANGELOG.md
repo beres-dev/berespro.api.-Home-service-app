@@ -2040,3 +2040,260 @@ Satu assert gagal pada mulanya kerana ujian saya menunggu 600ms untuk carian
 alamat yang baris giliriannya sengaja berjalan pada kadar 1.1 saat demi had
 Nominatim. Ujian yang tidak sabar, bukan kod yang salah — masa menunggu
 dibetulkan.
+
+
+---
+
+# v58 — ikon terpotong, masa jam & minit, pratonton peta tembus modal
+
+App sahaja. 572 ujian server kekal hijau; 20 assert DOM baharu.
+Tiada perubahan schema, tiada /setup.
+
+## 1. Baris pertama ikon terpotong separuh
+
+Skyline diletakkan position:absolute dengan z-index 0, dan itu menjadikannya
+dilukis DI ATAS helaian kandungan yang statik. Ia menutup tajuk "Browse
+categories" dan memotong baris atas ikon separuh jalan.
+
+Kandungan kini dilukis di atas skyline, jadi tiada apa boleh dipotong lagi.
+Padding header dikurangkan 64px ke 30px dan skyline dipendekkan 200px ke
+172px, jadi helaian bermula lebih tinggi seperti diminta - lebih banyak
+skrin digunakan, tanpa apa-apa terpotong. Ada assert yang membandingkan
+kedudukan sebenar ikon terhadap sempadan skyline, bukan sekadar z-index.
+
+## 2. Masa: dari "Petang" kepada jam sebenar
+
+"Afternoon" ialah tetingkap empat jam. Tukang cuci yang merancang harinya
+dan pelanggan yang menunggu di rumah kedua-duanya perlukan masa sebenar.
+
+Kini input type=time dengan langkah 15 minit - telefon memberikan roda
+pemilih jam miliknya sendiri, yang mengalahkan apa-apa kawalan buatan
+sendiri. Disimpan sebagai "2:30pm", format yang pelanggan baca pada kad
+tugas dan partner baca pada kad yang sama.
+
+"Flexible" kekal ada, tetapi sebagai TANDA yang disengajakan, bukan pilihan
+pertama dalam senarai. Sebagai pilihan dropdown ia menjadi jawapan lalai
+untuk kebanyakan orang, dan kedua-dua pihak berakhir tidak tahu bila hendak
+muncul.
+
+## 3. Peta kecil tembus atas peta penuh
+
+Bug sebenar dengan punca yang jelas. Leaflet meletakkan panelnya pada
+z-index 200-700 dan kawalannya pada 800+. Modal kita berada pada 70. Jadi
+peta pratonton yang hidup di dalam BORANG dilukis terus di atas peta skrin
+penuh yang berada di atasnya.
+
+modal-host kini mempunyai konteks susunannya sendiri pada z-index 2000,
+di atas apa-apa yang Leaflet guna. Sebagai langkah kedua, pratonton itu
+DIBUANG sepenuhnya semasa peta penuh dibuka - dua peta Leaflet hidup
+merebut satu skrin ialah pembaziran walaupun susunannya betul - dan
+dibina semula selepas ditutup, menunjukkan di mana pin berakhir.
+
+
+---
+
+# v59 - Xendit: get keselamatan komisen, /pay/return, kejujuran UI
+
+Zaini minta terus ke production dengan kunci sebenar TANPA sahkan dulu
+dengan Xendit sama ada FPX sokong authorize-then-capture. Sebelum tulis
+kod, saya cari dahulu - dan jumpa sesuatu yang lebih penting dari soalan
+FPX itu sendiri.
+
+## Penemuan 1: FPX - kod sudah selamat secara semula jadi
+
+channel_code sudah HARD-CODE "CARDS" sejak awal; FPX tidak pernah
+disambungkan di mana-mana bahagian app. Dokumentasi Stripe (penyedia
+lain, rel FPX yang sama) nyatakan terus terang "Manual capture support:
+No" untuk FPX - ciri rel itu sendiri (pindahan bank terus, tiada
+mekanisme tahan), bukan had khusus satu penyedia. SUPPORTED_CHANNELS
+kini eksplisit dalam kod sebagai satu senarai dengan satu kemasukan,
+supaya menambah kenderaan bayaran baharu ialah KEPUTUSAN yang disemak,
+bukan sekadar tukar satu string.
+
+## Penemuan 2 (LEBIH PENTING): Split Payments bukan self-service untuk Malaysia
+
+Dokumentasi Xendit sendiri: ciri ini automatik untuk Indonesia dan
+Filipina, tetapi untuk Thailand, Malaysia dan Vietnam MESTI hubungi
+Xendit untuk mengaktifkannya pada akaun terlebih dahulu.
+
+Ini bermakna kalau Zaini isi XENDIT_SECRET_KEY sekarang tanpa
+mengaktifkan ciri ini dahulu: partner yang sudah ada sub-akaun xenPlatform
+akan menerima BAYARAN PENUH, dan komisen platform TIDAK PERNAH diambil -
+secara SENYAP, bukan transaksi yang gagal. Ini bukan bug kecil, ini
+seluruh model pendapatan Berespro boleh bocor sehingga penyata bulanan
+tanpa sesiapa perasan.
+
+## Get keselamatan dibina
+
+authorizePayment() kini MENOLAK secara terus (kod ralat
+split_rule_missing) jika kunci sebenar aktif, partner ada sub-akaun
+Xendit, tetapi XENDIT_SPLIT_RULE_ID belum diisi. Ditapis melalui
+/bids/:id/accept sebagai 503 yang jelas ("Payments are not fully
+configured yet"), bukan 500 generik yang kelihatan seperti crash.
+
+Diuji khusus: get menolak keadaan bahaya, TIDAK menolak partner tanpa
+sub-akaun (masalah berbeza, bukan kebocoran senyap), dan terbuka semula
+sebaik split rule diisi. Disahkan hujung-ke-hujung melalui laluan
+/bids/:id/accept sebenar, bukan hanya fungsi psp.js secara berasingan.
+
+## /pay/return kini wujud
+
+Sebelum ini TIDAK dikendalikan oleh worker mahupun app - customer yang
+selesai bayar sebenar akan sampai ke 404. Kini satu halaman pendaratan
+yang bergraya, tanpa auth (Xendit ubah hala PELAYAR customer, bukan
+panggilan app yang disahkan), memaparkan mesej berbeza untuk berjaya dan
+gagal. Ia TIDAK mengemas kini apa-apa - app tetap tinjau status bayaran
+secara berasingan, keputusan sedia ada Zaini bahawa redirect terlalu
+rapuh untuk dipercayai membawa keadaan.
+
+## Kejujuran UI
+
+Skrin "Payment Methods" mendakwa "Cards, banking & e-wallets" sedangkan
+cuma kad yang berfungsi. Tajuk kecil diperbetulkan kepada "Cards" sahaja.
+
+## APA YANG ZAINI MASIH PERLU BUAT (bukan kod, tindakan sebenar)
+
+1. HUBUNGI XENDIT untuk aktifkan ciri Split Payments bagi akaun Malaysia
+   - tanpa ini, XENDIT_SPLIT_RULE_ID tidak boleh dicipta langsung.
+2. Selepas diaktifkan, cipta split rule (peratusan komisen platform) dan
+   masukkan ID ke XENDIT_SPLIT_RULE_ID dalam wrangler.toml.
+3. Tanya Xendit sama ada FPX/e-wallet menyokong authorize-then-capture
+   untuk akaun ini - tidak menghalang go-live kad sekarang, tetapi
+   diperlukan sebelum kaedah bayaran lain ditambah.
+4. Set XENDIT_SECRET_KEY dan XENDIT_CALLBACK_TOKEN sebagai Secret dalam
+   Cloudflare (bukan wrangler.toml).
+5. PUBLIC_URL dalam wrangler.toml hanya boleh diisi selepas HTTPS
+   app.berespro.my disediakan - masih blocker berdiri yang sama.
+6. Daftar webhook URL (/webhooks/psp) dalam papan pemuka Xendit.
+
+## Pengesahan
+
+12 ujian baharu (4 get keselamatan, 8 /pay/return) + pengesahan hujung-
+ke-hujung melalui laluan bid-accept sebenar. Ujian PSP sedia ada yang
+sudah lulus (partnerMerchantId=null, tiada split rule) disahkan masih
+lulus - get tidak menyentuh laluan yang memang selamat. 3 larian
+berturut-turut bersih.
+
+
+---
+
+# v60 - bug logo Berespro sebenar ditemui dan dibaiki
+
+App sahaja. Semua ujian server kekal hijau. Tiada perubahan schema, tiada /setup.
+
+## Bug production sebenar, tersembunyi selama ini
+
+Zaini kata mockup skrin selamat datang yang saya bina "buruk" dengan "crop
+hitam yang tak kemas" pada logo. Saya siasat secara pengiraan piksel, bukan
+tekaan mata.
+
+Logo <img> dalam app diberi border-radius:19px tanpa overflow:hidden.
+Ujian Chromium sebenar (logo diletak atas latar merah terang, piksel
+sudut disampel terus) membuktikan: sudut logo pada koordinat 1px dari
+tepi (jauh dalam lengkung 19px yang patut dipotong) masih RGB(11,21,38)
+PEJAL - iaitu border-radius LANGSUNG TIDAK memotong kandungan imej.
+Ini gotcha CSS yang dikenali: border-radius pada <img> tanpa
+overflow:hidden tidak memotong piksel raster.
+
+PNG asal (144x144, mod RGB, TIADA alpha channel) memang segiempat penuh
+dengan latar navy pejal mengelilingi ikon bulat. Ia kelihatan sempurna
+dalam production KERANA latar app sentiasa navy #0B1526 yang tepat sama -
+kotak segiempat tersembunyi dengan sempurna. Bug ini akan muncul pada
+apa-apa latar lain (mod terang, bahan pemasaran, senarai app store) - dan
+muncul dalam mockup saya kerana saya letak atas latar berbeza tanpa
+menyemak dahulu.
+
+## Pembetulan
+
+PNG asal ditopeng dengan bucu bulat SEBENAR (radius 39px atas 144px,
+nisbah sama seperti border-radius:19px/70px asal) menggunakan alpha
+channel tulen, bukan bergantung pada CSS untuk memotong. Disahkan dua
+kali: pertama atas latar merah ujian (semua sudut alpha=0), kemudian
+dalam konteks halaman sebenar (masih alpha=0). Logo baharu menggantikan
+yang lama dalam app/index.html - satu-satunya kemunculan, kini bersih.
+
+## Mockup dibina semula
+
+Skyline langit terang yang dipakai sebagai latar hero dibuang sepenuhnya
+- artwork itu direka sebagai jalur pendek untuk header home screen, dan
+diregangkan menjadi hero penuh ia nampak kosong/janggal, bukan premium
+seperti yang dijangka. Latar navy production yang sedia ada (dengan
+gradient radial lembut, bukan langit) dikekalkan. Dua variant ditawarkan:
+senyap tanpa chip, atau dengan baris kategori guna ikon 3D sebenar dalam
+kad gelap sepadan tema.
+
+Disahkan 6 semakan termasuk ujian ALPHA SEBENAR logo dalam konteks
+halaman (bukan hanya dalam ujian berasingan) - membuktikan pembetulan
+benar-benar berkesan, bukan sekadar lulus dalam makmal berasingan.
+
+
+---
+
+# v61 - pembetulan v60 didapati TAK LENGKAP, dibetulkan sepenuhnya
+
+App sahaja. Semua ujian server kekal hijau. Tiada perubahan schema, tiada /setup.
+
+## Zaini hantar screenshot sebenar dari telefon - kotak hitam masih ada
+
+Pembetulan v60 (topeng bucu bulat atas keseluruhan kanvas 144x144) cuma
+membuang SUDUT kanvas. Ia tidak membuang JALURAN NAVY antara sudut bulat
+itu dengan grafik ikon sebenar - ikon warna (gradient teal->biru + glyph
+putih) cuma menduduki x=28-130, y=16-120 dalam kanvas 144x144, meninggalkan
+margin 13-28px navy di sekeliling yang masih legap sepenuhnya.
+
+Disahkan dengan mengukur sempadan grafik berwarna berbanding kanvas penuh
+- bukan tekaan kali ini, ukuran terus.
+
+## Pembetulan sebenar: buang latar, bukan bulatkan bucu
+
+Digunakan teknik SAMA yang terbukti berkesan untuk lapan ikon kategori 3D
+(v54): flood-fill dari TEPI kanvas sahaja, membuang semua piksel navy yang
+BERSAMBUNG ke tepi, dengan feather bersempadan supaya warna dalaman ikon
+(gradient biru gelap) tidak turut terkorban. Hasil: 50.3% kanvas dibuang
+(berbanding pembetulan v60 yang cuma bulatkan sudut, tanpa membuang jaluran
+tengah).
+
+## Pengesahan kali ini lebih ketat
+
+Bukan sekadar semak 4 sudut (yang menipu - lulus dalam v60 walaupun bug
+sebenarnya masih ada). Kini semak SETIAP piksel sepanjang keempat-empat
+sisi perimeter kanvas - 0 daripada 576 piksel perimeter yang diuji masih
+legap. Disahkan khusus dalam palet Daylight (latar terang yang sama macam
+screenshot Zaini) kerana itulah konteks yang mendedahkan bug ini.
+
+
+---
+
+# v62 - animasi masuk untuk skrin selamat datang
+
+App sahaja. Semua ujian server kekal hijau. Tiada perubahan schema, tiada /setup.
+
+## Satu pergerakan yang diatur, bukan hiasan bertaburan
+
+Ikut panduan reka bentuk sendiri: gerakan berlebihan salah satu tanda paling
+jelas "buatan AI". Jadi ini SATU jujukan masuk yang teratur, bukan animasi
+berterusan/gelung yang boleh terasa bising.
+
+Turutan (~750ms keseluruhan, pantas sengaja supaya tidak terasa melengahkan
+log masuk):
+  1. Logo - timbul dengan skala (pop), paling awal
+  2. Wordmark "berespro" - naik + pudar masuk
+  3. Eyebrow + tagline - sama serentak
+  4. Kad kategori - naik + pudar
+  5. Butang "Continue with Google" - naik terakhir, menarik perhatian ke
+     tindakan utama
+  6. Pautan bawah - pudar paling akhir
+
+## Lantai kualiti: prefers-reduced-motion dihormati
+
+Sesiapa yang set OS mereka untuk kurangkan gerakan terus nampak semua
+elemen serta-merta, tiada animasi langsung - bukan pilihan, ini keperluan
+asas kebolehcapaian.
+
+## Pengesahan
+
+8 assert: keadaan awal (elemen belum kelihatan), keadaan akhir selepas
+900ms (SEMUA mendarat pada opacity 1 - bug animasi biasa ialah terlupa
+forwards fill-mode dan elemen kekal lutsinar selepas keyframe tamat),
+turutan (logo kelihatan sebelum butang pada 200ms), dan
+prefers-reduced-motion (semua terus kelihatan tanpa tunggu).
