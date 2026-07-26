@@ -724,6 +724,7 @@ const IC = {
   roller:d=>I('<rect x="4.4" y="4.4" width="13.2" height="4.8" rx="1.7"/><path d="M17.6 6.8h2.2v4.5H12v2.5"/><rect x="10.7" y="13.8" width="2.6" height="6.2" rx="1.15"/>',d),
   hex:d=>I('<path d="M12 3.6 19.3 7.8v8.4L12 20.4 4.7 16.2V7.8L12 3.6Z"/><circle cx="12" cy="12" r="2.9"/>',d),
   map:d=>I('<path d="M3.6 6.6 9 4.4v13L3.6 19.6Z"/><path d="M9 4.4 15 6.6v13L9 17.4Z"/><path d="M15 6.6 20.4 4.4v13L15 19.6Z"/>',d),
+  expand:d=>I('<path d="M9.4 4.6H4.6v4.8M14.6 4.6h4.8v4.8M19.4 14.6v4.8h-4.8M4.6 14.6v4.8h4.8"/>',d),
   close:d=>I('<path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/>',d),
   target:d=>I('<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.4"/><path d="M12 2.6v3.2M12 18.2v3.2M2.6 12h3.2M18.2 12h3.2"/>',d),
   motor:d=>I('<circle cx="5.5" cy="16.4" r="3.1"/><circle cx="18.5" cy="16.4" r="3.1"/><path d="M8.6 16.4h4.1l3.1-5.2h-4.4"/><path d="M12.7 11.2 10.9 8h-2"/><path d="M15.4 8h3.3l1.1 2.9"/><path d="M18.5 13.3 17 10"/>',d),
@@ -2629,12 +2630,19 @@ function rbStraightKm(){
   return km;
 }
 /* Ask the road router. Only fires when the ROUTE changes, never while panning. */
+/* Refresh whichever view is actually showing. The full-screen map and the list
+   are alternate views of the SAME _rb state, so measuring must never yank one
+   out from under the other. */
+function rbRefreshView(){
+  if (_rm.map){ rmDraw(false); if (_rm.sel) rmCard(_rm.sel, "selected"); return; }
+  rbRender();
+}
 async function rbMeasure(){
   const pts = [_rb.pickup, ..._rb.stops].filter(Boolean);
-  if (pts.length < 2){ _rb.km = 0; _rb.method = null; rbRender(); return; }
+  if (pts.length < 2){ _rb.km = 0; _rb.method = null; rbRefreshView(); return; }
   _rb.km = Math.round(rbStraightKm() * 1.35 * 10) / 10;   // honest interim figure
   _rb.method = "estimated";
-  rbRender();
+  rbRefreshView();
   try {
     const coords = pts.map(p=>`${p.lng},${p.lat}`).join(";");
     const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=false&alternatives=false`,
@@ -2647,7 +2655,7 @@ async function rbMeasure(){
         _rb.km = Math.round(km*10)/10;
         _rb.method = "road";
         _rb.minutes = isFinite(route.duration) ? Math.round(route.duration/60) : null;
-        rbRender();
+        rbRefreshView();
       }
     }
   } catch(e){ /* keep the estimate; the server will measure again on submit */ }
@@ -2705,9 +2713,11 @@ function rbRender(){
     <div style="flex:1;overflow-y:auto;background:var(--content);padding:0 0 18px">
       <div id="rb-map-wrap" style="position:relative;height:${_rb.stops.length?200:0}px;overflow:hidden;transition:height .2s;background:var(--sur2)">
         <div id="rb-map" style="position:absolute;inset:0"></div>
-        <div style="position:absolute;left:12px;bottom:12px;z-index:500;background:rgba(255,255,255,.94);border-radius:10px;padding:6px 11px;font-size:11.5px;font-weight:800;color:var(--tx);box-shadow:0 3px 12px rgba(16,31,58,.2)">
-          Route overview \u00b7 tap a stop below to change it
+        <div onclick="openRouteMap()" style="position:absolute;inset:0;z-index:450;cursor:pointer"></div>
+        <div onclick="openRouteMap()" style="position:absolute;left:12px;bottom:12px;z-index:500;background:rgba(255,255,255,.95);border-radius:10px;padding:7px 12px;font-size:11.5px;font-weight:800;color:var(--tx);box-shadow:0 3px 12px rgba(16,31,58,.2);cursor:pointer">
+          Tap to open full map
         </div>
+        <div onclick="openRouteMap()" style="position:absolute;right:12px;bottom:12px;z-index:500;width:38px;height:38px;border-radius:11px;background:rgba(255,255,255,.95);display:flex;align-items:center;justify-content:center;color:var(--blu);box-shadow:0 3px 12px rgba(16,31,58,.2);cursor:pointer">${IC.expand(18)}</div>
       </div>
       <div style="padding:14px 15px 0">
       <div class="sub" style="font-size:12.5px;margin-bottom:12px;line-height:1.5">
@@ -2861,6 +2871,250 @@ function closeRoutePlanner(){
   closePointPicker(true);
   const h = document.getElementById("modal-host"); if (h) h.innerHTML = "";
   _rb = { stops:[], vehicle:_ptVehicle||"motor", pickup:null };
+}
+
+/* ---- Full-screen route map: drag pins, add pins ----
+   v46 had draggable pins and Zaini found it confusing. The confusion came from
+   three specific things, not from dragging itself:
+     - a drop-off appeared at a random offset nobody asked for
+     - every pin was draggable at once with no feedback
+     - nothing told you WHICH pin you were holding
+   All three are addressed here: nothing is ever added without an explicit tap,
+   a pin announces itself the moment you touch it, and the card at the bottom
+   always names the stop you last moved or selected. The list behind this
+   screen stays the source of truth, so there is somewhere to check yourself. */
+let _rm = { map:null, markers:[], line:null, sel:null };
+
+function rmIcon(L, label, color, selected){
+  const size = selected ? 40 : 32;
+  return L.divIcon({ className:"", iconSize:[size,size], iconAnchor:[size/2,size/2], html:
+    `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};color:#fff;
+      font-weight:800;font-size:${selected?15:13}px;display:flex;align-items:center;justify-content:center;
+      border:3px solid #fff;box-shadow:0 ${selected?8:4}px ${selected?20:12}px rgba(10,20,40,${selected?.45:.32});
+      transition:all .12s">${label}</div>` });
+}
+async function openRouteMap(){
+  const host = document.getElementById("modal-host");
+  if (!host) return;
+  host.innerHTML = `
+  <div class="mmodal">
+    <div class="mmtop">
+      <div class="mmback" onclick="closeRouteMap()">${IC.chevL(20)}</div>
+      <b style="flex:1">Route map</b>
+      <div class="mmback" onclick="closeRouteMap()" style="width:auto;padding:0 14px;background:var(--blu)">Done</div>
+    </div>
+    <div style="flex:1;position:relative;min-height:240px">
+      <div id="rm-map" style="position:absolute;inset:0"></div>
+      <div class="pk-search">
+        <div class="pk-sbox">
+          <span style="color:var(--blu)">${IC.search(19)}</span>
+          <input id="rm-q" placeholder="Cari tempat untuk tambah destinasi"
+            autocomplete="off" spellcheck="false"
+            oninput="rmSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();rmSearchNow();}">
+          <span id="rm-clear" onclick="rmClearSearch()" style="display:none;cursor:pointer;color:var(--dim);padding:2px">${IC.close(16)}</span>
+        </div>
+        <div id="rm-results" class="pk-results" style="display:none"></div>
+      </div>
+      <button onclick="rmAddHere()" title="Add a stop here"
+        style="position:absolute;right:14px;bottom:${_rb.stops.length<5?"84":"14"}px;z-index:1000;height:44px;padding:0 16px;border-radius:22px;border:0;background:var(--blu);color:#fff;font-family:inherit;font-weight:800;font-size:13.5px;display:${_rb.stops.length<5?"flex":"none"};align-items:center;gap:7px;box-shadow:0 6px 18px rgba(0,81,233,.4);cursor:pointer">
+        ${IC.plus(16)} Add stop here</button>
+      <button onclick="rmLocate()" title="Use my location"
+        style="position:absolute;right:14px;bottom:14px;z-index:1000;width:44px;height:44px;border-radius:50%;border:0;background:#fff;box-shadow:0 6px 18px rgba(16,31,58,.28);display:flex;align-items:center;justify-content:center;color:var(--blu);cursor:pointer">${IC.target(19)}</button>
+    </div>
+    <div id="rm-card" class="mmsheet">
+      <div class="sub" style="font-size:12.5px;line-height:1.5">
+        Drag any pin to move that stop. Search above, or use <b>Add stop here</b> to drop one at the centre of the map.
+      </div>
+    </div>
+  </div>`;
+  let L;
+  try { L = await ensureLeaflet(); }
+  catch(e){ toast("Map unavailable \u2014 use the list instead."); closeRouteMap(); return; }
+  _rm.map = L.map(document.getElementById("rm-map"), { attributionControl:false, zoomControl:false });
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(_rm.map);
+  rmDraw(true);
+}
+function rmPoints(){ return [_rb.pickup, ..._rb.stops].filter(p=>p && p.lat!=null); }
+function rmDraw(fit){
+  if (!_rm.map) return;
+  const L = window.L;
+  _rm.markers.forEach(m=>{ try{ _rm.map.removeLayer(m); }catch(e){} });
+  _rm.markers = [];
+  if (_rm.line){ try{ _rm.map.removeLayer(_rm.line); }catch(e){} _rm.line = null; }
+
+  const items = [{ key:"pickup", i:0, item:_rb.pickup, label:"A", color:"#0EB57D" }]
+    .concat(_rb.stops.map((s,i)=>({ key:"stop", i, item:s, label:String(i+1), color:"#0051E9" })));
+  for (const it of items){
+    if (!it.item || it.item.lat == null) continue;
+    const id = it.key === "pickup" ? "pickup" : "stop"+it.i;
+    const m = L.marker([it.item.lat, it.item.lng], {
+      draggable:true, icon: rmIcon(L, it.label, it.color, _rm.sel === id)
+    }).addTo(_rm.map);
+    m.on("dragstart", ()=>{ _rm.sel = id; rmCard(id, "moving"); });
+    m.on("drag", ()=>{ rmLine(); });
+    m.on("dragend", ()=>{
+      const ll = m.getLatLng();
+      const target = it.key === "pickup" ? _rb.pickup : _rb.stops[it.i];
+      if (!target) return;
+      target.lat = ll.lat; target.lng = ll.lng; target.manual = false; target.addr = "";
+      rmCard(id, "moved");
+      lookupAddr(ll.lat, ll.lng, (addr)=>{
+        if (!addr) return;
+        const t2 = it.key === "pickup" ? _rb.pickup : _rb.stops[it.i];
+        if (!t2 || t2.manual) return;
+        t2.addr = addr;
+        if (_rm.sel === id) rmCard(id, "moved");
+      });
+      rbMeasure();          // refreshes this map in place via rbRefreshView()
+    });
+    m.on("click", ()=>{ _rm.sel = id; rmCard(id, "selected"); rmDraw(false); });
+    _rm.markers.push(m);
+  }
+  rmLine();
+  if (fit){
+    const pts = rmPoints().map(s=>[s.lat,s.lng]);
+    if (pts.length >= 2){ try{ _rm.map.fitBounds(L.latLngBounds(pts).pad(0.3)); }catch(e){} }
+    else if (pts.length === 1) _rm.map.setView(pts[0], 15);
+    else _rm.map.setView(state.myPos || CITIES[state.user.city] || [3.139,101.687], 13);
+    setTimeout(()=>{ try{ _rm.map.invalidateSize(); }catch(e){} }, 150);
+  }
+}
+function rmLine(){
+  if (!_rm.map) return;
+  const L = window.L;
+  const pts = _rm.markers.map(m=>m.getLatLng());
+  if (_rm.line){ try{ _rm.line.setLatLngs(pts); return; }catch(e){} }
+  if (pts.length >= 2)
+    _rm.line = L.polyline(pts, { color:"#0051E9", weight:4, opacity:.85, dashArray:"1 8", lineCap:"round", interactive:false }).addTo(_rm.map);
+}
+/* The card ALWAYS names the stop in question — that is the piece v46 was
+   missing, and the reason dragging felt like guesswork. */
+function rmCard(id, mode){
+  const card = document.getElementById("rm-card");
+  if (!card) return;
+  const isPickup = id === "pickup";
+  const idx = isPickup ? -1 : parseInt(id.slice(4),10);
+  const item = isPickup ? _rb.pickup : _rb.stops[idx];
+  if (!item){ card.innerHTML = ""; return; }
+  const title = isPickup ? "Pickup" : "Drop-off " + (idx+1);
+  const colour = isPickup ? "#0EB57D" : "#0051E9";
+  const label = isPickup ? "A" : String(idx+1);
+  const addr = item.addr || `${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}`;
+  const note = mode === "moving" ? "Moving\u2026" : mode === "moved" ? "Moved \u2014 address updating" : "";
+  const { km, fare } = rbFare();
+  card.innerHTML = `
+    <div class="rowbet" style="margin-bottom:10px">
+      <div class="rowg" style="gap:10px;min-width:0">
+        <span style="width:28px;height:28px;border-radius:50%;background:${colour};color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${label}</span>
+        <div style="min-width:0">
+          <div class="rb-lbl">${title}${note?` \u00b7 ${note}`:""}</div>
+          <div class="rb-addr">${esc(addr)}</div>
+        </div>
+      </div>
+      ${isPickup ? "" : `<span onclick="rmRemove(${idx})" style="color:var(--red);font-size:12.5px;font-weight:800;padding:6px;cursor:pointer;flex-shrink:0">Remove</span>`}
+    </div>
+    ${km ? `<div class="rowbet" style="border-top:1px solid var(--line);padding-top:10px">
+      <span class="sub" style="font-size:12.5px">${km} km \u00b7 ${_rb.stops.length} drop-off${_rb.stops.length>1?"s":""}</span>
+      <b style="font-size:16px;color:var(--blu)">RM ${fare}</b></div>` : ""}`;
+}
+function rmAddHere(){
+  if (_rb.stops.length >= 5){ toast("Maximum 5 drop-offs"); return; }
+  if (!_rm.map) return;
+  const c = _rm.map.getCenter();
+  _rb.stops.push({ lat:c.lat, lng:c.lng, addr:"", manual:false });
+  const i = _rb.stops.length - 1;
+  _rm.sel = "stop"+i;
+  lookupAddr(c.lat, c.lng, (addr)=>{
+    if (!addr) return;
+    const t = _rb.stops[i];
+    if (!t || t.manual) return;
+    t.addr = addr;
+    if (_rm.sel === "stop"+i) rmCard("stop"+i, "selected");
+  });
+  rbMeasure();
+  rmDraw(false);
+  rmCard("stop"+i, "selected");
+  toast(`Drop-off ${i+1} added \u2014 drag the pin to fine-tune`);
+}
+function rmRemove(i){
+  _rb.stops.splice(i,1);
+  _rm.sel = null;
+  rbMeasure();
+  rmDraw(false);
+  const card = document.getElementById("rm-card");
+  if (card) card.innerHTML = `<div class="sub" style="font-size:12.5px;line-height:1.5">Drop-off removed. Drag any pin to move a stop, or use <b>Add stop here</b>.</div>`;
+}
+function rmLocate(){
+  const blocked = geoBlockedReason();
+  if (blocked){ toast(blocked); return; }
+  toast("Finding your location\u2026");
+  navigator.geolocation.getCurrentPosition((pos)=>{
+    state.myPos = [pos.coords.latitude, pos.coords.longitude];
+    if (_rm.map) _rm.map.setView(state.myPos, 16);
+  }, (err)=>toast(geoErrText(err)), {enableHighAccuracy:true, timeout:9000});
+}
+let _rmQT = null;
+function rmSearchInput(){
+  const q = (document.getElementById("rm-q")||{value:""}).value.trim();
+  const clear = document.getElementById("rm-clear");
+  if (clear) clear.style.display = q ? "block" : "none";
+  clearTimeout(_rmQT);
+  if (q.length < 3){ rmShowResults(null,""); return; }
+  _rmQT = setTimeout(()=>rmSearchNow(), 450);
+}
+function rmSearchNow(){
+  const q = (document.getElementById("rm-q")||{value:""}).value.trim();
+  if (q.length < 3) return;
+  rmShowResults("loading");
+  const c = _rm.map ? _rm.map.getCenter() : null;
+  searchPlaces(q, c ? [c.lat,c.lng] : null, (res)=>{
+    const now = (document.getElementById("rm-q")||{value:""}).value.trim();
+    if (now !== q) return;
+    rmShowResults(res, q);
+  });
+}
+function rmShowResults(res, q){
+  const box = document.getElementById("rm-results");
+  if (!box) return;
+  if (res === null && q === ""){ box.style.display="none"; box.innerHTML=""; return; }
+  box.style.display = "block";
+  if (res === "loading"){ box.innerHTML = `<div class="pk-msg">Searching\u2026</div>`; return; }
+  if (res === null){ box.innerHTML = `<div class="pk-msg">Couldn't search right now. Move the map and use Add stop here.</div>`; return; }
+  if (!res.length){ box.innerHTML = `<div class="pk-msg">No match for \u201c${esc(q)}\u201d.</div>`; return; }
+  _rm.results = res;
+  box.innerHTML = res.map((r,i)=>`
+    <div class="pk-res" onclick="rmChoose(${i})">
+      <span class="pin">${IC.pin(15)}</span>
+      <div style="min-width:0"><b>${esc(r.name)}</b><span>${esc(r.detail)}</span></div>
+    </div>`).join("");
+}
+function rmChoose(i){
+  const r = (_rm.results||[])[i];
+  if (!r || !_rm.map) return;
+  _rm.map.setView([r.lat, r.lng], 17);
+  rmClearSearch();
+  if (_rb.stops.length >= 5){ toast("Maximum 5 drop-offs \u2014 map moved there"); return; }
+  _rb.stops.push({ lat:r.lat, lng:r.lng, addr:r.name, manual:true });
+  const idx = _rb.stops.length - 1;
+  _rm.sel = "stop"+idx;
+  rbMeasure();
+  rmDraw(false);
+  rmCard("stop"+idx, "selected");
+  toast(`${r.name} added as drop-off ${idx+1}`);
+}
+function rmClearSearch(){
+  const q = document.getElementById("rm-q");
+  if (q){ q.value = ""; q.blur(); }
+  const clear = document.getElementById("rm-clear");
+  if (clear) clear.style.display = "none";
+  rmShowResults(null,"");
+}
+function closeRouteMap(){
+  clearTimeout(_rmQT);
+  if (_rm.map){ try{ _rm.map.remove(); }catch(e){} }
+  _rm = { map:null, markers:[], line:null, sel:null };
+  rbRender();          // back to the list, with everything the map changed
+  rbLookupAll();
 }
 
 /* ---- Point picker: ONE location, fixed centre pin ----

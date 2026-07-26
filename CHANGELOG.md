@@ -1948,3 +1948,51 @@ Kawalan zoom dimatikan (telefon cubit untuk zum), dan bar carian dibesarkan
 dengan sempadan biru, ikon lebih besar, teks Melayu, serta baris contoh di
 bawahnya: "Cth. KLCC, Mid Valley, Hospital Sultanah Aminah". Contoh itu
 hilang sebaik anda mula menaip.
+
+
+---
+
+# v56 — peta laluan skrin penuh: seret pin, tambah pin
+
+App sahaja. 572 ujian server kekal hijau; 24 assert DOM baharu.
+Tiada perubahan schema, tiada /setup.
+
+## Peta ikhtisar kini boleh dibuka penuh
+
+Tap peta di atas senarai (atau butang kembang) -> peta skrin penuh yang
+BOLEH DIUBAH, bukan sekadar dilihat.
+
+## Pin boleh diseret — dan kali ini ia tidak mengelirukan
+
+v46 ada pin boleh seret dan Zaini kata ia mengelirukan. Kekeliruan itu
+datang dari TIGA perkara khusus, bukan dari menyeret itu sendiri:
+  - destinasi muncul pada kedudukan rawak yang tiada siapa minta
+  - semua pin boleh diseret serentak tanpa maklum balas
+  - tiada apa memberitahu pin MANA yang sedang dipegang
+
+Ketiga-tiganya ditangani. Tiada apa ditambah tanpa ketukan yang jelas.
+Sebaik sahaja pin disentuh, kad di bawah MENAMAKAN stop itu ("Drop-off 2")
+dan menunjukkan alamatnya. Pin terpilih membesar. Senarai di belakang skrin
+ini kekal sebagai rujukan, jadi sentiasa ada tempat untuk menyemak diri.
+
+Selepas dilepaskan: alamat dicari semula, jarak diukur semula, tambang
+dikemas kini — semuanya di tempat, tanpa meninggalkan peta.
+
+## Tambah destinasi terus di peta
+
+Dua cara:
+  - "Add stop here" menjatuhkan pin di TENGAH peta (jadi anda gerakkan peta
+    ke tempatnya dahulu, sama seperti pemilih satu-titik)
+  - Cari nama tempat -> pilih -> ia terus menjadi destinasi seterusnya
+
+Nama tempat yang dipilih dari carian ditandakan manual, jadi carian alamat
+terbalik tidak akan menimpanya kemudian — pelajaran yang sama seperti v52.
+
+## Bug yang assert DOM tangkap
+
+Menyeret pin memanggil rbMeasure(), dan rbMeasure() merender semula SENARAI.
+Dengan peta skrin penuh terbuka, itu bermakna peta digantikan dengan senarai
+di tengah-tengah seretan — anda akan tercampak keluar setiap kali menggerakkan
+pin. Kini rbRefreshView() menyegarkan pandangan yang SEDANG dipapar; peta dan
+senarai ialah dua pandangan atas keadaan yang sama, jadi satu tidak boleh
+menarik keluar yang satu lagi.
