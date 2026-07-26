@@ -286,8 +286,10 @@ textarea.f{min-height:88px;resize:vertical}
 
 /* ---- place search over the map ---- */
 .pk-search{position:absolute;left:12px;right:12px;top:12px;z-index:1000}
-.pk-sbox{display:flex;align-items:center;gap:9px;background:#fff;border-radius:14px;padding:11px 13px;
-  box-shadow:0 6px 20px rgba(16,31,58,.22);color:var(--dim)}
+.pk-sbox{display:flex;align-items:center;gap:10px;background:#fff;border-radius:15px;padding:14px 14px;
+  box-shadow:0 8px 24px rgba(16,31,58,.26);border:1.5px solid rgba(0,81,233,.18);color:var(--dim)}
+.pk-hint{margin-top:7px;font-size:11px;font-weight:700;color:#fff;text-align:center;
+  text-shadow:0 1px 6px rgba(10,20,40,.75);pointer-events:none}
 .pk-sbox input{flex:1;border:0;outline:0;background:none;font-family:inherit;font-size:14.5px;font-weight:600;color:var(--tx);min-width:0}
 .pk-sbox input::placeholder{color:var(--dim);font-weight:500}
 .pk-results{background:#fff;border-radius:14px;margin-top:8px;box-shadow:0 8px 26px rgba(16,31,58,.24);
@@ -917,6 +919,36 @@ ${nav('chome')}`;
 };
 
 /* ---------- CUSTOMER: MY TASKS ---------- */
+/* One place that decides what the bottom of a task card says. Every branch
+   checks the accepted bid EXISTS before reading it — a cancelled task has no
+   accepted bid, and reaching into it threw and blanked the whole screen. */
+function acceptedPartner(t){
+  if (t.accepted == null) return null;
+  const bid = t.bids && t.bids[t.accepted];
+  if (!bid) return null;
+  return PARTNERS[bid.p] || null;
+}
+function taskRowFoot(t){
+  const p = acceptedPartner(t);
+  if (t.status === "open")
+    return `<span style="font-size:13.5px;font-weight:700;color:var(--blu)">${t.bids.length} ${t.bids.length===1?"bid":"bids"} \u00b7 review now</span>`;
+  if (t.status === "cancelled")
+    return `<div class="rowg" style="gap:8px">
+      <span class="sub" style="font-size:13px">Cancelled${p?` \u00b7 ${esc(p.name)}`:""}</span>
+      <span onclick="event.stopPropagation();reorderTask('${t.id}')"
+        style="font-size:13px;font-weight:800;color:var(--blu);padding:4px 6px;cursor:pointer">Post again</span>
+    </div>`;
+  if (!p)
+    return `<span class="sub" style="font-size:13px">${esc(statusLabel(t.status))}</span>`;
+  if (t.status === "inprogress")
+    return `<div class="rowg" style="gap:8px">${avat(p.name,"a40")}<div><b style="font-size:13.5px">${esc(p.name)}</b><div style="font-size:12px;color:var(--mut)">Working on it \u00b7 ${esc(t.date||"")}</div></div></div>`;
+  return `<div class="rowg" style="gap:8px">${avat(p.name,"a40")}<div><b style="font-size:13.5px">${esc(p.name)}</b><div class="stars" style="font-size:12px">${t.reviewed?`You rated ${IC.star(11)} ${t.myRating}.0`:`<span style="color:var(--blu)">Leave a rating</span>`}</div></div></div>`;
+}
+function statusLabel(s){
+  return ({open:"Open for bids", inprogress:"In progress", completed:"Completed",
+           cancelled:"Cancelled", disputed:"Under review"})[s] || s;
+}
+
 T.ctasks = () => {
   const mine = state.tasks.filter(t=>t.mine);
   return `
@@ -932,9 +964,7 @@ ${header("My Tasks","Everything you've posted")}
     </div>
     <div class="divider" style="margin:12px 0 10px"></div>
     <div class="rowbet">
-      ${t.status==="open"?`<span style="font-size:13.5px;font-weight:700;color:var(--blu)">${t.bids.length} bids · review now</span>`
-      :t.status==="inprogress"?`<div class="rowg" style="gap:8px">${avat(PARTNERS[t.bids[t.accepted].p].name,"a40")}<div><b style="font-size:13.5px">${esc(PARTNERS[t.bids[t.accepted].p].name)}</b><div style="font-size:12px;color:var(--mut)">Working on it · ${t.date}</div></div></div>`
-      :`<div class="rowg" style="gap:8px">${avat(PARTNERS[t.bids[t.accepted].p].name,"a40")}<div><b style="font-size:13.5px">${esc(PARTNERS[t.bids[t.accepted].p].name)}</b><div class="stars" style="font-size:12px">${t.reviewed?`You rated ${IC.star(11)} ${t.myRating}.0`:`<span style="color:var(--blu)">Leave a rating</span>`}</div></div></div>`}
+      ${taskRowFoot(t)}
       ${IC.chevR(17)}
     </div>
   </div>`).join("")}
@@ -2672,9 +2702,17 @@ function rbRender(){
       <div class="mmback" onclick="closeRoutePlanner()">${IC.chevL(20)}</div>
       <b style="flex:1">Delivery route</b>
     </div>
-    <div style="flex:1;overflow-y:auto;background:var(--content);padding:14px 15px 18px">
+    <div style="flex:1;overflow-y:auto;background:var(--content);padding:0 0 18px">
+      <div id="rb-map-wrap" style="position:relative;height:${_rb.stops.length?200:0}px;overflow:hidden;transition:height .2s;background:var(--sur2)">
+        <div id="rb-map" style="position:absolute;inset:0"></div>
+        <div style="position:absolute;left:12px;bottom:12px;z-index:500;background:rgba(255,255,255,.94);border-radius:10px;padding:6px 11px;font-size:11.5px;font-weight:800;color:var(--tx);box-shadow:0 3px 12px rgba(16,31,58,.2)">
+          Route overview \u00b7 tap a stop below to change it
+        </div>
+      </div>
+      <div style="padding:14px 15px 0">
       <div class="sub" style="font-size:12.5px;margin-bottom:12px;line-height:1.5">
-        Set where it's picked up, then where it goes. Tap each line to place it on the map.
+        Set where it's picked up, then where it goes. Tap each line to place it on the map \u2014
+        you can search by name there.
       </div>
 
       <div class="card" style="padding:4px 14px">
@@ -2719,13 +2757,42 @@ function rbRender(){
         ${km ? `<div class="sub" style="font-size:11px;margin-top:8px;line-height:1.5">
           ${minApplies ? `Minimum RM${(vehiclePricing(_rb.vehicle).min_cents/100).toFixed(0)} applies for a ${VEHICLE_META[_rb.vehicle].name.toLowerCase()}. ` : ""}A suggestion, not a fixed price \u2014 partners still bid.</div>` : ""}
       </div>
+      </div>
     </div>
     <div style="background:var(--sur);padding:12px 15px 16px;box-shadow:0 -6px 22px rgba(16,31,58,.10)">
       <button class="btn ${ready?"pri":"dark"}" onclick="rbConfirm()" ${ready?"":"disabled style=\"opacity:.5\""}>
         ${ready ? "Use this route" : "Set a drop-off first"}</button>
     </div>
   </div>`;
-  setTimeout(()=>{ try{ drawPhotos(); }catch(e){} }, 0);   // tiles re-attach after each render
+  setTimeout(()=>{ try{ drawPhotos(); rbDrawMap(); }catch(e){} }, 0);
+}
+
+/* Read-only overview of the whole trip. Nothing here is draggable — the map
+   that EDITS a point is the picker, one point at a time. This one exists so a
+   person can see the shape of what they're ordering before they commit. */
+let _rbMap = null;
+async function rbDrawMap(){
+  const host = document.getElementById("rb-map");
+  if (!host) { _rbMap = null; return; }
+  const pts = [_rb.pickup, ..._rb.stops].filter(p=>p && p.lat!=null);
+  if (pts.length < 2){ _rbMap = null; return; }
+  let L;
+  try { L = await ensureLeaflet(); } catch(e){ return; }
+  if (!document.getElementById("rb-map")) return;   // re-rendered while we waited
+  try { if (_rbMap) _rbMap.remove(); } catch(e){}
+  _rbMap = L.map(host, { attributionControl:false, zoomControl:false,
+    dragging:false, scrollWheelZoom:false, doubleClickZoom:false,
+    boxZoom:false, keyboard:false, tap:false, touchZoom:false });
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(_rbMap);
+  const dot = (label, color) => L.divIcon({ className:"", iconSize:[26,26], iconAnchor:[13,13],
+    html:`<div style="width:26px;height:26px;border-radius:50%;background:${color};color:#fff;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;border:2.5px solid #fff;box-shadow:0 3px 10px rgba(10,20,40,.35)">${label}</div>` });
+  L.marker([pts[0].lat, pts[0].lng], { icon: dot("A","#0EB57D"), interactive:false }).addTo(_rbMap);
+  pts.slice(1).forEach((s,i)=>
+    L.marker([s.lat,s.lng], { icon: dot(String(i+1),"#0051E9"), interactive:false }).addTo(_rbMap));
+  L.polyline(pts.map(s=>[s.lat,s.lng]),
+    { color:"#0051E9", weight:4, opacity:.85, dashArray:"1 8", lineCap:"round", interactive:false }).addTo(_rbMap);
+  try { _rbMap.fitBounds(L.latLngBounds(pts.map(s=>[s.lat,s.lng])).pad(0.35)); } catch(e){}
+  setTimeout(()=>{ try{ _rbMap && _rbMap.invalidateSize(); }catch(e){} }, 120);
 }
 function rbPriceLabel(v){
   const pr = vehiclePricing(v);
@@ -2789,6 +2856,8 @@ function rbConfirm(){
 }
 function closeRoutePlanner(){
   _rbSeen = true;
+  try { if (_rbMap) _rbMap.remove(); } catch(e){}
+  _rbMap = null;
   closePointPicker(true);
   const h = document.getElementById("modal-host"); if (h) h.innerHTML = "";
   _rb = { stops:[], vehicle:_ptVehicle||"motor", pickup:null };
@@ -2811,12 +2880,13 @@ async function openPointPicker(opts){
       <div id="pk-map" style="position:absolute;inset:0"></div>
       <div class="pk-search">
         <div class="pk-sbox">
-          ${IC.search(17)}
-          <input id="pk-q" placeholder="Search address or place name"
+          <span style="color:var(--blu)">${IC.search(19)}</span>
+          <input id="pk-q" placeholder="Cari nama tempat atau alamat"
             autocomplete="off" autocorrect="off" spellcheck="false"
             oninput="pkSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();pkSearchNow();}">
-          <span id="pk-clear" onclick="pkClearSearch()" style="display:none;cursor:pointer;color:var(--dim);padding:2px">${IC.close(15)}</span>
+          <span id="pk-clear" onclick="pkClearSearch()" style="display:none;cursor:pointer;color:var(--dim);padding:2px">${IC.close(16)}</span>
         </div>
+        <div id="pk-hint" class="pk-hint">Cth. KLCC, Mid Valley, Hospital Sultanah Aminah</div>
         <div id="pk-results" class="pk-results" style="display:none"></div>
       </div>
       <!-- fixed centre pin: pure DOM, never a map layer, so it cannot drift -->
@@ -2843,7 +2913,7 @@ async function openPointPicker(opts){
   let L;
   try { L = await ensureLeaflet(); }
   catch(e){ toast("Map unavailable \u2014 type the address instead."); return; }
-  _pk.map = L.map(document.getElementById("pk-map"), { attributionControl:false, zoomControl:true })
+  _pk.map = L.map(document.getElementById("pk-map"), { attributionControl:false, zoomControl:false })
     .setView([opts.lat ?? 3.139, opts.lng ?? 101.687], 17);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(_pk.map);
   _pk.map.on("movestart", ()=>{
@@ -2877,7 +2947,13 @@ function pkSearchNow(){
 function pkShowResults(res, q){
   const box = document.getElementById("pk-results");
   if (!box) return;
-  if (res === null && q === ""){ box.style.display="none"; box.innerHTML=""; return; }
+  const hint = document.getElementById("pk-hint");
+  if (res === null && q === ""){
+    box.style.display="none"; box.innerHTML="";
+    if (hint) hint.style.display="block";
+    return;
+  }
+  if (hint) hint.style.display="none";
   box.style.display = "block";
   if (res === "loading"){ box.innerHTML = `<div class="pk-msg">Searching\u2026</div>`; return; }
   if (res === null){
@@ -3540,6 +3616,41 @@ async function deleteAddr(aid){
 /* Less typing: when the form opens with no pin set and the person has saved
    addresses, their Home (or first saved place) applies itself. One toast says
    so; one tap on another chip changes it. */
+/* Re-posting a cancelled job. Cancelling is often circumstantial — wrong day,
+   partner fell through, plans moved — and making someone retype the whole
+   thing is the kind of friction that loses the job to a phone call instead.
+   The ORIGINAL task is left alone: this opens a fresh form pre-filled, so the
+   cancellation record and its audit trail stay intact. */
+let _reorder = null;
+function reorderTask(id){
+  const t = state.tasks.find(x=>String(x.id)===String(id));
+  if (!t){ toast("Task not found"); return; }
+  _reorder = {
+    title: t.title, cat: t.cat, city: t.city, addr: t.addr,
+    budget: t.budget, desc: t.desc, ll: t.ll,
+    stops: (t.stops||[]).map(s=>({...s})), vehicle: t.vehicle || null,
+  };
+  go("cpost", t.cat);
+}
+function applyReorder(){
+  if (!_reorder) return;
+  const r = _reorder; _reorder = null;
+  const set = (id,v)=>{ const el=document.getElementById(id); if (el && v!=null && v!=="") el.value=v; };
+  set("pt-title", r.title);
+  set("pt-cat", r.cat);
+  set("pt-city", r.city);
+  set("pt-addr", r.addr);
+  set("pt-budget", r.budget);
+  set("pt-desc", r.desc);
+  if (Array.isArray(r.ll) && r.ll.length===2) setPin(r.ll[0], r.ll[1]);
+  if (r.stops && r.stops.length){ _ptStops = r.stops; }
+  if (r.vehicle) _ptVehicle = r.vehicle;
+  onCatChange(); drawStops(); drawVehicles(); drawRoute();
+  // Deliberately NOT the date: the old date is in the past, and silently
+  // re-using it is how a job gets posted for a day that has already gone.
+  toast("Details copied \u2014 check the date before posting");
+}
+
 function autoApplyHome(){
   if (state.pin) return;
   const list = state.addresses || [];
@@ -3923,11 +4034,11 @@ function liveSync(screen){
       if (el) el.value = state.param;
     }
     onCatChange(); drawStops(); drawPhotos(); drawVehicles();
-    autoApplyHome();
+    if (_reorder) applyReorder(); else autoApplyHome();
     // Delivery and moving ARE a route — open the planner immediately instead of
     // making the person hunt for the map button. Only on first arrival from the
     // home grid, never when they come back to the form afterwards.
-    if (state.param && ["delivery","moving"].includes(state.param) && !_ptStops.length && !_rbSeen){
+    if (state.param && ["delivery","moving"].includes(state.param) && !_ptStops.length && !_rbSeen && !_reorder){
       _rbSeen = true;
       setTimeout(()=>{ try{ openRoutePlanner(); }catch(e){} }, 120);
     }

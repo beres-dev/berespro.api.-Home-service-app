@@ -1876,3 +1876,75 @@ dengan 10% piksel rosak.
 CAT_ART menyenaraikan kategori yang ADA artwork. Kategori tanpa artwork
 kekal menggunakan glif SVG yang dilukis, jadi menambah kategori kesembilan
 tidak akan meninggalkan ikon pecah.
+
+
+---
+
+# v55 — My Tasks CRASH dibaiki, reorder, route mode, search ketara
+
+App sahaja. 572 ujian server kekal hijau; 26 assert DOM baharu.
+Tiada perubahan schema, tiada /setup.
+
+## 1. "My Task macam tak function" — ia memang CRASH
+
+Bug sebenar, dan teruk. Kad tugas membaca t.bids[t.accepted].p terus untuk
+apa-apa status yang bukan "open" dan bukan "inprogress". Tugas yang
+DIBATALKAN mempunyai accepted = null, jadi bacaan itu melontar ralat dan
+menjatuhkan SELURUH skrin My Tasks — bukan satu kad, semuanya. Sesiapa
+yang pernah membatalkan satu tugas akan nampak tab itu mati.
+
+Kini semua cabang melalui satu fungsi yang MENYEMAK bida diterima itu
+wujud dahulu. Tugas dibatalkan mendapat papar "Cancelled" yang betul,
+dengan nama partner jika ada seorang, tanpa jika tiada.
+
+Ini juga menerangkan kenapa ia berkait dengan permintaan cancel/reorder
+Zaini — kedua-duanya bermula dari keadaan yang sama.
+
+## 2. Reorder selepas batal
+
+Pembatalan selalunya bersebab keadaan: salah hari, partner tak jadi,
+rancangan berubah. Memaksa orang menaip semula segalanya ialah geseran
+yang menghantar kerja itu kepada panggilan telefon.
+
+"Post again" pada tugas dibatalkan membuka borang BARU yang sudah terisi:
+tajuk, kategori, bandar, alamat, pin, bajet, butiran, destinasi dan
+kenderaan. Tugas ASAL tidak disentuh — rekod pembatalan dan jejak auditnya
+kekal utuh.
+
+TARIKH sengaja TIDAK disalin. Tarikh lama sudah berlalu, dan menyalinnya
+secara senyap ialah bagaimana kerja tersiar untuk hari yang sudah lepas.
+Toast memberitahu supaya tarikh disemak.
+
+## 3. Route mode kembali ke peta
+
+v51 membuang peta dari pembina laluan sepenuhnya untuk menghapuskan
+kekeliruan "pin mana saya pegang". Itu berjaya, tetapi ia juga menghapuskan
+keupayaan MELIHAT laluan langsung.
+
+Kini ada peta ikhtisar di atas senarai: pin A hijau, destinasi bernombor,
+garisan antara semuanya. Ia BACA SAHAJA — tiada apa boleh diseret, jadi
+kekeliruan lama tidak kembali bersamanya. Peta yang MENGUBAH satu titik
+kekal pemilih satu-titik. Ia tersembunyi sehingga ada destinasi pertama,
+supaya skrin tidak bermula dengan peta kosong.
+
+## 5. Ujian goyah dihapuskan (1 daripada 8 larian gagal)
+
+Ditemui semasa menyediakan pakej ini, bukan dilaporkan. Satu assert KYC
+mencari "12 digit berturut" di SELURUH baris sebagai bukti nombor IC penuh
+tidak disimpan. Tetapi kunci dokumen mengandungi hex rawak, dan sekali
+sekala 12 aksara hex itu kebetulan semuanya digit — jadi assert gagal
+secara rawak. Kod tidak pernah salah; ujian itu yang salah.
+
+Kini ia menyemak MEDAN yang boleh memegang IC, bukan regex membuta atas
+keseluruhan baris. Disahkan 15 larian berturut-turut tanpa gagal.
+
+## 4. Butang search yang Zaini tercari-cari
+
+Puncanya ditemui: kawalan zoom Leaflet lalai ke penjuru ATAS KIRI —
+tempat yang SAMA dengan bar carian, jadi kedua-duanya bertindih dan
+carian itu terbaca sebagai sebahagian perabot peta.
+
+Kawalan zoom dimatikan (telefon cubit untuk zum), dan bar carian dibesarkan
+dengan sempadan biru, ikon lebih besar, teks Melayu, serta baris contoh di
+bawahnya: "Cth. KLCC, Mid Valley, Hospital Sultanah Aminah". Contoh itu
+hilang sebaik anda mula menaip.
