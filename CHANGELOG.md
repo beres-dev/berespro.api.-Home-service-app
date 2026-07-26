@@ -1996,3 +1996,47 @@ di tengah-tengah seretan — anda akan tercampak keluar setiap kali menggerakkan
 pin. Kini rbRefreshView() menyegarkan pandangan yang SEDANG dipapar; peta dan
 senarai ialah dua pandangan atas keadaan yang sama, jadi satu tidak boleh
 menarik keluar yang satu lagi.
+
+
+---
+
+# v57 — peta interaktif untuk SEMUA kategori
+
+App sahaja. 572 ujian server kekal hijau; 22 assert DOM baharu.
+Tiada perubahan schema, tiada /setup.
+
+## Kenapa ini patut ada dari awal
+
+Penghantaran dapat peta penuh; cuci rumah dapat medan teks kosong. Tetapi
+tukang cuci perlu MENCARI rumah itu sama seperti rider perlu mencari alamat
+penghantaran. Tiada sebab kategori lain diberi layanan lebih rendah.
+
+## Apa yang sama, apa yang beza
+
+Sama seperti aliran penghantaran:
+  - peta skrin penuh dengan pin BOLEH DISERET
+  - carian nama tempat (dihadkan Malaysia, dicondongkan ke kawasan peta)
+  - butang lokasi saya
+  - medan tambahan untuk nombor unit, tingkat, mercu tanda
+  - nama tempat yang DIPILIH dari carian mengatasi carian alamat terbalik
+    sehingga pin digerakkan dengan tangan (peraturan sama seperti v52)
+
+Bezanya, tepat seperti yang Zaini kata: TIADA destinasi. Tiada "Add stop",
+tiada pemilih kenderaan, tiada tambang. Satu lokasi sahaja.
+
+## Pratonton dalam borang
+
+Setelah pin ditetapkan, borang menunjukkan peta kecil BACA SAHAJA dengan
+pin itu dan label "Tap to adjust". Ia tersembunyi sehingga ada pin, supaya
+borang tidak bermula dengan kotak kelabu kosong.
+
+Baris status juga berhenti memaparkan koordinat mentah — ia kini menunjukkan
+alamat sebenar, kerana "Jalan Damai, Taman Damai" memberitahu seseorang jauh
+lebih banyak daripada "3.20000, 101.60000".
+
+## Nota ujian
+
+Satu assert gagal pada mulanya kerana ujian saya menunggu 600ms untuk carian
+alamat yang baris giliriannya sengaja berjalan pada kadar 1.1 saat demi had
+Nominatim. Ujian yang tidak sabar, bukan kod yang salah — masa menunggu
+dibetulkan.

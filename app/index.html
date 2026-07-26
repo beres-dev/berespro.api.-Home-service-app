@@ -989,13 +989,16 @@ ${header("Post a Task","Describe it once, pros come to you",'chome')}
   <div class="addr-chips" id="addr-chips">
     ${state.addresses.map(a=>`<span class="chip" onclick="pickSavedAddr('${a.id}')">${IC.pin(12)} ${esc(a.label)}</span>`).join("")}
   </div>`:``}
-  <div class="card" style="margin:10px 0 0;padding:12px">
-    <div class="rowbet">
-      <div>
-        <b style="font-size:13.5px">Exact location</b>
-        <div class="sub" style="font-size:12px;margin-top:2px" id="pin-status">${state.pin?`Pin set (${state.pin[0].toFixed(4)}, ${state.pin[1].toFixed(4)})`:"Not set. Pros see distance from here."}</div>
+  <div class="card" style="margin:10px 0 0;padding:0;overflow:hidden">
+    <div id="pt-loc-map" style="height:0;background:var(--sur2);position:relative;transition:height .2s"></div>
+    <div style="padding:12px">
+      <div class="rowbet">
+        <div style="min-width:0">
+          <b style="font-size:13.5px">Exact location</b>
+          <div class="sub" style="font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="pin-status">${state.pin?"Pin set":"Not set. Pros see distance from here."}</div>
+        </div>
+        <button class="btn ${state.pin?"ghost":"pri"} sm" style="width:auto;padding:11px 15px" onclick="openLocationMap()">${IC.pin(15)} ${state.pin?"Change":"Set on map"}</button>
       </div>
-      <button class="btn ${state.pin?"ghost":"pri"} sm" onclick="openTaskMap()">${IC.pin(15)} ${state.pin?"Change":"Set on map"}</button>
     </div>
   </div>
   <div style="display:flex;gap:10px">
@@ -3117,6 +3120,199 @@ function closeRouteMap(){
   rbLookupAll();
 }
 
+/* ---- Single-location map (cleaning, handyman, aircon, everything else) ----
+   Same interactive map as the delivery route, minus drop-offs: one draggable
+   pin, search, locate-me. A cleaner has to find the house too — there was no
+   reason those categories got a text field while delivery got a map.
+
+   The preview in the form is read-only and only appears once a pin exists, so
+   the form doesn't open with an empty grey box. */
+let _lm = { map:null, marker:null, sel:false };
+let _lmPreview = null;
+
+async function drawLocPreview(){
+  const host = document.getElementById("pt-loc-map");
+  if (!host) { _lmPreview = null; return; }
+  if (!state.pin){ host.style.height = "0px"; _lmPreview = null; return; }
+  host.style.height = "150px";
+  let L;
+  try { L = await ensureLeaflet(); } catch(e){ return; }
+  if (!document.getElementById("pt-loc-map")) return;
+  try { if (_lmPreview) _lmPreview.remove(); } catch(e){}
+  _lmPreview = L.map(host, { attributionControl:false, zoomControl:false, dragging:false,
+    scrollWheelZoom:false, doubleClickZoom:false, boxZoom:false, keyboard:false,
+    tap:false, touchZoom:false }).setView(state.pin, 16);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(_lmPreview);
+  L.marker(state.pin, { interactive:false, icon: L.divIcon({ className:"", iconSize:[30,30], iconAnchor:[15,15],
+    html:`<div style="width:30px;height:30px;border-radius:50%;background:#0051E9;border:3px solid #fff;box-shadow:0 4px 12px rgba(10,20,40,.4);display:flex;align-items:center;justify-content:center;color:#fff">${IC.pin(15)}</div>` }) }).addTo(_lmPreview);
+  const tap = document.createElement("div");
+  tap.style.cssText = "position:absolute;inset:0;z-index:500;cursor:pointer";
+  tap.onclick = () => openLocationMap();
+  host.appendChild(tap);
+  const badge = document.createElement("div");
+  badge.style.cssText = "position:absolute;right:10px;bottom:10px;z-index:501;background:rgba(255,255,255,.95);border-radius:9px;padding:6px 10px;font-size:11px;font-weight:800;color:var(--tx);box-shadow:0 3px 10px rgba(16,31,58,.2);pointer-events:none";
+  badge.textContent = "Tap to adjust";
+  host.appendChild(badge);
+  setTimeout(()=>{ try{ _lmPreview && _lmPreview.invalidateSize(); }catch(e){} }, 120);
+}
+
+async function openLocationMap(){
+  const host = document.getElementById("modal-host");
+  if (!host) return;
+  const city = (document.getElementById("pt-city")||{}).value || (state.user&&state.user.city);
+  const start = state.pin || state.myPos || CITIES[city] || [3.139,101.687];
+  const typed = (document.getElementById("pt-addr")||{value:""}).value.trim();
+  host.innerHTML = `
+  <div class="mmodal">
+    <div class="mmtop">
+      <div class="mmback" onclick="closeLocationMap()">${IC.chevL(20)}</div>
+      <b style="flex:1">Where is the job?</b>
+      <div class="mmback" onclick="lmConfirm()" style="width:auto;padding:0 14px;background:var(--blu)">Done</div>
+    </div>
+    <div style="flex:1;position:relative;min-height:240px">
+      <div id="lm-map" style="position:absolute;inset:0"></div>
+      <div class="pk-search">
+        <div class="pk-sbox">
+          <span style="color:var(--blu)">${IC.search(19)}</span>
+          <input id="lm-q" placeholder="Cari nama tempat atau alamat"
+            autocomplete="off" spellcheck="false"
+            oninput="lmSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();lmSearchNow();}">
+          <span id="lm-clear" onclick="lmClearSearch()" style="display:none;cursor:pointer;color:var(--dim);padding:2px">${IC.close(16)}</span>
+        </div>
+        <div id="lm-hint" class="pk-hint">Cth. Taman Melati, Hospital Selayang, Jalan Ampang</div>
+        <div id="lm-results" class="pk-results" style="display:none"></div>
+      </div>
+      <button onclick="lmLocate()" title="Use my location"
+        style="position:absolute;right:14px;bottom:14px;z-index:1000;width:46px;height:46px;border-radius:50%;border:0;background:#fff;box-shadow:0 6px 18px rgba(16,31,58,.28);display:flex;align-items:center;justify-content:center;color:var(--blu);cursor:pointer">${IC.target(19)}</button>
+    </div>
+    <div class="mmsheet">
+      <div class="rb-lbl">Job location</div>
+      <div id="lm-addr" class="rb-addr" style="margin-bottom:10px">\u2026</div>
+      <input class="f" id="lm-manual" placeholder="Unit number, floor, landmark\u2026" style="font-size:14px" value="${esc(typed)}">
+      <div class="sub" style="font-size:11px;margin-top:7px">Drag the pin, or search above. The partner uses this to find you.</div>
+      <div style="height:12px"></div>
+      <button class="btn pri" onclick="lmConfirm()">Use this location</button>
+    </div>
+  </div>`;
+  let L;
+  try { L = await ensureLeaflet(); }
+  catch(e){ toast("Map unavailable \u2014 type the address instead."); closeLocationMap(); return; }
+  _lm.map = L.map(document.getElementById("lm-map"), { attributionControl:false, zoomControl:false })
+    .setView(start, state.pin ? 17 : 14);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(_lm.map);
+  _lm.marker = L.marker(start, { draggable:true, icon: L.divIcon({ className:"", iconSize:[38,38], iconAnchor:[19,19],
+    html:`<div style="width:38px;height:38px;border-radius:50%;background:#0051E9;border:3.5px solid #fff;box-shadow:0 8px 20px rgba(10,20,40,.45);display:flex;align-items:center;justify-content:center;color:#fff">${IC.pin(19)}</div>` }) }).addTo(_lm.map);
+  _lm.marker.on("dragstart", ()=>{ const e=document.getElementById("lm-addr"); if(e) e.style.opacity=".45"; });
+  _lm.marker.on("dragend", ()=>{ _lm.manual = false; lmUpdateAddr(); });
+  _lm.map.on("click", (e)=>{ if (e && e.latlng){ _lm.marker.setLatLng(e.latlng); _lm.manual=false; lmUpdateAddr(); } });
+  setTimeout(()=>{ try{ _lm.map.invalidateSize(); lmUpdateAddr(); }catch(e){} }, 200);
+}
+function lmUpdateAddr(){
+  if (!_lm.marker) return;
+  const ll = _lm.marker.getLatLng();
+  const el = document.getElementById("lm-addr");
+  if (el){ el.style.opacity="1"; }
+  if (_lm.chosen){ if (el) el.textContent = _lm.chosen; return; }
+  if (el) el.textContent = `${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}`;
+  lookupAddr(ll.lat, ll.lng, (addr)=>{
+    if (!_lm.marker || !addr) return;
+    const now = _lm.marker.getLatLng();
+    if (geoKey(now.lat,now.lng) !== geoKey(ll.lat,ll.lng)) return;   // moved again
+    if (_lm.chosen) return;
+    const e2 = document.getElementById("lm-addr");
+    if (e2) e2.textContent = addr;
+  });
+}
+function lmLocate(){
+  const blocked = geoBlockedReason();
+  if (blocked){ toast(blocked); return; }
+  toast("Finding your location\u2026");
+  navigator.geolocation.getCurrentPosition((pos)=>{
+    if (!_lm.map) return;
+    const ll = [pos.coords.latitude, pos.coords.longitude];
+    state.myPos = ll; _lm.chosen = null;
+    _lm.map.setView(ll, 17); _lm.marker.setLatLng(ll);
+    lmUpdateAddr();
+  }, (err)=>toast(geoErrText(err)), {enableHighAccuracy:true, timeout:9000});
+}
+let _lmQT = null;
+function lmSearchInput(){
+  const q = (document.getElementById("lm-q")||{value:""}).value.trim();
+  const clear = document.getElementById("lm-clear");
+  if (clear) clear.style.display = q ? "block" : "none";
+  clearTimeout(_lmQT);
+  if (q.length < 3){ lmShowResults(null,""); return; }
+  _lmQT = setTimeout(()=>lmSearchNow(), 450);
+}
+function lmSearchNow(){
+  const q = (document.getElementById("lm-q")||{value:""}).value.trim();
+  if (q.length < 3) return;
+  lmShowResults("loading");
+  const c = _lm.map ? _lm.map.getCenter() : null;
+  searchPlaces(q, c ? [c.lat,c.lng] : null, (res)=>{
+    const now = (document.getElementById("lm-q")||{value:""}).value.trim();
+    if (now !== q) return;
+    lmShowResults(res, q);
+  });
+}
+function lmShowResults(res, q){
+  const box = document.getElementById("lm-results");
+  const hint = document.getElementById("lm-hint");
+  if (!box) return;
+  if (res === null && q === ""){ box.style.display="none"; box.innerHTML=""; if(hint) hint.style.display="block"; return; }
+  if (hint) hint.style.display = "none";
+  box.style.display = "block";
+  if (res === "loading"){ box.innerHTML = `<div class="pk-msg">Searching\u2026</div>`; return; }
+  if (res === null){ box.innerHTML = `<div class="pk-msg">Couldn't search right now. Drag the pin instead \u2014 it still works.</div>`; return; }
+  if (!res.length){ box.innerHTML = `<div class="pk-msg">No match for \u201c${esc(q)}\u201d. Try a nearby landmark.</div>`; return; }
+  _lm.results = res;
+  box.innerHTML = res.map((r,i)=>`
+    <div class="pk-res" onclick="lmChoose(${i})">
+      <span class="pin">${IC.pin(15)}</span>
+      <div style="min-width:0"><b>${esc(r.name)}</b><span>${esc(r.detail)}</span></div>
+    </div>`).join("");
+}
+function lmChoose(i){
+  const r = (_lm.results||[])[i];
+  if (!r || !_lm.map) return;
+  // Chosen name outranks the reverse lookup until the pin is moved by hand —
+  // same rule as the delivery picker, for the same reason.
+  _lm.chosen = r.name + (r.detail ? ", " + r.detail.split(",")[0] : "");
+  _lm.map.setView([r.lat, r.lng], 17);
+  _lm.marker.setLatLng([r.lat, r.lng]);
+  const el = document.getElementById("lm-addr");
+  if (el){ el.style.opacity="1"; el.textContent = _lm.chosen; }
+  lmClearSearch();
+}
+function lmClearSearch(){
+  const q = document.getElementById("lm-q");
+  if (q){ q.value=""; q.blur(); }
+  const clear = document.getElementById("lm-clear");
+  if (clear) clear.style.display = "none";
+  lmShowResults(null,"");
+}
+function lmConfirm(){
+  if (!_lm.marker){ closeLocationMap(); return; }
+  const ll = _lm.marker.getLatLng();
+  const typed = (document.getElementById("lm-manual")||{value:""}).value.trim();
+  const shown = (document.getElementById("lm-addr")||{textContent:""}).textContent.trim();
+  const addr = typed || (/^-?\d+\.\d+,/.test(shown) ? "" : shown);
+  closeLocationMap();
+  setPin(ll.lat, ll.lng);
+  const f = document.getElementById("pt-addr");
+  if (f && addr) f.value = addr;
+  const st = document.getElementById("pin-status");
+  if (st) st.textContent = addr || "Pin set";
+  drawLocPreview();
+  toast("Location set");
+}
+function closeLocationMap(){
+  clearTimeout(_lmQT);
+  if (_lm.map){ try{ _lm.map.remove(); }catch(e){} }
+  _lm = { map:null, marker:null, sel:false };
+  const h = document.getElementById("modal-host"); if (h) h.innerHTML = "";
+}
+
 /* ---- Point picker: ONE location, fixed centre pin ----
    The pin never moves; the map moves under it. On a phone that beats dragging
    a small marker, and it removes the "which pin am I holding?" question
@@ -3409,9 +3605,12 @@ async function ensureLeaflet(){
 function setPin(lat,lng){
   state.pin=[lat,lng];
   const st=document.getElementById("pin-status");
-  if(st) st.textContent = `Pin set (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+  // Only overwrite the status line if it isn't already showing a real address —
+  // coordinates are a worse label than the street name we just resolved.
+  if (st && !st.dataset.addr) st.textContent = "Pin set";
   persist();
   if (typeof drawRoute === "function") drawRoute();
+  if (typeof drawLocPreview === "function") drawLocPreview();
 }
 // Partner's own GPS position. Without this the feed measured distance from the
 // city centre, so "2.1 km away" was never a real number.
@@ -3917,14 +4116,17 @@ function pickSavedAddr(aid){
   if (!a) return;
   const f = document.getElementById("pt-addr");
   if (f) f.value = a.addr;
-  setPin(a.lat, a.lng);                      // updates #pin-status text only
+  setPin(a.lat, a.lng);
+  const st = document.getElementById("pin-status");
+  if (st) st.textContent = a.addr || "Pin set";
   document.querySelectorAll("#addr-chips .chip").forEach(c=>c.classList.remove("on"));
   const chips = [...document.querySelectorAll("#addr-chips .chip")];
   const idx = (state.addresses||[]).findIndex(x=>String(x.id)===String(aid));
   if (chips[idx]) chips[idx].classList.add("on");
   toast(`Using ${a.label}`);
 }
-function openTaskMap(){
+function openTaskMap(){ return openLocationMap(); }
+function openTaskMapLegacy(){
   const city = (document.getElementById("pt-city")||{}).value || (state.user&&state.user.city);
   const start = state.pin || (state.myPos) || CITIES[city] || [3.139,101.687];
   const typed = (document.getElementById("pt-addr")||{value:""}).value.trim();
@@ -4279,7 +4481,10 @@ function liveSync(screen){
   // ---- UI hooks: pure screen preparation, NO network needed. These sat below
   // the token guard once, which silently disabled the category preselect and
   // form redraws whenever a session wasn't ready. UI prep never waits on auth.
-  if (screen!=="cpost") _rbSeen = false;
+  if (screen!=="cpost"){
+    _rbSeen = false;
+    try { if (_lmPreview){ _lmPreview.remove(); _lmPreview = null; } } catch(e){}
+  }
   if (screen==="cpost") setTimeout(()=>{ try{
     // Category tapped on the home grid arrives as the nav param — apply it
     // BEFORE onCatChange so the delivery section shows for moving/delivery.
@@ -4289,6 +4494,7 @@ function liveSync(screen){
     }
     onCatChange(); drawStops(); drawPhotos(); drawVehicles();
     if (_reorder) applyReorder(); else autoApplyHome();
+    drawLocPreview();
     // Delivery and moving ARE a route — open the planner immediately instead of
     // making the person hunt for the map button. Only on first arrival from the
     // home grid, never when they come back to the form afterwards.
