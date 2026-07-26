@@ -241,22 +241,7 @@ label.f{display:block;font-size:11.5px;font-weight:700;color:var(--mut);margin:1
         <div class="card" style="margin-top:14px">
           <h3>Delivery pricing (per-km suggestion)</h3>
           <p class="mut" style="font-size:12.5px">Shown to customers on Moving/Delivery tasks as a suggested budget: base + per-km × route distance. It never forces the price — partners still bid.</p>
-          <div style="display:flex;gap:18px;flex-wrap:wrap">
-            <div style="flex:1;min-width:180px">
-              <b style="font-size:13px">Motorbike</b>
-              <label>Base fare (RM)</label>
-              <input type="number" id="s-mbase" min="0" max="100" step="0.5">
-              <label>Per km (RM)</label>
-              <input type="number" id="s-mkm" min="0" max="20" step="0.1">
-            </div>
-            <div style="flex:1;min-width:180px">
-              <b style="font-size:13px">Car</b>
-              <label>Base fare (RM)</label>
-              <input type="number" id="s-cbase" min="0" max="100" step="0.5">
-              <label>Per km (RM)</label>
-              <input type="number" id="s-ckm" min="0" max="20" step="0.1">
-            </div>
-          </div>
+          <div id="veh-pricing" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px"></div>
         </div>
         <button class="act" onclick="saveSettings()">Save settings</button>
         <span style="font-size:12px;color:var(--mut);margin-left:12px">2000 bps = 20% fee. Cancel fee compensates the partner when a customer cancels mid-job after the grace window. Changes apply to new activity only.</span>
@@ -685,10 +670,7 @@ async function loadAlgorithm(){
   const set = (id, v) => { const el = document.getElementById(id); el.value = v; el.nextElementSibling.value = v; };
   set("s-dist", settings.algo_w_distance || 50);
   set("s-rec", settings.algo_w_recency || 30);
-  set("s-mbase", ((settings.delivery_motor_base_cents || 400) / 100));
-  set("s-mkm", ((settings.delivery_motor_per_km_cents || 100) / 100));
-  set("s-cbase", ((settings.delivery_car_base_cents || 500) / 100));
-  set("s-ckm", ((settings.delivery_car_per_km_cents || 150) / 100));
+  renderVehiclePricing(settings);
   set("s-bud", settings.algo_w_budget || 20);
   set("s-comm", settings.commission_bps || 2000);
   set("s-cfee", settings.cancel_fee_bps ?? 1000);
@@ -727,6 +709,33 @@ async function clearOverride(key){
   await api("/admin/settings", "PATCH", { [key]: null });
   toast("Override removed"); loadAlgorithm();
 }
+// One row per vehicle. Defaults mirror the worker's, so an untouched panel
+// shows exactly what the app is actually charging.
+const VEHICLES = [
+  { k:"motor", n:"Motorbike", base:400,  km:100, min:0 },
+  { k:"car",   n:"Car",       base:500,  km:150, min:0 },
+  { k:"4x4",   n:"4x4",       base:800,  km:200, min:0 },
+  { k:"van",   n:"Van",       base:1000, km:250, min:0 },
+  { k:"lorry", n:"Lorry (moving)", base:2000, km:300, min:6000 },
+];
+function renderVehiclePricing(s){
+  const box = document.getElementById("veh-pricing");
+  if (!box) return;
+  box.innerHTML = VEHICLES.map(v=>`
+    <div style="border:1px solid var(--line);border-radius:12px;padding:12px 13px">
+      <b style="font-size:13.5px">${v.n}</b>
+      <label>Base fare (RM)</label>
+      <input type="number" id="s-${v.k}-base" min="0" max="500" step="0.5"
+        value="${((s[`delivery_${v.k}_base_cents`] ?? v.base)/100)}">
+      <label>Per km (RM)</label>
+      <input type="number" id="s-${v.k}-km" min="0" max="50" step="0.1"
+        value="${((s[`delivery_${v.k}_per_km_cents`] ?? v.km)/100)}">
+      <label>Minimum fare (RM) \u2014 0 for none</label>
+      <input type="number" id="s-${v.k}-min" min="0" max="1000" step="1"
+        value="${((s[`delivery_${v.k}_min_cents`] ?? v.min)/100)}">
+    </div>`).join("");
+}
+
 async function saveSettings(){
   await api("/admin/settings", "PATCH", {
     algo_w_distance: +document.getElementById("s-dist").value,
@@ -735,10 +744,11 @@ async function saveSettings(){
     commission_bps: +document.getElementById("s-comm").value,
     cancel_fee_bps: +document.getElementById("s-cfee").value,
     cancel_grace_min: +document.getElementById("s-cgrace").value,
-    delivery_motor_base_cents: Math.round((+document.getElementById("s-mbase").value || 0) * 100),
-    delivery_motor_per_km_cents: Math.round((+document.getElementById("s-mkm").value || 0) * 100),
-    delivery_car_base_cents: Math.round((+document.getElementById("s-cbase").value || 0) * 100),
-    delivery_car_per_km_cents: Math.round((+document.getElementById("s-ckm").value || 0) * 100),
+    ...Object.fromEntries(VEHICLES.flatMap(v => [
+      [`delivery_${v.k}_base_cents`,   Math.round((+document.getElementById(`s-${v.k}-base`).value || 0) * 100)],
+      [`delivery_${v.k}_per_km_cents`, Math.round((+document.getElementById(`s-${v.k}-km`).value   || 0) * 100)],
+      [`delivery_${v.k}_min_cents`,    Math.round((+document.getElementById(`s-${v.k}-min`).value  || 0) * 100)],
+    ])),
   });
   toast("Settings saved — applies to new activity");
 }

@@ -26,11 +26,12 @@ const base = { title:'Move box', category:'moving', city:'Kuala Lumpur', addr:'D
 
 console.log("\n\u2014 Pricing config reaches the app \u2014");
 let r = await call('/me','GET',null, tc);
-ok("per-vehicle pricing in /me", r.body.delivery_pricing
-   && r.body.delivery_pricing.motor.per_km_cents===100
-   && r.body.delivery_pricing.car.per_km_cents===150, r.body.delivery_pricing);
-ok("motor is cheaper than car (otherwise the choice is meaningless)",
-   r.body.delivery_pricing.motor.base_cents < r.body.delivery_pricing.car.base_cents, r.body.delivery_pricing);
+const dp = r.body.delivery_pricing;
+ok("all five vehicles priced", dp && ["motor","car","4x4","van","lorry"].every(v=>dp[v]&&dp[v].per_km_cents>0), dp);
+ok("cost rises with vehicle size", dp.motor.base_cents < dp.car.base_cents
+   && dp.car.base_cents < dp["4x4"].base_cents && dp["4x4"].base_cents < dp.van.base_cents, dp);
+ok("lorry carries a RM60 minimum", dp.lorry.min_cents===6000, dp.lorry);
+ok("smaller vehicles have no minimum", dp.motor.min_cents===0 && dp.car.min_cents===0, dp);
 
 console.log("\n\u2014 Stops: validated, km computed SERVER-side \u2014");
 const stops = [{addr:'Stop A, Cheras',lat:3.085,lng:101.745},{addr:'Stop B, Kajang',lat:2.993,lng:101.787}];
@@ -38,9 +39,18 @@ r = await call('/tasks','POST',{...base, stops}, tc);
 ok("create with 2 stops", r.status===201, r.body);
 const t = r.body.task;
 ok("stops echoed back", t.stops.length===2 && t.stops[1].addr.includes('Kajang'), t.stops);
-const expect = Math.round((haversineKm(3.139,101.687,3.085,101.745)+haversineKm(3.085,101.745,2.993,101.787))*10)/10;
-ok(`route_km matches independent calc (${expect})`, t.route_km===expect, t.route_km);
-ok("client CANNOT dictate km", (await call('/tasks','POST',{...base, stops, route_km: 1}, tc)).body.task.route_km===expect);
+const straight = Math.round((haversineKm(3.139,101.687,3.085,101.745)+haversineKm(3.085,101.745,2.993,101.787))*10)/10;
+// Road distance is NEVER shorter than the straight line — that is the whole
+// point of the change: riders ride roads, not crow-flight, and pricing on the
+// straight line quietly underpaid them on every job.
+ok(`route_km >= straight line (${straight} km)`, t.route_km >= straight, {road:t.route_km, straight});
+ok("route_method recorded so a fare can be explained", ["road","estimated"].includes(t.route_method), t.route_method);
+// No network in the sandbox, so the router is unreachable and the circuity
+// estimate is what we should see — and it must still beat the straight line.
+ok("router unreachable -> circuity estimate, not the raw straight line",
+   t.route_method==="estimated" && t.route_km > straight, {m:t.route_method, km:t.route_km, straight});
+const again = (await call('/tasks','POST',{...base, stops, route_km: 1}, tc)).body.task;
+ok("client CANNOT dictate km", again.route_km === t.route_km, {sent:1, stored:again.route_km});
 r = await call('/tasks','POST',{...base, stops:[{addr:'no pin'}]}, tc);
 ok("stop without pin rejected", r.status===400 && r.body.error.code==='bad_stop', r.body);
 r = await call('/tasks','POST',{...base, stops:Array(6).fill({addr:'x',lat:3,lng:101})}, tc);
@@ -56,11 +66,24 @@ ok("delivery task stores vehicle", r.status===201 && r.body.task.vehicle==='car'
 r = await call('/tasks','POST',{...base, category:'delivery', stops}, tc);
 ok("defaults to motor when unspecified", r.body.task.vehicle==='motor', r.body.task && r.body.task.vehicle);
 r = await call('/tasks','POST',{...base, category:'delivery', vehicle:'lorry', stops}, tc);
-ok("unknown vehicle rejected", r.status===400 && r.body.error.code==='bad_vehicle', r.body);
+ok("a lorry cannot be booked for a DELIVERY", r.status===400 && r.body.error.code==='bad_vehicle', r.body);
+r = await call('/tasks','POST',{...base, category:'moving', vehicle:'motor', stops}, tc);
+ok("a motorbike cannot be booked for a MOVE", r.status===400 && r.body.error.code==='bad_vehicle', r.body);
+r = await call('/tasks','POST',{...base, category:'moving', vehicle:'lorry', stops}, tc);
+ok("lorry accepted for moving", r.status===201 && r.body.task.vehicle==='lorry', r.body.task);
+for (const v of ['4x4','van']){
+  r = await call('/tasks','POST',{...base, category:'delivery', vehicle:v, stops}, tc);
+  ok(`${v} accepted for delivery`, r.status===201 && r.body.task.vehicle===v, r.body.task);
+}
 r = await call('/tasks','POST',{...base, category:'cleaning', vehicle:'car'}, tc);
 ok("non-delivery task stores NO vehicle (no misleading data)", r.body.task.vehicle===null, r.body.task && r.body.task.vehicle);
 
 console.log("\n\u2014 Photos: upload, ownership, serve auth \u2014");
+// A fresh customer: the vehicle cases above legitimately spend this suite's
+// share of the per-user task rate limit, and hitting it here would mask real
+// photo failures behind a 429.
+await env.DB.prepare("INSERT INTO users (id,firebase_uid,phone,email,name,avatar_hue,mode,city,lat,lng,skills,id_verified,suspended,created_at) VALUES ('c2','fb_c2','+60122','c2@t.my','Cust2',214,'customer','KL',3.139,101.687,'[]',1,0,?)").bind(now()).run();
+const tc2 = await signJWT({uid:'c2'}, env.JWT_SECRET, 3600);
 const JPEG = new Uint8Array([0xFF,0xD8,0xFF,0xE0,0,0x10,0x4A,0x46,0x49,0x46,0,1,...new Array(64).fill(0x41)]);
 let up = await worker.fetch(new Request('https://t.dev/tasks/photo-upload',
   {method:'POST',headers:{authorization:'Bearer '+tc},body:JPEG}), env);
@@ -69,11 +92,16 @@ ok("upload returns a key under MY prefix", up.status===201 && k1.startsWith('tas
 up = await worker.fetch(new Request('https://t.dev/tasks/photo-upload',
   {method:'POST',headers:{authorization:'Bearer '+tc},body:new Uint8Array([1,2,3,4,5,6,7,8,9,10,11,12,13])}), env);
 ok("garbage bytes rejected (magic sniff)", up.status===415, up.status);
-r = await call('/tasks','POST',{...base, photo_keys:[k1]}, tc);
-ok("create with photo", r.status===201 && r.body.task.photos[0]===k1, r.body.task && r.body.task.photos);
-r = await call('/tasks','POST',{...base, photo_keys:['taskimg/c1/a','taskimg/c1/b','taskimg/c1/c','taskimg/c1/d','taskimg/c1/e']}, tc);
+// c2 must upload their OWN photo — a key belonging to c1 is correctly refused,
+// which is precisely what the ownership assertion below checks.
+let up2 = await worker.fetch(new Request('https://t.dev/tasks/photo-upload',
+  {method:'POST',headers:{authorization:'Bearer '+tc2},body:JPEG}), env);
+const k2 = (await up2.json()).key;
+r = await call('/tasks','POST',{...base, photo_keys:[k2]}, tc2);
+ok("create with photo", r.status===201 && r.body.task.photos[0]===k2, r.body.task && r.body.task.photos);
+r = await call('/tasks','POST',{...base, photo_keys:['taskimg/c2/a','taskimg/c2/b','taskimg/c2/c','taskimg/c2/d','taskimg/c2/e']}, tc2);
 ok("5 photos rejected (max 4)", r.status===400, r.status);
-r = await call('/tasks','POST',{...base, photo_keys:['kyc/c1/steal']}, tc);
+r = await call('/tasks','POST',{...base, photo_keys:['kyc/c2/steal']}, tc2);
 ok("kyc/ key rejected (prefix forgery)", r.status===400, r.status);
 r = await call('/tasks','POST',{...base, photo_keys:[k1]}, tx);
 ok("someone ELSE cannot claim my key", r.status===400, r.status);

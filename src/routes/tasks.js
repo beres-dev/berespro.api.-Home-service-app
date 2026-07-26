@@ -1,5 +1,6 @@
 // src/routes/tasks.js
 import { json, err, id, now, haversineKm, readBody } from "../lib/util.js";
+import { routeDistanceKm } from "../lib/routing.js";
 import { resolveDistrict } from "../lib/geo.js";
 import { isCovered } from "../lib/coverage.js";
 import { requireUser } from "../lib/auth.js";
@@ -9,6 +10,12 @@ import { createNotif } from "./bids.js";
 import { pushNotify } from "../lib/notify.js";
 
 // POST /tasks  (customer)
+// Delivery is about parcels and errands; moving is about furniture and a lorry.
+// Keeping the lists separate stops someone booking a lorry to send documents,
+// or a motorbike to shift a wardrobe.
+export const VEHICLES_DELIVERY = ["motor", "car", "4x4", "van"];
+export const VEHICLES_MOVING = ["lorry"];
+
 export async function createTask(req, env) {
   const user = await requireUser(req, env);
   if (!user) return err("unauthorized", 401);
@@ -34,14 +41,16 @@ export async function createTask(req, env) {
   // Vehicle only means anything on a delivery-style task; storing it on a
   // cleaning job would be noise that later code might wrongly price on.
   let vehicle = null;
-  const isDelivery = ["delivery", "moving"].includes((b.category || "").toLowerCase());
-  if (isDelivery) {
-    vehicle = (b.vehicle || "motor").toLowerCase();
-    if (!["motor", "car"].includes(vehicle))
-      return err("vehicle must be motor or car", 400, "bad_vehicle");
+  const cat = (b.category || "").toLowerCase();
+  const isDelivery = cat === "delivery", isMoving = cat === "moving";
+  if (isDelivery || isMoving) {
+    const allowed = isMoving ? VEHICLES_MOVING : VEHICLES_DELIVERY;
+    vehicle = (b.vehicle || allowed[0]).toLowerCase();
+    if (!allowed.includes(vehicle))
+      return err(`vehicle for ${cat} must be one of: ${allowed.join(", ")}`, 400, "bad_vehicle");
   }
 
-  let stops = null, routeKm = null;
+  let stops = null, routeKm = null, routeMethod = null;
   if (Array.isArray(b.stops) && b.stops.length) {
     if (b.stops.length > 5) return err("maximum 5 delivery stops", 400);
     stops = [];
@@ -53,9 +62,11 @@ export async function createTask(req, env) {
         return err("each delivery stop needs an address and a map pin", 400, "bad_stop");
       stops.push({ addr: sAddr, lat: sLat, lng: sLng });
     }
-    let prev = [b.lat, b.lng]; routeKm = 0;
-    for (const s of stops) { routeKm += haversineKm(prev[0], prev[1], s.lat, s.lng); prev = [s.lat, s.lng]; }
-    routeKm = Math.round(routeKm * 10) / 10;
+    // Measured along real roads, not crow-flight — the partner rides roads and
+    // is paid for roads. Falls back to a circuity estimate if the router is
+    // unreachable; never to the raw straight line.
+    const rd = await routeDistanceKm([[b.lat, b.lng], ...stops.map(s => [s.lat, s.lng])]);
+    routeKm = rd.km; routeMethod = rd.method;
     if (routeKm > 400) return err("route is over 400 km — split this into separate tasks", 400);
   }
 
@@ -87,13 +98,13 @@ export async function createTask(req, env) {
 
   const tid = id("tsk");
   await env.DB.prepare(
-    "INSERT INTO tasks (id,customer_id,title,category,city,addr,lat,lng,budget_cents,date_label,time_slot,description,status,created_at,state,district,stops,route_km,photos,vehicle) " +
-    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?, 'open', ?,?,?,?,?,?,?)"
+    "INSERT INTO tasks (id,customer_id,title,category,city,addr,lat,lng,budget_cents,date_label,time_slot,description,status,created_at,state,district,stops,route_km,photos,vehicle,route_method) " +
+    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?, 'open', ?,?,?,?,?,?,?,?)"
   ).bind(tid, user.id, b.title, b.category, b.city, b.addr || null, b.lat, b.lng,
          b.budget_cents, b.date_label || null, b.time_slot || null, b.description || null, now(),
          area.state, area.district,
          stops ? JSON.stringify(stops) : null, routeKm, photos ? JSON.stringify(photos) : null,
-         vehicle).run();
+         vehicle, routeMethod).run();
   const task = await env.DB.prepare("SELECT * FROM tasks WHERE id = ?").bind(tid).first();
 
   // Tell nearby partners a job just appeared. Without this, partners have to keep
@@ -269,6 +280,7 @@ export function shapeTask(t) {
     route_km: t.route_km ?? null,
     photos: t.photos ? JSON.parse(t.photos) : [],
     vehicle: t.vehicle || null,
+    route_method: t.route_method || null,
   };
 }
 export function shapeBidRow(b) {

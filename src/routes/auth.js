@@ -83,15 +83,20 @@ export async function getMe(req, env) {
   // Per vehicle: a motorbike is cheaper and beats traffic but carries little;
   // a car costs more and carries more. The customer picks the trade-off, so the
   // price has to differ or the choice is meaningless.
+  // Bigger vehicle, bigger cost to run. min_cents is a FLOOR on the suggestion:
+  // a lorry job is never worth quoting at RM8 no matter how short the trip,
+  // because the driver still has to load, secure, drive and unload.
+  const vp = (k, base, perKm, min) => ({
+    base_cents:   parseInt(s[`delivery_${k}_base_cents`]   || String(base),  10),
+    per_km_cents: parseInt(s[`delivery_${k}_per_km_cents`] || String(perKm), 10),
+    min_cents:    parseInt(s[`delivery_${k}_min_cents`]    || String(min),   10),
+  });
   const delivery_pricing = {
-    motor: {
-      base_cents: parseInt(s.delivery_motor_base_cents || "400", 10),      // RM4
-      per_km_cents: parseInt(s.delivery_motor_per_km_cents || "100", 10),  // RM1.00/km
-    },
-    car: {
-      base_cents: parseInt(s.delivery_car_base_cents || "500", 10),        // RM5 (Zaini's number)
-      per_km_cents: parseInt(s.delivery_car_per_km_cents || "150", 10),    // RM1.50/km
-    },
+    motor: vp("motor", 400, 100, 0),      // RM4  + RM1.00/km
+    car:   vp("car",   500, 150, 0),      // RM5  + RM1.50/km  (Zaini's number)
+    "4x4": vp("4x4",   800, 200, 0),      // RM8  + RM2.00/km
+    van:   vp("van",  1000, 250, 0),      // RM10 + RM2.50/km
+    lorry: vp("lorry", 2000, 300, 6000),  // RM20 + RM3.00/km, never below RM60
   };
   return json({ user: publicUser(user, env), delivery_pricing, commission_bps: bps,
                 cancel_policy: { grace_min: cancel.graceMin, fee_bps: cancel.feeBps } });

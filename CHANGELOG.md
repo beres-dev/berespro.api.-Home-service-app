@@ -1583,3 +1583,296 @@ jadi 404 akan ditangkap: tiada. Manrope disahkan benar-benar dimuat
 (bukan fallback senyap), tiada sisa Hanken, wordmark masih Unbounded, dan
 tiada teks terkeluar kotak pada mana-mana skrin — termasuk dalam Bahasa
 Melayu, yang perkataannya lebih panjang.
+
+
+---
+
+# v50 — alamat dalam planner, planner lebih stabil, tile ikon terapung
+
+App sahaja. 545 ujian server kekal hijau; 18 assert DOM baharu.
+Tiada perubahan schema, tiada /setup.
+
+## 1. Koordinat -> alamat sebenar
+
+Planner memaparkan "1.4920, 103.7410" — nombor itu tidak bermakna apa-apa
+kepada orang yang memutuskan ke mana bungkusan pergi. Kini setiap baris
+menunjukkan nama jalan dan kawasan.
+
+Reverse geocoding Nominatim mengehadkan lebih kurang satu permintaan
+sesaat, dan menyeret empat pin akan melanggarnya serta-merta. Jadi:
+carian di-CACHE mengikut koordinat dibundarkan, dan disalurkan melalui
+BARISAN satu-satu dengan jeda 1.1 saat. Jawapan basi (pin sudah bergerak
+lagi) dibuang.
+
+display_name Nominatim ialah rantaian poskod penuh — terlalu panjang
+untuk satu baris. shortAddr() mengambil bahagian bermakna sahaja:
+bangunan/jalan, kemudian kawasan.
+
+## 2. Alamat boleh DITAIP sendiri
+
+Tap mana-mana baris untuk taip alamat betul. Geocoding dapat nama jalan,
+tetapi tidak pernah nombor unit, kod pagar, atau "belakang surau".
+Taipan pengguna menang — carian automatik tidak akan menimpanya.
+
+## 3. Kestabilan: punca sebenar "tak stabil"
+
+Dua sebab, kedua-duanya kesalahan saya dalam v46:
+- list.innerHTML dibina SEMULA setiap kali pin diseret. Baris berkelip dan
+  kedudukan skrol melompat. Kini baris dibina SEKALI apabila stop
+  ditambah/dibuang; menyeret hanya mengemas kini teks di tempatnya.
+- Polyline dibuang dan dicipta semula setiap redraw. Kini setLatLngs()
+  menggerakkan garisan sedia ada — tiada kelipan.
+
+Juga: kotak senarai dinaikkan 120px -> 210px supaya lima destinasi muat
+tanpa skrol dalam yang sempit, dan destinasi pertama kini disemai lebih
+jauh dari pin pengambilan supaya ia jelas pin berasingan.
+
+## 4. Tile kategori: sempadan dibuang, ikon terapung
+
+Kad, bayang dan latar tile dibuang sepenuhnya seperti diminta. Yang
+tinggal: cakera bertona lembut dengan glow warna kategori di bawahnya,
+dan label. Sasaran tap kekal saiz sama.
+
+## 5. Ikon dilukis semula: pejal, bukan garis nipis
+
+Garis nipis satu-berat itulah yang membaca sebagai generik. Ikon kategori
+kini bentuk PEJAL dua-tona — siluet penuh dengan bentuk sekunder lebih
+lembut, satu warna kategori memandu keseluruhan glif. Ini bukan ilustrasi
+3D (kekangan yang sama seperti dijelaskan dalam v44) tetapi ia bentuk yang
+dilukis dengan niat, bukan stroke generik.
+
+## Nota ujian
+
+Satu assert gagal dua kali dan KEDUA-DUANYA salah saya, bukan kod: label
+baris memang wujud, tetapi huruf besarnya datang dari CSS text-transform
+yang tidak mengubah textContent, dan selector saya tersasar satu tingkat.
+Label kini diberi kelas sendiri — lebih kemas untuk kod dan ujian.
+
+
+---
+
+# v51 — flow laluan ditulis semula: satu titik pada satu masa
+
+App sahaja. 545 ujian server kekal hijau; 22 assert DOM baharu.
+Tiada perubahan schema, tiada /setup.
+
+## Punca kekeliruan (kesalahan reka bentuk saya dalam v46)
+
+Versi lama meletakkan SEMUA pin atas satu peta serentak, MENYEMAI satu
+drop-off di kedudukan rawak yang pengguna tidak pernah minta, dan
+menjadikan semua pin boleh diseret pada masa sama. Jadi tiada apa yang
+memberitahu anda pin MANA yang sedang anda tetapkan — dan menyeret pin
+kecil dengan ibu jari memang payah. Itulah kekeliruannya, bukan lukisan.
+
+## Flow baharu
+
+1. SENARAI langkah, bukan peta. Pengambilan di atas, penghantaran
+   bernombor di bawahnya.
+2. Tap satu baris -> pemilih skrin penuh untuk SATU titik itu sahaja.
+3. Pin TETAP di tengah skrin. Anda gerakkan PETA di bawahnya — jauh lebih
+   mudah dengan ibu jari daripada mengena sasaran 30px, dan soalan "pin
+   mana saya pegang ni?" hilang terus sebab hanya ada satu.
+   Alamat di bawah peta dikemas kini semasa anda gerak.
+4. Sahkan -> kembali ke senarai. Satu keputusan pada satu masa.
+
+Tiada apa ditambah di belakang anda: "Add drop-off" terus membuka
+pemilih, dan berundur tidak menambah apa-apa.
+
+Medan tambahan untuk nombor unit / mercu tanda / pagar, sebab geocoding
+dapat nama jalan tetapi tidak pernah "No 12, sebelah kedai runcit".
+Taipan pengguna menang atas carian automatik.
+
+Butang sahkan DIMATIKAN sehingga ada sekurang-kurangnya satu destinasi,
+dan berbunyi "Set a drop-off first" — bukan butang mati tanpa sebab.
+
+## Bug yang assert DOM tangkap semasa kerja ini
+
+Fungsi geocoding (_geoCache, lookupAddr, geoKey, shortAddr, drainGeo)
+tertanam DALAM blok planner lama, jadi menulis semula planner memadamnya
+sekali — sementara tiga tempat masih memanggilnya. App akan throw
+ReferenceError sebaik pemilih dibuka. Dipulihkan dan dipindahkan KELUAR
+dari blok planner supaya penulisan semula akan datang tidak boleh
+memadamnya lagi.
+
+## Diuji
+
+22 assert: senarai buka tanpa drop-off hantu, pemilih buka dengan pin
+tengah tetap, gerak peta mengemas kini alamat, batal tidak menambah apa-
+apa, taipan menang, tambang berubah ikut kenderaan, had 5 destinasi,
+confirm menulis balik ke borang, planner ditutup bersih.
+
+
+---
+
+# v52 — carian tempat dalam peta
+
+App sahaja. 545 ujian server kekal hijau; 17 assert DOM baharu.
+Tiada perubahan schema, tiada /setup.
+
+## Taip nama tempat, jangan pan sampai jumpa
+
+Kotak carian di atas peta dalam pemilih titik. Taip "KLCC", "Mid Valley",
+"Hospital Sultanah Aminah" atau nama jalan — pilih dari senarai, peta
+melompat ke sana.
+
+Butiran yang membuatkan ia berguna:
+- Hasil DIHADKAN ke Malaysia (countrycodes=my) — bukan Jalan Besar di
+  negara lain.
+- Hasil DICONDONGKAN ke kawasan yang peta sedang tunjuk, jadi nama jalan
+  biasa memulangkan yang berdekatan dahulu.
+- Carian hanya bermula selepas 3 aksara DAN selepas anda berhenti menaip
+  (450ms). Satu permintaan satu carian, bukan satu setiap ketukan kekunci.
+- Hasil di-cache; permintaan disalurkan satu-satu dengan jeda seperti
+  carian alamat terbalik, kerana Nominatim menghadkan lebih kurang satu
+  permintaan sesaat.
+- Jawapan basi dibuang jika kotak sudah ditaip semula.
+
+## Kes gagal dikendalikan dengan jujur
+
+Tiada padanan -> "No match for X. Try a nearby landmark, or move the map."
+Carian gagal (luar talian / dihadkan) -> memberitahu terus terang DAN
+mengingatkan bahawa menggerakkan peta masih berfungsi. Peta tidak pernah
+disekat oleh carian yang gagal.
+
+## Bug yang ditangkap semasa menguji
+
+Memilih hasil carian menetapkan nama tempat pada label — kemudian carian
+alamat TERBALIK yang tertunda mendarat lebih kurang 350ms selepas itu dan
+MENIMPANYA dengan nama jalan. Jadi "Mid Valley Megamall" bertukar sendiri
+menjadi "Lingkaran Syed Putra" sebaik anda memilihnya. Itu betul-betul
+mengelirukan, dan ia satu bug sebenar, bukan artifak ujian.
+
+Dibetulkan: tempat yang DIPILIH mengatasi carian terbalik dan kekal
+sehingga anda menggerakkan peta sendiri — menggerakkan peta dengan tangan
+bermakna anda membatalkan pilihan itu, jadi carian terbalik disambung
+semula.
+
+
+---
+
+# v53 — jarak jalan SEBENAR, 5 kenderaan, minimum lori, planner terus
+
+Suite baru test/routing.mjs: 18 ujian. Jumlah 575 lulus, 0 gagal.
+PERLU /setup: kolum tasks.route_method.
+
+## 1. Jarak: garis lurus -> jalan raya sebenar (aduan Zaini, dan dia betul)
+
+Jarak garis lurus MEMBAYAR KURANG setiap penghantaran. Dua titik 5 km
+jarak burung terbang selalunya 7-9 km jalan sebenar sebaik dikira sungai,
+jalan sehala, lebuh raya, dan hakikat kawasan perumahan Malaysia jarang
+bersambung terus. Partner yang bakar minyak dan masa itu; mengharga pada
+nombor burung terbang secara senyap memindahkan bezanya dari dia kepada
+pelanggan.
+
+Kini jarak diukur oleh penghala jalan sebenar (OSRM). Bila penghala tidak
+dapat menjawab, kita TIDAK jatuh ke garis lurus mentah — itu nombor tidak
+adil yang sedang kita hentikan. Sebaliknya faktor circuity 1.35 dipakai
+(nisbah terdokumentasi antara jarak jalan dan garis lurus di kawasan
+berbandar), yang tersilap sedikit MEMIHAK partner, bukan platform.
+
+route_method disimpan ("road" atau "estimated") supaya partner yang
+mempertikaikan tambang boleh diberitahu dengan tepat yang mana, bukan
+diminta menebak.
+
+Pengiraan di SERVER kekal satu-satunya kebenaran; app memanggil penghala
+yang sama supaya nombor di depan pelanggan ialah nombor yang membina
+tambang.
+
+Ujian menstub fetch, jadi laluan OSRM sebenar BENAR-BENAR diuji (dulu CI
+hanya menguji laluan sandaran), dan ia tidak lagi goyah bergantung
+rangkaian. Jawapan buruk ditolak: laluan jalan yang lebih PENDEK dari
+garis lurus tidak dipercayai.
+
+## 2. Kenderaan mengikut kategori
+
+  Delivery  motor, kereta, 4x4, van
+  Moving    lori sahaja
+
+Lori tidak boleh ditempah untuk delivery, motosikal tidak boleh ditempah
+untuk moving — dikuatkuasakan di server, bukan hanya disembunyikan di UI.
+
+Harga naik ikut saiz: motor RM4+RM1.00/km, kereta RM5+RM1.50/km,
+4x4 RM8+RM2.00/km, van RM10+RM2.50/km, lori RM20+RM3.00/km.
+
+## 3. Minimum RM60 untuk lori
+
+Kerja lori tidak pernah berbaloi dipetik RM8 walau sependek mana
+perjalanan — pemandu tetap perlu memuat, mengikat, memandu dan
+memunggah. min_cents ialah LANTAI pada cadangan. Kenderaan kecil tiada
+minimum. Kesemuanya boleh ditala dalam control panel (kini 15 tetapan:
+asas, per-km dan minimum untuk lima kenderaan).
+
+## 4. "Plan route on map" terus
+
+Tekan tile Delivery atau Moving -> planner terus terbuka. Untuk kategori
+ini laluan ITULAH pesanan; memaksa orang menggulung borang untuk mencari
+butang peta adalah geseran tanpa sebab. Ia terbuka sekali sahaja setiap
+lawatan, bukan setiap render.
+
+## 5. Foto boleh dimuat naik dalam halaman peta juga
+
+Bahagian foto ditambah dalam planner. Tile yang sama berfungsi dari
+kedua-dua tempat — ia mengesan input mana yang ada di skrin.
+
+## Dua bug yang assert DOM tangkap
+
+- rbConfirm membaca jarak SELEPAS menutup planner, dan penutupan itu
+  mengosongkan keadaan — jadi 0 km dibawa masuk ke borang secara senyap.
+  Kini semua nilai dibaca sebelum ditutup.
+- (ujian saya sendiri) selector .vgrid terlalu luas sebab kini ada DUA
+  grid kenderaan, satu dalam planner satu dalam borang.
+
+
+---
+
+# v54 — ikon 3D Zaini dipasang
+
+App sahaja. 575 ujian server kekal hijau; 13 assert DOM baharu.
+Tiada perubahan schema, tiada /setup.
+
+## Latar belakang dibuang, jadi tiada tile diperlukan
+
+Zaini menghantar lapan ikon 3D yang dia crop sendiri. Ia TIADA lutsinar —
+latarnya warna pepejal ~#E8EFFB. Dia berkata jika warna itu tidak dapat
+dipadankan dengan latar app, jadikan tile semula.
+
+Ia tidak perlu jadi tile: latar dibuang sepenuhnya, jadi ikon terapung di
+atas apa-apa permukaan.
+
+Cara ia dibuang: flood-fill dari TEPI sahaja. Piksel terang DI DALAM ikon
+(buih putih pada baldi, badan aircon putih) tidak pernah dicapai kerana ia
+tidak bersambung ke tepi melalui warna latar. Sudut disahkan alpha 0.
+
+## Satu kesilapan algoritma yang ditangkap pertengahan kerja
+
+Percubaan pertama melembutkan tepi berdasarkan JARAK WARNA dari latar. Itu
+merosakkan ikon paip — paip itu perak kebiruan, warnanya hampir sama dengan
+latar, jadi sebahagian paip menjadi separa lutsinar (592 piksel terjejas).
+Dibetulkan: pelembutan kini hanya pada piksel yang BERSEBELAHAN dengan latar
+yang dibuang, bukan mana-mana piksel yang kebetulan sewarna. Selepas itu
+piksel separa-lutsinar yang salah turun ke 0-2 pada kesemua lapan.
+
+## Saiz dinormalkan
+
+Setiap ikon dicrop berbeza, jadi baldi akan nampak jauh lebih besar dari
+mentol jika dipasang terus. Setiap satu kini dipangkas kepada artwork
+sebenar, kemudian diskala supaya jejak visualnya SAMA. Ada assert yang
+mengesahkan kelapan-lapan dirender pada lebar yang sama.
+
+## Format dipilih ikut ukuran, bukan agakan
+
+  webp q90       50K   tetapi 3-10% piksel kelihatan terjejas >25
+  webp q95       59K   hampir tiada beza (97 -> 95) — jadi bukan isu kualiti
+  webp lossless 156K   sifar kerosakan
+  png           189K   sifar kerosakan
+
+Dipilih WebP LOSSLESS: kualiti sempurna, masih 18% lebih kecil dari PNG.
+Untuk imej yang menjadi identiti visual app dan hanya dimuat turun sekali
+(service worker menyimpannya), 100K bukan harga yang berbaloi ditukar
+dengan 10% piksel rosak.
+
+## Sandaran
+
+CAT_ART menyenaraikan kategori yang ADA artwork. Kategori tanpa artwork
+kekal menggunakan glif SVG yang dilukis, jadi menambah kategori kesembilan
+tidak akan meninggalkan ikon pecah.

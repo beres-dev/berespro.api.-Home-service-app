@@ -214,6 +214,10 @@ ALTER TABLE payments ADD COLUMN original_amount_cents INTEGER;
 -- traffic but carry little; cars cost more and carry more. Each has its own
 -- base + per-km price (admin-tunable), so the customer picks the trade-off.
 ALTER TABLE tasks ADD COLUMN vehicle TEXT;
+-- How route_km was arrived at: "road" (measured along real roads) or
+-- "estimated" (router unavailable; straight line x circuity factor). Stored so
+-- a partner disputing a fare can be told exactly which, instead of guessing.
+ALTER TABLE tasks ADD COLUMN route_method TEXT;
 
 ALTER TABLE tasks ADD COLUMN stops TEXT;
 ALTER TABLE tasks ADD COLUMN route_km REAL;

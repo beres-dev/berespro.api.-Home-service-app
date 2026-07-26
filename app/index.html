@@ -173,10 +173,20 @@ textarea.f{min-height:88px;resize:vertical}
 
 /* ---------- categories ---------- */
 .catgrid{display:flex;flex-wrap:wrap;gap:10px}
-.cat{width:calc(25% - 8px);background:var(--sur);border:0;border-radius:18px;padding:14px 6px 12px;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;box-shadow:var(--clay-sm);transition:transform .12s,box-shadow .12s}
-.cat:active{transform:scale(.97);box-shadow:var(--clay-in)}
-.cat .ci{width:42px;height:42px;border-radius:99px;background:#EFF3FA;display:flex;align-items:center;justify-content:center;color:#22304B}
-.cat span{font-size:11.5px;font-weight:700;color:#3E4F70;text-align:center;line-height:1.2}
+.cat{width:calc(25% - 8px);background:none;border:0;border-radius:18px;padding:6px 2px 8px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;box-shadow:none;transition:transform .12s}
+.cat:active{transform:scale(.94)}
+/* The icon floats: a soft tinted disc with the glyph sitting on it, and a
+   coloured glow underneath instead of a card outline. */
+.cat .ci{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 18px -6px var(--catglow,rgba(16,31,58,.28)), inset 0 -2px 0 rgba(255,255,255,.55);
+  transition:transform .12s}
+.cat:active .ci{transform:translateY(1px)}
+/* The artwork is transparent, so it floats directly on the surface — no tile,
+   no disc. A soft drop shadow grounds it instead of a container. */
+.cat .cart{width:72px;height:72px;object-fit:contain;display:block;
+  filter:drop-shadow(0 7px 9px rgba(16,31,58,.16));transition:transform .12s}
+.cat:active .cart{transform:translateY(1px) scale(.96)}
+.cat span{font-size:11.5px;font-weight:700;color:#3E4F70;text-align:center;line-height:1.25;letter-spacing:-.005em}
 .catrow{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:2px}
 .catrow::-webkit-scrollbar{display:none}
 .fchip{flex-shrink:0;font-size:13.5px;font-weight:700;padding:9px 17px;border-radius:99px;background:var(--sur);border:0;color:var(--mut);cursor:pointer;white-space:nowrap;box-shadow:var(--clay-sm);transition:box-shadow .12s}
@@ -264,8 +274,36 @@ textarea.f{min-height:88px;resize:vertical}
 .escrow svg{flex-shrink:0;color:var(--grn);margin-top:1px}
 
 /* ---------- toast ---------- */
+/* ---- route builder list ---- */
+.rb-row{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.rb-row:last-child{border-bottom:0}
+.rb-row:active{opacity:.7}
+.rb-dot{width:26px;height:26px;border-radius:50%;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.rb-lbl{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.rb-addr{font-size:14px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.rb-addr.empty{color:var(--blu);font-weight:600}
+.rb-x{width:28px;height:28px;border-radius:50%;background:var(--sur2);display:flex;align-items:center;justify-content:center;color:var(--mut);flex-shrink:0}
+
+/* ---- place search over the map ---- */
+.pk-search{position:absolute;left:12px;right:12px;top:12px;z-index:1000}
+.pk-sbox{display:flex;align-items:center;gap:9px;background:#fff;border-radius:14px;padding:11px 13px;
+  box-shadow:0 6px 20px rgba(16,31,58,.22);color:var(--dim)}
+.pk-sbox input{flex:1;border:0;outline:0;background:none;font-family:inherit;font-size:14.5px;font-weight:600;color:var(--tx);min-width:0}
+.pk-sbox input::placeholder{color:var(--dim);font-weight:500}
+.pk-results{background:#fff;border-radius:14px;margin-top:8px;box-shadow:0 8px 26px rgba(16,31,58,.24);
+  max-height:236px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.pk-res{display:flex;gap:10px;align-items:flex-start;padding:12px 13px;border-bottom:1px solid var(--line);cursor:pointer}
+.pk-res:last-child{border-bottom:0}
+.pk-res:active{background:var(--sur2)}
+.pk-res .pin{color:var(--blu);flex-shrink:0;margin-top:1px}
+.pk-res b{display:block;font-size:13.5px;color:var(--tx);line-height:1.3}
+.pk-res span{display:block;font-size:11.5px;color:var(--mut);line-height:1.35;margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pk-msg{padding:13px;font-size:12.5px;color:var(--mut);text-align:center}
+
 /* ---- vehicle picker ---- */
-.vcard{flex:1;background:var(--sur);border-radius:18px;padding:13px 12px;box-shadow:var(--clay-sm);cursor:pointer;transition:box-shadow .14s,transform .12s;text-align:center}
+.vgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.vcard{background:var(--sur);border-radius:18px;padding:13px 12px;box-shadow:var(--clay-sm);cursor:pointer;transition:box-shadow .14s,transform .12s;text-align:center}
 .vcard b{display:block;font-size:14px;margin-top:6px}
 .vcard span{display:block;font-size:12.5px;font-weight:800;color:var(--blu);margin-top:2px}
 .vcard .vsub{font-size:11px;color:var(--dim);margin-top:4px;line-height:1.35}
@@ -532,6 +570,48 @@ function skylineFor(city){
 
 /* Per-category tint: [soft circle background, icon colour]. Bright enough to
    feel alive, muted enough to stay adult. */
+/* Filled two-tone category marks. currentColor is the category accent; the
+   lighter shapes use opacity so one colour drives the whole glyph. */
+const F = (paths, d=26) =>
+  `<svg viewBox="0 0 32 32" width="${d}" height="${d}" fill="currentColor" aria-hidden="true">${paths}</svg>`;
+const CIC = {
+  // bucket + suds
+  cleaning: d=>F(`<path d="M7.4 12.6h17.2l-1.5 11.2a3 3 0 0 1-3 2.6h-8.2a3 3 0 0 1-3-2.6Z"/>
+    <rect x="6" y="9.6" width="20" height="3.6" rx="1.8" opacity=".55"/>
+    <circle cx="22.6" cy="7.4" r="2.5" opacity=".45"/><circle cx="26.4" cy="10.4" r="1.5" opacity=".35"/>`, d),
+  // wrench crossed with a screwdriver
+  handyman: d=>F(`<path d="M20.9 5.6a6.2 6.2 0 0 0-6.9 8.2L5.6 22.2a2.6 2.6 0 0 0 3.7 3.7l8.4-8.4a6.2 6.2 0 0 0 8.2-6.9l-3.6 3.6-3.4-.9-.9-3.4Z"/>
+    <circle cx="8" cy="24" r="1.5" opacity=".5" fill="#fff"/>`, d),
+  // box truck
+  moving: d=>F(`<path d="M3.4 9.6h12.4a1.6 1.6 0 0 1 1.6 1.6v10.4H3.4Z"/>
+    <path d="M18.4 13.4h4.9l3.9 4.3v4H18.4Z" opacity=".55"/>
+    <circle cx="9.2" cy="23.4" r="2.9"/><circle cx="22.4" cy="23.4" r="2.9"/>`, d),
+  // parcel with a pin
+  delivery: d=>F(`<path d="M6 11.4 16 7l10 4.4v9.2L16 25 6 20.6Z" opacity=".55"/>
+    <path d="M6 11.4 16 15.8l10-4.4L16 7Z"/><path d="M16 15.8V25l-10-4.4v-9.2Z" opacity=".8"/>
+    <circle cx="24.4" cy="9.4" r="4.4" fill="#fff" opacity=".9"/><circle cx="24.4" cy="9.4" r="2.4"/>`, d),
+  // split unit blowing air
+  aircon: d=>F(`<rect x="4.4" y="7.6" width="23.2" height="9.2" rx="2.6"/>
+    <rect x="7.4" y="10.8" width="17.2" height="1.8" rx=".9" fill="#fff" opacity=".8"/>
+    <path d="M9 20.6q2.6 3 5.2 0M17.8 20.6q2.6 3 5.2 0" stroke="currentColor" stroke-width="2.2"
+      fill="none" stroke-linecap="round" opacity=".55"/>`, d),
+  // tap with a drop
+  plumbing: d=>F(`<path d="M5.6 12.4h9v4h-9a2 2 0 0 1 0-4Z"/><path d="M14.6 9.4h4.8v10h-4.8Z"/>
+    <path d="M19.4 11.4h4a2.6 2.6 0 0 1 2.6 2.6v3.4h-4V14a.6.6 0 0 0-.6-.6h-2Z" opacity=".6"/>
+    <path d="M22 21.4c1.9 2.3 2.9 3.9 2.9 5a2.9 2.9 0 1 1-5.8 0c0-1.1 1-2.7 2.9-5Z" opacity=".75"/>`, d),
+  // bulb with a bolt
+  electrical: d=>F(`<path d="M16 4.4a8.4 8.4 0 0 0-5 15.1v2.1a1.6 1.6 0 0 0 1.6 1.6h6.8a1.6 1.6 0 0 0 1.6-1.6v-2.1A8.4 8.4 0 0 0 16 4.4Z"/>
+    <rect x="12.6" y="25" width="6.8" height="2.6" rx="1.3" opacity=".55"/>
+    <path d="M16.9 8.6 13 15h2.7l-.7 4.6 3.9-6.6h-2.7Z" fill="#fff" opacity=".92"/>`, d),
+  // potted sprout
+  gardening: d=>F(`<path d="M11 18.6h10l-1.2 7.2a2.4 2.4 0 0 1-2.4 2h-2.8a2.4 2.4 0 0 1-2.4-2Z"/>
+    <rect x="9.6" y="15.6" width="12.8" height="3.4" rx="1.7" opacity=".55"/>
+    <path d="M16 15V9.6"/><path d="M16 11.4c-3.4 0-5-1.9-5-5 3.4 0 5 1.9 5 5Z" opacity=".8"/>
+    <path d="M16.6 13c2.8-.6 3.9-2.6 3.3-5.9-2.8.6-3.9 2.6-3.3 5.9Z" opacity=".6"/>`, d),
+};
+// Categories that ship real artwork. Anything not listed falls back to the
+// drawn glyph, so a new category never renders as a broken image.
+const CAT_ART = ["cleaning","handyman","moving","delivery","aircon","plumbing","electrical","gardening"];
 const CAT_TINT = {
   cleaning:["#E1F7F0","#0EA97C"], handyman:["#FFF1DC","#DF8A00"],
   moving:["#E6EEFF","#2458E6"],   delivery:["#F1EAFF","#7A44E0"],
@@ -642,6 +722,7 @@ const IC = {
   roller:d=>I('<rect x="4.4" y="4.4" width="13.2" height="4.8" rx="1.7"/><path d="M17.6 6.8h2.2v4.5H12v2.5"/><rect x="10.7" y="13.8" width="2.6" height="6.2" rx="1.15"/>',d),
   hex:d=>I('<path d="M12 3.6 19.3 7.8v8.4L12 20.4 4.7 16.2V7.8L12 3.6Z"/><circle cx="12" cy="12" r="2.9"/>',d),
   map:d=>I('<path d="M3.6 6.6 9 4.4v13L3.6 19.6Z"/><path d="M9 4.4 15 6.6v13L9 17.4Z"/><path d="M15 6.6 20.4 4.4v13L15 19.6Z"/>',d),
+  close:d=>I('<path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/>',d),
   target:d=>I('<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.4"/><path d="M12 2.6v3.2M12 18.2v3.2M2.6 12h3.2M18.2 12h3.2"/>',d),
   motor:d=>I('<circle cx="5.5" cy="16.4" r="3.1"/><circle cx="18.5" cy="16.4" r="3.1"/><path d="M8.6 16.4h4.1l3.1-5.2h-4.4"/><path d="M12.7 11.2 10.9 8h-2"/><path d="M15.4 8h3.3l1.1 2.9"/><path d="M18.5 13.3 17 10"/>',d),
   car:d=>I('<path d="M4.6 12.4 6 8.6A2.2 2.2 0 0 1 8.1 7.1h7.8A2.2 2.2 0 0 1 18 8.6l1.4 3.8"/><path d="M4.6 12.4h14.8a1.3 1.3 0 0 1 1.3 1.3v3.2h-2.2M4.6 12.4a1.3 1.3 0 0 0-1.3 1.3v3.2h2.2"/><circle cx="7.6" cy="17.1" r="1.7"/><circle cx="16.4" cy="17.1" r="1.7"/><path d="M9.3 16.9h5.4"/>',d),
@@ -810,7 +891,14 @@ ${skylineFor(state.user.city)}
   </div>`:""}
   <div class="rowbet"><div class="sec" style="margin:8px 0 10px">Browse categories</div><span style="font-size:13px;font-weight:700;color:var(--blu);cursor:pointer">See all</span></div>
   <div class="catgrid">
-    ${CATS.slice(0,8).map(c=>`<div class="cat" onclick="go('cpost','${c.id}')"><div class="ci" style="background:${CAT_TINT[c.id]?CAT_TINT[c.id][0]:'var(--sur2)'};color:${CAT_TINT[c.id]?CAT_TINT[c.id][1]:'var(--tx)'}">${IC[c.i](20)}</div><span>${c.n}</span></div>`).join("")}
+    ${CATS.slice(0,8).map(c=>{
+      const tint = CAT_TINT[c.id]||["#EFF3FA","#22304B"];
+      const art  = CAT_ART.includes(c.id);
+      return `<div class="cat" onclick="go('cpost','${c.id}')">
+        ${art
+          ? `<img class="cart" src="icons/cat/${c.id}.webp" alt="" width="72" height="72" loading="lazy" decoding="async">`
+          : `<div class="ci" style="background:${tint[0]};color:${tint[1]};--catglow:${tint[1]}55">${(CIC[c.id]||IC[c.i])(26)}</div>`}
+        <span>${c.n}</span></div>`;}).join("")}
   </div>
   <div class="sec">Your active tasks</div>
   ${active.length?active.map(t=>`
@@ -885,18 +973,7 @@ ${header("Post a Task","Describe it once, pros come to you",'chome')}
   </div>
   <div id="pt-stops-wrap" style="display:none">
     <label class="f">Vehicle</label>
-    <div class="rowg" style="gap:9px">
-      <div class="vcard" id="v-motor" onclick="pickVehicle('motor')">
-        <div class="vico">${IC.motor(26)}</div>
-        <b>Motorbike</b><span id="v-motor-p"></span>
-        <div class="vsub">Documents, food, small parcels</div>
-      </div>
-      <div class="vcard" id="v-car" onclick="pickVehicle('car')">
-        <div class="vico">${IC.car(26)}</div>
-        <b>Car</b><span id="v-car-p"></span>
-        <div class="vsub">Boxes, groceries, bulky items</div>
-      </div>
-    </div>
+    <div class="vgrid" id="pt-vehicles"></div>
     <button class="btn pri" style="margin-top:6px" onclick="openRoutePlanner()">${IC.pin(16)} Plan route on map</button>
     <div class="sub" style="font-size:11.5px;margin:7px 0 2px;text-align:center">Pickup, drop-offs and fare — all on one map, like you'd expect.</div>
     <label class="f" style="margin-top:12px">Delivery stops</label>
@@ -2400,170 +2477,489 @@ function closeJobsMap(){
   const h = document.getElementById("modal-host"); if (h) h.innerHTML="";
 }
 
-/* ---- Grab-style route planner ----
-   One full-screen map that IS the order: a green pickup pin, numbered drop-off
-   pins, a route line between them, and a fare card that recalculates live as
-   anything moves. Confirming writes back into the normal form (pin, stops,
-   vehicle, address) so the rest of the flow — and the server's own fare
-   arithmetic — stays exactly the same.
+/* ---- Reverse geocoding (shared) ----
+   Coordinates mean nothing to a person deciding where a parcel goes, so every
+   map surface shows a street name instead. Nominatim allows roughly one request
+   a second, and panning a map fires constantly — so results are CACHED by
+   rounded coordinate and drained through a queue one at a time. Answers that
+   arrive after the pin has moved again are discarded.
 
-   The polyline is straight point-to-point, not road routing: real routing
-   needs a directions service we don't run. The fare already prices on the
-   same straight-line km SERVER-side, so what you see here is what the
-   suggestion will be — honest, just not road-shaped. */
-let _rp = { map:null, A:null, stops:[], line:null, vehicle:"motor" };
-function rpIcon(L, label, color){
-  return L.divIcon({ className:"", iconSize:[30,30], iconAnchor:[15,15],
-    html:`<div style="width:30px;height:30px;border-radius:50%;background:${color};color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(10,20,40,.35);border:2.5px solid #fff">${label}</div>` });
+   Keep this OUTSIDE any one feature's block: it is used by the route builder,
+   the point picker and the saved-address modal. */
+const _geoCache = new Map();
+let _geoQueue = [], _geoBusy = false;
+function geoKey(lat, lng){ return lat.toFixed(4) + "," + lng.toFixed(4); }
+function shortAddr(j){
+  // display_name is a full postal chain — far too long for one line. Take the
+  // meaningful head: building or road, then the neighbourhood.
+  const a = (j && j.address) || {};
+  const first = a.building || a.amenity || a.shop || a.road || a.pedestrian || a.suburb;
+  const area  = a.suburb || a.neighbourhood || a.village || a.town || a.city_district || a.city;
+  if (first && area && first !== area) return `${first}, ${area}`;
+  return first || area || (j && j.display_name ? j.display_name.split(",").slice(0,2).join(",") : "");
 }
-async function openRoutePlanner(){
-  const host = document.getElementById("modal-host");
-  if (!host) return;
-  _rp.vehicle = _ptVehicle || "motor";
-  const city = (document.getElementById("pt-city")||{}).value || (state.user&&state.user.city);
-  const startA = state.pin || state.myPos || CITIES[city] || [3.139,101.687];
-  host.innerHTML = `
-  <div class="mmodal">
-    <div class="mmtop"><div class="mmback" onclick="closeRoutePlanner()">${IC.chevL(20)}</div><b>Plan your delivery</b></div>
-    <div style="flex:1;position:relative;min-height:200px">
-      <div id="rp-map" style="position:absolute;inset:0"></div>
-      <button onclick="rpLocate()" title="Use my location"
-        style="position:absolute;right:14px;top:14px;z-index:1000;width:44px;height:44px;border-radius:50%;border:0;background:#fff;box-shadow:0 6px 18px rgba(16,31,58,.28);display:flex;align-items:center;justify-content:center;color:var(--blu);cursor:pointer">${IC.target(18)}</button>
-    </div>
-    <div class="mmsheet">
-      <div class="rowg" style="gap:8px;margin-bottom:10px">
-        <span class="fchip ${_rp.vehicle==="motor"?"on":""}" id="rp-v-motor" onclick="rpVehicle('motor')">${IC.motor(14)} Motor</span>
-        <span class="fchip ${_rp.vehicle==="car"?"on":""}" id="rp-v-car" onclick="rpVehicle('car')">${IC.car(14)} Car</span>
-      </div>
-      <div id="rp-list" style="max-height:120px;overflow-y:auto"></div>
-      <button class="btn dark sm" style="width:auto;padding:9px 14px;margin-top:6px" onclick="rpAddStop()">${IC.plus(14)} Add drop-off</button>
-      <div class="rowbet" style="margin:12px 0 10px">
-        <div class="sub" style="font-size:12px" id="rp-km"></div>
-        <b style="font-size:18px;color:var(--blu)" id="rp-fare"></b>
-      </div>
-      <button class="btn pri" onclick="rpConfirm()">Use this route</button>
-    </div>
-  </div>`;
-  let L;
-  try { L = await ensureLeaflet(); }
-  catch(e){ toast("Map unavailable \u2014 use the fields below instead."); closeRoutePlanner(); return; }
-  _rp.map = L.map(document.getElementById("rp-map"), { attributionControl:false }).setView(startA, 14);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(_rp.map);
-  _rp.A = L.marker(startA, { draggable:true, icon: rpIcon(L,"A","#0EB57D") }).addTo(_rp.map);
-  _rp.A.on("dragend", rpRedraw);
-  _rp.stops = [];
-  // seed from stops already added on the form, so the two views agree
-  for (const s of _ptStops){
-    const m = L.marker([s.lat,s.lng], { draggable:true, icon: rpIcon(L, String(_rp.stops.length+1), "#0051E9") }).addTo(_rp.map);
-    m._addr = s.addr || ""; m.on("dragend", rpRedraw);
-    _rp.stops.push(m);
-  }
-  if (!_rp.stops.length) rpAddStop(true);
-  rpRedraw();
-  setTimeout(()=>{ try{ _rp.map.invalidateSize(); rpFit(); }catch(e){} }, 260);
+async function drainGeo(){
+  if (_geoBusy || !_geoQueue.length) return;
+  _geoBusy = true;
+  const { lat, lng, done } = _geoQueue.shift();
+  const key = geoKey(lat, lng);
+  try {
+    if (!_geoCache.has(key)){
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+        { headers:{ "Accept":"application/json" } });
+      const j = await r.json();
+      _geoCache.set(key, shortAddr(j) || "");
+    }
+    done(_geoCache.get(key));
+  } catch(e){ done(""); }
+  setTimeout(()=>{ _geoBusy = false; drainGeo(); }, 1100);
 }
-function rpVehicle(v){
-  _rp.vehicle = v;
-  const m=document.getElementById("rp-v-motor"), c=document.getElementById("rp-v-car");
-  if (m) m.classList.toggle("on", v==="motor");
-  if (c) c.classList.toggle("on", v==="car");
-  rpRedraw();
+function lookupAddr(lat, lng, done){
+  const key = geoKey(lat, lng);
+  if (_geoCache.has(key)){ done(_geoCache.get(key)); return; }
+  _geoQueue = _geoQueue.filter(q => geoKey(q.lat,q.lng) !== key);   // newest wins
+  _geoQueue.push({ lat, lng, done });
+  drainGeo();
 }
-function rpAddStop(silent){
-  if (!_rp.map) return;
-  if (_rp.stops.length >= 5){ toast("Maximum 5 drop-offs"); return; }
-  const L = window.L;
-  const from = _rp.stops.length ? _rp.stops[_rp.stops.length-1].getLatLng() : _rp.A.getLatLng();
-  const pos = [from.lat + 0.006, from.lng + 0.006];
-  const m = L.marker(pos, { draggable:true, icon: rpIcon(L, String(_rp.stops.length+1), "#0051E9") }).addTo(_rp.map);
-  m._addr = ""; m.on("dragend", rpRedraw);
-  _rp.stops.push(m);
-  if (!silent) toast("Drag pin " + _rp.stops.length + " to the drop-off spot");
-  rpRedraw();
+
+/* ---- Place search (forward geocoding) ----
+   Panning a map to find Mid Valley is absurd when you can just type it. Same
+   rate-limit discipline as the reverse lookups: one request in flight, results
+   cached by query, and a stale response is dropped if the box has moved on.
+
+   Results are biased to Malaysia (countrycodes=my) and softly toward whatever
+   the map is currently showing, so "Jalan Besar" returns the one near you
+   rather than one four states away. */
+const _searchCache = new Map();
+let _searchSeq = 0, _searchBusy = false;
+async function searchPlaces(q, near, done){
+  const key = q.trim().toLowerCase() + "|" + (near ? geoKey(near[0], near[1]) : "");
+  if (_searchCache.has(key)){ done(_searchCache.get(key)); return; }
+  const seq = ++_searchSeq;
+  while (_searchBusy) await new Promise(r=>setTimeout(r,120));
+  if (seq !== _searchSeq) return;                 // a newer query replaced this one
+  _searchBusy = true;
+  try {
+    let url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6`
+            + `&countrycodes=my&q=${encodeURIComponent(q)}`;
+    if (near){
+      // soft bias: a box roughly 60km around what the map is showing
+      const [la, ln] = near, d = 0.55;
+      url += `&viewbox=${ln-d},${la+d},${ln+d},${la-d}`;
+    }
+    const r = await fetch(url, { headers:{ "Accept":"application/json" } });
+    const j = await r.json();
+    const out = (Array.isArray(j) ? j : []).map(x=>({
+      lat: parseFloat(x.lat), lng: parseFloat(x.lon),
+      name: x.name || shortAddr(x) || (x.display_name||"").split(",")[0],
+      detail: (x.display_name||"").split(",").slice(1,4).join(",").trim(),
+    })).filter(x=>isFinite(x.lat) && isFinite(x.lng));
+    _searchCache.set(key, out);
+    if (seq === _searchSeq) done(out);
+  } catch(e){ if (seq === _searchSeq) done(null); }   // null = failed, [] = no matches
+  setTimeout(()=>{ _searchBusy = false; }, 1100);
 }
-function rpRemoveStop(i){
-  const m = _rp.stops.splice(i,1)[0];
-  if (m && _rp.map) _rp.map.removeLayer(m);
-  _rp.stops.forEach((s,idx)=>{ s.setIcon(rpIcon(window.L, String(idx+1), "#0051E9")); });
-  rpRedraw();
+
+/* ---- Route builder (Moving / Delivery) ----
+   REWRITTEN in v51. The old version put every pin on one map at once, seeded a
+   drop-off at an arbitrary offset the person never asked for, and made all pins
+   draggable simultaneously — so nothing told you WHICH point you were setting,
+   and dragging a small pin with a thumb is fiddly anyway. That was the
+   confusion, not the drawing.
+
+   Now it works the way people already expect from ride and delivery apps:
+     1. A LIST of stops. Pickup on top, drop-offs numbered under it.
+     2. Tap a stop -> a full-screen picker for THAT ONE point.
+     3. The pin is FIXED at the centre of the screen. You move the MAP under it,
+        which is far easier with a thumb than hitting a 30px target, and the
+        address under the map updates as you go.
+     4. Confirm -> back to the list. One decision at a time.
+   Nothing is added behind your back: "Add drop-off" opens the picker straight
+   away, and backing out adds nothing. */
+
+let _rb = { stops:[], vehicle:"motor", pickup:null, cat:"delivery", km:0, method:null, minutes:null };   // pickup/stops: {lat,lng,addr,manual}
+let _pk = { map:null, target:null, moveT:null, onDone:null };
+
+/* Distance shown here comes from the SAME road router the server uses, so the
+   number in front of the customer is the number the fare is built from. Until
+   it answers we show the circuity estimate rather than a bare straight line —
+   the straight line is the unfair figure this replaced. */
+function rbFare(){
+  const km = _rb.km || 0;
+  return { km, fare: km ? fareFor(_rb.vehicle, km) : 0, method: _rb.method || "estimated" };
 }
-function rpKm(){
-  const pts = [_rp.A.getLatLng(), ..._rp.stops.map(s=>s.getLatLng())];
+function rbStraightKm(){
+  const pts = [_rb.pickup, ..._rb.stops].filter(Boolean);
+  if (pts.length < 2) return 0;
   const hav=(a,b,c,d)=>{const R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,
     h=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
     return 2*R*Math.asin(Math.sqrt(h));};
   let km=0;
   for (let i=1;i<pts.length;i++) km += hav(pts[i-1].lat,pts[i-1].lng,pts[i].lat,pts[i].lng);
-  return Math.round(km*10)/10;
+  return km;
 }
-function rpRedraw(){
-  if (!_rp.map) return;
-  const L = window.L;
-  const pts = [_rp.A.getLatLng(), ..._rp.stops.map(s=>s.getLatLng())];
-  if (_rp.line) _rp.map.removeLayer(_rp.line);
-  _rp.line = L.polyline(pts, { color:"#0051E9", weight:4, opacity:.85, dashArray:"1 8", lineCap:"round" }).addTo(_rp.map);
-  const km = _rp.stops.length ? rpKm() : 0;
-  const pr = vehiclePricing(_rp.vehicle);
-  const fare = Math.ceil((pr.base_cents + pr.per_km_cents * km) / 100);
-  const kmEl = document.getElementById("rp-km"), fEl = document.getElementById("rp-fare");
-  if (kmEl) kmEl.textContent = _rp.stops.length ? `\u2248 ${km} km \u00b7 ${_rp.stops.length} drop-off${_rp.stops.length>1?"s":""}` : "Add a drop-off to see the fare";
-  if (fEl) fEl.textContent = _rp.stops.length ? `RM ${fare}` : "";
-  const list = document.getElementById("rp-list");
-  if (list){
-    const row = (label,color,text,extra) => `
-      <div class="rowbet" style="padding:5px 0">
-        <div class="rowg" style="gap:8px;min-width:0">
-          <span style="width:20px;height:20px;border-radius:50%;background:${color};color:#fff;font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${label}</span>
-          <span style="font-size:12.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${text}</span>
-        </div>${extra||""}
-      </div>`;
-    const a = _rp.A.getLatLng();
-    list.innerHTML = row("A","#0EB57D",`Pickup \u00b7 ${a.lat.toFixed(4)}, ${a.lng.toFixed(4)}`) +
-      _rp.stops.map((s,i)=>{ const ll=s.getLatLng();
-        return row(String(i+1),"#0051E9",`Drop-off \u00b7 ${ll.lat.toFixed(4)}, ${ll.lng.toFixed(4)}`,
-          `<span onclick="rpRemoveStop(${i})" style="color:var(--red);font-size:11.5px;font-weight:800;padding:4px;cursor:pointer;flex-shrink:0">Remove</span>`); }).join("");
-  }
-}
-function rpFit(){
+/* Ask the road router. Only fires when the ROUTE changes, never while panning. */
+async function rbMeasure(){
+  const pts = [_rb.pickup, ..._rb.stops].filter(Boolean);
+  if (pts.length < 2){ _rb.km = 0; _rb.method = null; rbRender(); return; }
+  _rb.km = Math.round(rbStraightKm() * 1.35 * 10) / 10;   // honest interim figure
+  _rb.method = "estimated";
+  rbRender();
   try {
-    const pts = [_rp.A.getLatLng(), ..._rp.stops.map(s=>s.getLatLng())];
-    _rp.map.fitBounds(window.L.latLngBounds(pts).pad(0.28));
-  } catch(e){}
+    const coords = pts.map(p=>`${p.lng},${p.lat}`).join(";");
+    const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=false&alternatives=false`,
+      { headers:{ accept:"application/json" } });
+    const j = await r.json();
+    const route = j && j.code === "Ok" && j.routes && j.routes[0];
+    if (route && isFinite(route.distance)){
+      const km = route.distance / 1000;
+      if (km >= rbStraightKm() * 0.95){
+        _rb.km = Math.round(km*10)/10;
+        _rb.method = "road";
+        _rb.minutes = isFinite(route.duration) ? Math.round(route.duration/60) : null;
+        rbRender();
+      }
+    }
+  } catch(e){ /* keep the estimate; the server will measure again on submit */ }
 }
-function rpLocate(){
-  const blocked = geoBlockedReason();
-  if (blocked){ toast(blocked); return; }
-  navigator.geolocation.getCurrentPosition((pos)=>{
-    const ll=[pos.coords.latitude,pos.coords.longitude];
-    _rp.A.setLatLng(ll); state.myPos=ll; _rp.map.setView(ll,16); rpRedraw();
-    toast("Pickup set to your location");
-  }, (err)=>toast(geoErrText(err)), {enableHighAccuracy:true, timeout:9000});
+
+function openRoutePlanner(){
+  // seed from whatever the form already knows
+  const city = (document.getElementById("pt-city")||{}).value || (state.user&&state.user.city);
+  const start = state.pin || state.myPos || CITIES[city] || [3.139,101.687];
+  const typed = (document.getElementById("pt-addr")||{value:""}).value.trim();
+  _rb.pickup = { lat:start[0], lng:start[1], addr:typed, manual:!!typed };
+  _rb.stops = _ptStops.map(s=>({ lat:s.lat, lng:s.lng, addr:s.addr||"", manual:!!s.addr }));
+  _rb.cat = currentCat();
+  const allowed = vehiclesFor(_rb.cat);
+  _rb.vehicle = allowed.includes(_ptVehicle) ? _ptVehicle : allowed[0];
+  _rb.km = 0; _rb.method = null;
+  rbRender();
+  rbLookupAll();
+  rbMeasure();
+  setTimeout(()=>{ try{ drawPhotos(); }catch(e){} }, 0);
 }
-async function rpConfirm(){
-  if (!_rp.stops.length){ toast("Add at least one drop-off"); return; }
-  const a = _rp.A.getLatLng();
-  const stops = _rp.stops.map(s=>{ const ll=s.getLatLng();
-    return { addr: s._addr || `${ll.lat.toFixed(4)}, ${ll.lng.toFixed(4)}`, lat: ll.lat, lng: ll.lng }; });
-  const veh = _rp.vehicle;
+
+function rbRow(kind, i){
+  const item = kind === "pickup" ? _rb.pickup : _rb.stops[i];
+  const label = kind === "pickup" ? "A" : String(i+1);
+  const color = kind === "pickup" ? "#0EB57D" : "#0051E9";
+  const title = kind === "pickup" ? "Pickup" : "Drop-off " + (i+1);
+  const set = item && (item.addr || item.lat != null);
+  return `
+  <div class="rb-row" onclick="rbPick('${kind}',${i})">
+    <span class="rb-dot" style="background:${color}">${label}</span>
+    <div style="flex:1;min-width:0">
+      <div class="rb-lbl">${title}</div>
+      <div class="rb-addr ${set?"":"empty"}">${set ? esc(item.addr || (item.lat.toFixed(4)+", "+item.lng.toFixed(4))) : "Tap to set on map"}</div>
+    </div>
+    ${kind==="stop" ? `<span class="rb-x" onclick="event.stopPropagation();rbRemove(${i})">${IC.close?IC.close(15):"\u00d7"}</span>` : IC.chevR(16)}
+  </div>`;
+}
+
+function rbRender(){
+  const keepPhotos = true;   // photo tiles live in #pt-photos, redrawn below
+  const host = document.getElementById("modal-host");
+  if (!host) return;
+  const { km, fare, method } = rbFare();
+  const pr = vehiclePricing(_rb.vehicle);
+  const minApplies = km > 0 && pr.min_cents > 0 &&
+    (pr.base_cents + pr.per_km_cents * km) < pr.min_cents;
+  const ready = _rb.pickup && _rb.stops.length && _rb.stops.every(s=>s.lat!=null);
+  host.innerHTML = `
+  <div class="mmodal">
+    <div class="mmtop">
+      <div class="mmback" onclick="closeRoutePlanner()">${IC.chevL(20)}</div>
+      <b style="flex:1">Delivery route</b>
+    </div>
+    <div style="flex:1;overflow-y:auto;background:var(--content);padding:14px 15px 18px">
+      <div class="sub" style="font-size:12.5px;margin-bottom:12px;line-height:1.5">
+        Set where it's picked up, then where it goes. Tap each line to place it on the map.
+      </div>
+
+      <div class="card" style="padding:4px 14px">
+        ${rbRow("pickup",0)}
+        ${_rb.stops.map((s,i)=>rbRow("stop",i)).join("")}
+      </div>
+
+      ${_rb.stops.length < 5 ? `
+      <button class="btn dark sm" style="width:auto;padding:11px 16px;margin-top:12px" onclick="rbAdd()">
+        ${IC.plus(15)} Add drop-off</button>` : `
+      <div class="sub" style="font-size:11.5px;margin-top:10px">Maximum 5 drop-offs.</div>`}
+
+      <div class="sec" style="margin:20px 0 9px">Vehicle</div>
+      <div class="vgrid">
+        ${vehiclesFor(_rb.cat).map(v=>{const m=VEHICLE_META[v];return `
+        <div class="vcard ${_rb.vehicle===v?"on":""}" onclick="rbVehicle('${v}')">
+          <div class="vico">${IC[m.icon](24)}</div><b>${m.name}</b>
+          <span>${rbPriceLabel(v)}</span>
+          <div class="vsub">${m.note}</div>
+        </div>`;}).join("")}
+      </div>
+
+      <div class="sec" style="margin:20px 0 9px">Photos (optional)</div>
+      <input type="file" id="rb-file" accept="image/*" multiple style="display:none" onchange="onPhotoPick(this)">
+      <div style="display:flex;gap:10px;flex-wrap:wrap" id="pt-photos"></div>
+      <div class="sub" style="font-size:11.5px;margin-top:8px">Show what's being moved — partners bid more accurately when they can see it.</div>
+
+      <div class="card" style="margin-top:16px;padding:14px">
+        <div class="rowbet">
+          <div>
+            <div class="sub" style="font-size:11.5px">${km ? "Road distance" : "Add a drop-off to see the fare"}</div>
+            ${km ? `<b style="font-size:15px">${km} km</b>
+              <div class="sub" style="font-size:10.5px;margin-top:2px">
+                ${method === "road" ? "Measured along real roads" : "Estimated \u2014 measuring\u2026"}
+                ${_rb.minutes && method === "road" ? ` \u00b7 ~${_rb.minutes} min` : ""}</div>` : ""}
+          </div>
+          ${km ? `<div style="text-align:right">
+            <div class="sub" style="font-size:11.5px">Suggested</div>
+            <div class="price num" style="font-size:22px;color:var(--blu)">RM ${fare}</div>
+          </div>` : ""}
+        </div>
+        ${km ? `<div class="sub" style="font-size:11px;margin-top:8px;line-height:1.5">
+          ${minApplies ? `Minimum RM${(vehiclePricing(_rb.vehicle).min_cents/100).toFixed(0)} applies for a ${VEHICLE_META[_rb.vehicle].name.toLowerCase()}. ` : ""}A suggestion, not a fixed price \u2014 partners still bid.</div>` : ""}
+      </div>
+    </div>
+    <div style="background:var(--sur);padding:12px 15px 16px;box-shadow:0 -6px 22px rgba(16,31,58,.10)">
+      <button class="btn ${ready?"pri":"dark"}" onclick="rbConfirm()" ${ready?"":"disabled style=\"opacity:.5\""}>
+        ${ready ? "Use this route" : "Set a drop-off first"}</button>
+    </div>
+  </div>`;
+  setTimeout(()=>{ try{ drawPhotos(); }catch(e){} }, 0);   // tiles re-attach after each render
+}
+function rbPriceLabel(v){
+  const pr = vehiclePricing(v);
+  const base = `RM${(pr.base_cents/100).toFixed(0)} + RM${(pr.per_km_cents/100).toFixed(2)}/km`;
+  return pr.min_cents ? `${base} \u00b7 min RM${(pr.min_cents/100).toFixed(0)}` : base;
+}
+function rbVehicle(v){ _rb.vehicle = v; rbRender(); }   // distance unchanged; only the price moves
+function rbRemove(i){ _rb.stops.splice(i,1); rbRender(); rbMeasure(); }
+function rbAdd(){
+  if (_rb.stops.length >= 5){ toast("Maximum 5 drop-offs"); return; }
+  // Open the picker immediately. Nothing is added unless it's confirmed —
+  // the old version dropped a pin somewhere random and left you to find it.
+  const last = _rb.stops.length ? _rb.stops[_rb.stops.length-1] : _rb.pickup;
+  openPointPicker({
+    title: "Drop-off " + (_rb.stops.length + 1),
+    lat: last ? last.lat : 3.139, lng: last ? last.lng : 101.687,
+    onDone: (res)=>{ _rb.stops.push({ ...res, manual:res.manual }); rbRender(); rbLookupAll(); rbMeasure(); },
+    onCancel: ()=>rbRender(),
+  });
+}
+function rbPick(kind, i){
+  const item = kind === "pickup" ? _rb.pickup : _rb.stops[i];
+  openPointPicker({
+    title: kind === "pickup" ? "Pickup point" : "Drop-off " + (i+1),
+    lat: item.lat, lng: item.lng, addr: item.addr,
+    onDone: (res)=>{
+      if (kind === "pickup") _rb.pickup = { ...res };
+      else _rb.stops[i] = { ...res };
+      rbRender(); rbLookupAll(); rbMeasure();
+    },
+    onCancel: ()=>rbRender(),
+  });
+}
+/* Fill in any address we don't have yet, without blocking the list. */
+function rbLookupAll(){
+  const items = [_rb.pickup, ..._rb.stops].filter(Boolean);
+  items.forEach((it)=>{
+    if (it.manual || it.addr || it.lat == null) return;
+    lookupAddr(it.lat, it.lng, (addr)=>{
+      if (!addr || it.manual) return;
+      it.addr = addr;
+      if (document.querySelector(".rb-row")) rbRender();
+    });
+  });
+}
+function rbConfirm(){
+  if (!_rb.pickup || !_rb.stops.length){ toast("Add at least one drop-off"); return; }
+  // Read EVERYTHING out of _rb before closing — closeRoutePlanner() resets it,
+  // and reading km afterwards silently carried 0 into the form.
+  const pickup = _rb.pickup, stops = _rb.stops.slice();
+  const veh = _rb.vehicle, km = _rb.km, method = _rb.method;
   closeRoutePlanner();
-  setPin(a.lat, a.lng);
-  _ptStops = stops; _ptVehicle = veh;
+  setPin(pickup.lat, pickup.lng);
+  _ptStops = stops.map(s=>({ addr: s.addr || `${s.lat.toFixed(4)}, ${s.lng.toFixed(4)}`, lat:s.lat, lng:s.lng }));
+  _ptVehicle = veh;
+  _ptRouteKm = km; _ptRouteMethod = method;
   drawStops(); drawVehicles(); drawRoute();
   const f = document.getElementById("pt-addr");
-  if (f && !f.value.trim()){
-    // best-effort street name for the pickup; user can edit
-    try {
-      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${a.lat}&lon=${a.lng}&zoom=18`,{headers:{"Accept":"application/json"}});
-      const j = await r.json();
-      if (j.display_name && !f.value.trim()) f.value = j.display_name;
-    } catch(e){}
-  }
+  if (f && !f.value.trim() && pickup.addr) f.value = pickup.addr;
   toast("Route set \u2014 fare suggestion updated");
 }
 function closeRoutePlanner(){
-  if (_rp.map){ try{ _rp.map.remove(); }catch(e){} }
-  _rp = { map:null, A:null, stops:[], line:null, vehicle:_ptVehicle||"motor" };
-  const h = document.getElementById("modal-host"); if (h) h.innerHTML="";
+  _rbSeen = true;
+  closePointPicker(true);
+  const h = document.getElementById("modal-host"); if (h) h.innerHTML = "";
+  _rb = { stops:[], vehicle:_ptVehicle||"motor", pickup:null };
+}
+
+/* ---- Point picker: ONE location, fixed centre pin ----
+   The pin never moves; the map moves under it. On a phone that beats dragging
+   a small marker, and it removes the "which pin am I holding?" question
+   entirely because there is only ever one. */
+async function openPointPicker(opts){
+  const host = document.getElementById("modal-host");
+  if (!host) return;
+  host.innerHTML = `
+  <div class="mmodal">
+    <div class="mmtop">
+      <div class="mmback" onclick="closePointPicker()">${IC.chevL(20)}</div>
+      <b style="flex:1">${esc(opts.title || "Set location")}</b>
+    </div>
+    <div style="flex:1;position:relative;min-height:220px">
+      <div id="pk-map" style="position:absolute;inset:0"></div>
+      <div class="pk-search">
+        <div class="pk-sbox">
+          ${IC.search(17)}
+          <input id="pk-q" placeholder="Search address or place name"
+            autocomplete="off" autocorrect="off" spellcheck="false"
+            oninput="pkSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();pkSearchNow();}">
+          <span id="pk-clear" onclick="pkClearSearch()" style="display:none;cursor:pointer;color:var(--dim);padding:2px">${IC.close(15)}</span>
+        </div>
+        <div id="pk-results" class="pk-results" style="display:none"></div>
+      </div>
+      <!-- fixed centre pin: pure DOM, never a map layer, so it cannot drift -->
+      <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);z-index:900;pointer-events:none">
+        <div style="width:34px;height:34px;border-radius:50%;background:#0051E9;border:3.5px solid #fff;box-shadow:0 6px 16px rgba(10,20,40,.4);display:flex;align-items:center;justify-content:center;color:#fff">${IC.pin(17)}</div>
+        <div style="width:2px;height:12px;background:#0051E9;margin:0 auto;opacity:.75"></div>
+      </div>
+      <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:899;pointer-events:none;width:12px;height:6px;border-radius:50%;background:rgba(10,20,40,.22)"></div>
+      <button onclick="pkLocate()" title="Use my location"
+        style="position:absolute;right:14px;bottom:14px;z-index:1000;width:46px;height:46px;border-radius:50%;border:0;background:#fff;box-shadow:0 6px 18px rgba(16,31,58,.28);display:flex;align-items:center;justify-content:center;color:var(--blu);cursor:pointer">${IC.target(19)}</button>
+    </div>
+    <div class="mmsheet">
+      <div class="sub" style="font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;margin-bottom:6px">Move the map to place the pin</div>
+      <div id="pk-addr" style="font-size:14.5px;font-weight:700;color:var(--tx);min-height:20px;line-height:1.4">\u2026</div>
+      <input class="f" id="pk-manual" placeholder="Add unit number, landmark, gate\u2026" style="margin-top:10px;font-size:14px">
+      <div style="height:12px"></div>
+      <button class="btn pri" onclick="pkConfirm()">Confirm this location</button>
+    </div>
+  </div>`;
+  _pk.onDone = opts.onDone; _pk.onCancel = opts.onCancel;
+  const manual = document.getElementById("pk-manual");
+  if (manual && opts.addr) manual.value = opts.addr;
+
+  let L;
+  try { L = await ensureLeaflet(); }
+  catch(e){ toast("Map unavailable \u2014 type the address instead."); return; }
+  _pk.map = L.map(document.getElementById("pk-map"), { attributionControl:false, zoomControl:true })
+    .setView([opts.lat ?? 3.139, opts.lng ?? 101.687], 17);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(_pk.map);
+  _pk.map.on("movestart", ()=>{
+    _pk.chosen = null;                     // moving by hand overrides a search pick
+    const el=document.getElementById("pk-addr"); if (el) el.style.opacity=".45"; });
+  _pk.map.on("moveend", pkUpdateAddr);
+  setTimeout(()=>{ try{ _pk.map.invalidateSize(); pkUpdateAddr(); }catch(e){} }, 250);
+}
+let _pkQT = null;
+function pkSearchInput(){
+  const q = (document.getElementById("pk-q")||{value:""}).value.trim();
+  const clear = document.getElementById("pk-clear");
+  if (clear) clear.style.display = q ? "block" : "none";
+  clearTimeout(_pkQT);
+  if (q.length < 3){ pkShowResults(null, ""); return; }
+  // wait for a pause in typing: one request per search, not one per keystroke
+  _pkQT = setTimeout(()=>pkSearchNow(), 450);
+}
+function pkSearchNow(){
+  const q = (document.getElementById("pk-q")||{value:""}).value.trim();
+  if (q.length < 3) return;
+  pkShowResults("loading");
+  const c = _pk.map ? _pk.map.getCenter() : null;
+  searchPlaces(q, c ? [c.lat, c.lng] : null, (res)=>{
+    // the box may have been cleared or retyped while this was in flight
+    const now = (document.getElementById("pk-q")||{value:""}).value.trim();
+    if (now !== q) return;
+    pkShowResults(res, q);
+  });
+}
+function pkShowResults(res, q){
+  const box = document.getElementById("pk-results");
+  if (!box) return;
+  if (res === null && q === ""){ box.style.display="none"; box.innerHTML=""; return; }
+  box.style.display = "block";
+  if (res === "loading"){ box.innerHTML = `<div class="pk-msg">Searching\u2026</div>`; return; }
+  if (res === null){
+    box.innerHTML = `<div class="pk-msg">Couldn't search right now. Move the map instead \u2014 it still works.</div>`;
+    return;
+  }
+  if (!res.length){
+    box.innerHTML = `<div class="pk-msg">No match for \u201c${esc(q)}\u201d. Try a nearby landmark, or move the map.</div>`;
+    return;
+  }
+  _pk.results = res;
+  box.innerHTML = res.map((r,i)=>`
+    <div class="pk-res" onclick="pkChoose(${i})">
+      <span class="pin">${IC.pin(15)}</span>
+      <div style="min-width:0"><b>${esc(r.name)}</b><span>${esc(r.detail)}</span></div>
+    </div>`).join("");
+}
+function pkChoose(i){
+  const r = (_pk.results||[])[i];
+  if (!r || !_pk.map) return;
+  // Remember the name BEFORE moving, so the moveend handler honours it.
+  _pk.chosen = r.name + (r.detail ? ", " + r.detail.split(",")[0] : "");
+  _pk.map.setView([r.lat, r.lng], 17);
+  clearTimeout(_pk.moveT);                 // cancel any lookup the move queued
+  const el = document.getElementById("pk-addr");
+  if (el){ el.style.opacity = "1"; el.textContent = _pk.chosen; }
+  pkClearSearch();
+}
+function pkClearSearch(){
+  const q = document.getElementById("pk-q");
+  if (q) q.value = "";
+  const clear = document.getElementById("pk-clear");
+  if (clear) clear.style.display = "none";
+  pkShowResults(null, "");
+  if (q) q.blur();
+}
+function pkUpdateAddr(){
+  if (!_pk.map) return;
+  const c = _pk.map.getCenter();
+  const el = document.getElementById("pk-addr");
+  // A place picked from search stands until the person moves the map again.
+  if (_pk.chosen){ if (el){ el.style.opacity="1"; el.textContent = _pk.chosen; } return; }
+  if (el){ el.style.opacity="1"; el.textContent = `${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}`; }
+  clearTimeout(_pk.moveT);
+  _pk.moveT = setTimeout(()=>{
+    lookupAddr(c.lat, c.lng, (addr)=>{
+      if (!_pk.map) return;
+      const now = _pk.map.getCenter();
+      if (geoKey(now.lat,now.lng) !== geoKey(c.lat,c.lng)) return;   // moved again
+      const e2 = document.getElementById("pk-addr");
+      if (e2 && addr) e2.textContent = addr;
+    });
+  }, 350);
+}
+function pkLocate(){
+  const blocked = geoBlockedReason();
+  if (blocked){ toast(blocked); return; }
+  toast("Finding your location\u2026");
+  navigator.geolocation.getCurrentPosition((pos)=>{
+    if (!_pk.map) return;
+    state.myPos = [pos.coords.latitude, pos.coords.longitude];
+    _pk.map.setView(state.myPos, 17);
+    pkUpdateAddr();
+  }, (err)=>toast(geoErrText(err)), {enableHighAccuracy:true, timeout:9000});
+}
+function pkConfirm(){
+  if (!_pk.map){ closePointPicker(); return; }
+  const c = _pk.map.getCenter();
+  const typed = (document.getElementById("pk-manual")||{value:""}).value.trim();
+  const shown = (document.getElementById("pk-addr")||{textContent:""}).textContent.trim();
+  // What the person typed wins; otherwise use the looked-up street name.
+  const addr = typed || (/^-?\d+\.\d+,/.test(shown) ? "" : shown);
+  const done = _pk.onDone;
+  closePointPicker(true);
+  if (done) done({ lat:c.lat, lng:c.lng, addr, manual: !!typed });
+}
+function closePointPicker(silent){
+  clearTimeout(_pk.moveT);
+  if (_pk.map){ try{ _pk.map.remove(); }catch(e){} }
+  const cb = _pk.onCancel;
+  _pk = { map:null, target:null, moveT:null, onDone:null, results:[], chosen:null };
+  if (!silent && cb) cb();
 }
 
 /* ---- saved addresses sync ---- */
@@ -2730,6 +3126,8 @@ function useMyPosition(){
    lesson: a render() here would wipe the rest of the form. */
 let _ptStops = [];
 let _ptVehicle = "motor";
+let _ptRouteKm = 0, _ptRouteMethod = null;
+let _rbSeen = false;   // planner auto-opens once per visit, not on every render
 let _ptPhotos = [];   // { key, dataUrl } — key null until uploaded
 const DELIVERY_CATS = ["moving","delivery"];
 function isDeliveryCat(){
@@ -2777,20 +3175,54 @@ function greeting(){
   const h = new Date().getHours();
   return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
 }
+/* Which vehicles a category may use, and what each one is for. Delivery is
+   parcels and errands; moving is furniture and a lorry. Keeping them apart
+   stops someone booking a lorry to send documents. */
+const VEHICLE_SETS = {
+  delivery: ["motor","car","4x4","van"],
+  moving:   ["lorry"],
+};
+const VEHICLE_META = {
+  motor: { name:"Motorbike", icon:"motor", note:"Documents, food, small parcels" },
+  car:   { name:"Car",       icon:"car",   note:"Boxes, groceries, bulky items" },
+  "4x4": { name:"4x4",       icon:"car",   note:"Heavy or awkward loads, rough access" },
+  van:   { name:"Van",       icon:"truck", note:"Many boxes, appliances, small moves" },
+  lorry: { name:"Lorry",     icon:"truck", note:"Furniture and full house moves" },
+};
+function vehiclesFor(cat){ return VEHICLE_SETS[(cat||"").toLowerCase()] || VEHICLE_SETS.delivery; }
+function currentCat(){ const el=document.getElementById("pt-cat"); return el ? (el.value||"").toLowerCase() : "delivery"; }
+
 function vehiclePricing(v){
   const dp = (state.live && state.live.delivery_pricing) || {};
-  return dp[v] || (v === "car" ? { base_cents:500, per_km_cents:150 }
-                               : { base_cents:400, per_km_cents:100 });
+  const fallback = {
+    motor:{base_cents:400,per_km_cents:100,min_cents:0},
+    car:{base_cents:500,per_km_cents:150,min_cents:0},
+    "4x4":{base_cents:800,per_km_cents:200,min_cents:0},
+    van:{base_cents:1000,per_km_cents:250,min_cents:0},
+    lorry:{base_cents:2000,per_km_cents:300,min_cents:6000},
+  };
+  return dp[v] || fallback[v] || fallback.motor;
+}
+/* The floor matters: a lorry job is never worth quoting at RM8 however short
+   the trip, because the driver still loads, secures, drives and unloads. */
+function fareFor(vehicle, km){
+  const pr = vehiclePricing(vehicle);
+  const cents = Math.max(pr.base_cents + pr.per_km_cents * km, pr.min_cents || 0);
+  return Math.ceil(cents / 100);
 }
 function drawVehicles(){
-  for (const v of ["motor","car"]){
-    const card = document.getElementById("v-"+v);
-    const price = document.getElementById("v-"+v+"-p");
-    if (!card) continue;
-    card.classList.toggle("on", _ptVehicle === v);
-    const pr = vehiclePricing(v);
-    if (price) price.textContent = `RM${(pr.base_cents/100).toFixed(0)} + RM${(pr.per_km_cents/100).toFixed(2)}/km`;
-  }
+  const box = document.getElementById("pt-vehicles");
+  if (!box) return;
+  const allowed = vehiclesFor(currentCat());
+  if (!allowed.includes(_ptVehicle)) _ptVehicle = allowed[0];
+  box.innerHTML = allowed.map(v=>{
+    const m = VEHICLE_META[v], pr = vehiclePricing(v);
+    const price = `RM${(pr.base_cents/100).toFixed(0)} + RM${(pr.per_km_cents/100).toFixed(2)}/km`
+      + (pr.min_cents ? ` \u00b7 min RM${(pr.min_cents/100).toFixed(0)}` : "");
+    return `<div class="vcard ${_ptVehicle===v?"on":""}" onclick="pickVehicle('${v}')">
+      <div class="vico">${IC[m.icon](24)}</div><b>${m.name}</b><span>${price}</span>
+      <div class="vsub">${m.note}</div></div>`;
+  }).join("");
 }
 function pickVehicle(v){ _ptVehicle = v; drawVehicles(); drawRoute(); }
 function drawStops(){
@@ -2829,15 +3261,15 @@ function drawRoute(){
   const el = document.getElementById("pt-route");
   const hint = document.getElementById("pt-budget-hint");
   if (!el) return;
-  const km = routeKmLocal();
+  const km = _ptRouteKm || routeKmLocal();
   if (!isDeliveryCat() || km == null){
     el.textContent = _ptStops.length && !state.pin ? "Set the pickup pin first to see the route distance." : "";
     if (hint) hint.textContent = "Partners can bid at, below, or slightly above your budget.";
     return;
   }
+  const sug = fareFor(_ptVehicle, km);
+  const vname = (VEHICLE_META[_ptVehicle] || VEHICLE_META.motor).name;
   const pr = vehiclePricing(_ptVehicle);
-  const sug = Math.ceil((pr.base_cents + pr.per_km_cents * km) / 100);
-  const vname = _ptVehicle === "car" ? "Car" : "Motorbike";
   el.innerHTML = `Route ≈ <b>${km} km</b> by <b>${vname}</b> · suggested <b>RM ${sug}</b> ` +
     `<a href="javascript:void(0)" onclick="useSuggested(${sug})" style="color:var(--blu);font-weight:800">Use suggested</a>`;
   if (hint) hint.textContent = `${vname}: RM${(pr.base_cents/100).toFixed(0)} base + RM${(pr.per_km_cents/100).toFixed(2)}/km. It's a suggestion — partners still bid.`;
@@ -2895,8 +3327,11 @@ function drawPhotos(){
       <img src="${ph.dataUrl}" style="width:74px;height:74px;object-fit:cover;border-radius:13px;${ph.key||!LIVE()?"":"opacity:.45"}">
       <span onclick="removePhoto(${i})" style="position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;background:var(--red);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer">×</span>
     </div>`).join("");
+  // The builder has its own hidden input; the form has another. Use whichever
+  // is actually on screen so the tile works from both places.
+  const inputId = document.getElementById("rb-file") ? "rb-file" : "pt-file";
   const add = _ptPhotos.length < 4
-    ? `<div onclick="document.getElementById('pt-file').click()" style="width:74px;height:74px;border:1.5px dashed var(--line2);border-radius:13px;display:flex;align-items:center;justify-content:center;color:var(--dim);cursor:pointer">${IC.plus(22)}</div>` : "";
+    ? `<div onclick="document.getElementById('${inputId}').click()" style="width:74px;height:74px;border:1.5px dashed var(--line2);border-radius:13px;display:flex;align-items:center;justify-content:center;color:var(--dim);cursor:pointer">${IC.plus(22)}</div>` : "";
   box.innerHTML = tiles + add;
 }
 function removePhoto(i){ _ptPhotos.splice(i,1); drawPhotos(); }
@@ -3479,6 +3914,7 @@ function liveSync(screen){
   // ---- UI hooks: pure screen preparation, NO network needed. These sat below
   // the token guard once, which silently disabled the category preselect and
   // form redraws whenever a session wasn't ready. UI prep never waits on auth.
+  if (screen!=="cpost") _rbSeen = false;
   if (screen==="cpost") setTimeout(()=>{ try{
     // Category tapped on the home grid arrives as the nav param — apply it
     // BEFORE onCatChange so the delivery section shows for moving/delivery.
@@ -3488,6 +3924,13 @@ function liveSync(screen){
     }
     onCatChange(); drawStops(); drawPhotos(); drawVehicles();
     autoApplyHome();
+    // Delivery and moving ARE a route — open the planner immediately instead of
+    // making the person hunt for the map button. Only on first arrival from the
+    // home grid, never when they come back to the form afterwards.
+    if (state.param && ["delivery","moving"].includes(state.param) && !_ptStops.length && !_rbSeen){
+      _rbSeen = true;
+      setTimeout(()=>{ try{ openRoutePlanner(); }catch(e){} }, 120);
+    }
   }catch(e){} }, 0);
   if (screen==="ctask" || screen==="pjob") setTimeout(()=>{ try{ hydrateTimgs(); }catch(e){} }, 0);
   if (screen==="cprofile" || screen==="pprofile") setTimeout(()=>{ try{ hydrateMyAvatar(); }catch(e){} }, 0);
